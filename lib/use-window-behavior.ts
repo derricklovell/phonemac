@@ -1,0 +1,254 @@
+"use client";
+
+import { useState, useCallback, useEffect, useRef } from "react";
+
+export interface Position {
+  x: number;
+  y: number;
+}
+
+export interface Size {
+  width: number;
+  height: number;
+}
+
+export type ResizeDirection = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw" | null;
+
+// Layout constants
+export const MENU_BAR_HEIGHT = 28;
+export const DOCK_HEIGHT = 80;
+
+interface UseWindowBehaviorProps {
+  position: Position;
+  size: Size;
+  minSize?: Size;
+  isMaximized: boolean;
+  onMove: (position: Position) => void;
+  onResize: (size: Size, position?: Position) => void;
+  onFocus?: () => void;
+  windowRef: React.RefObject<HTMLDivElement | null>;
+  positionMode?: "transform" | "top-left";
+}
+
+interface UseWindowBehaviorReturn {
+  isInteracting: boolean;
+  handleDragStart: (e: React.MouseEvent) => void;
+  handleResizeStart: (e: React.MouseEvent, direction: ResizeDirection) => void;
+}
+
+export function useWindowBehavior({
+  position,
+  size,
+  minSize = { width: 400, height: 300 },
+  isMaximized,
+  onMove,
+  onResize,
+  onFocus,
+  windowRef,
+  positionMode = "transform",
+}: UseWindowBehaviorProps): UseWindowBehaviorReturn {
+  // Single state toggle to attach/detach global listeners (2 re-renders per interaction)
+  const [isInteracting, setIsInteracting] = useState(false);
+
+  // All drag/resize data in refs — no re-renders during mousemove
+  const isDraggingRef = useRef(false);
+  const dragOffsetRef = useRef({ x: 0, y: 0 });
+  const dragSizeRef = useRef({ width: 0, height: 0 });
+  const currentPosRef = useRef({ x: 0, y: 0 });
+
+  const resizeDirRef = useRef<ResizeDirection>(null);
+  const resizeStartRef = useRef({ x: 0, y: 0, width: 0, height: 0, posX: 0, posY: 0 });
+  const currentSizeRef = useRef({ width: 0, height: 0 });
+  const currentResizePosRef = useRef({ x: 0, y: 0 });
+  const didMoveRef = useRef(false);
+  const didResizeRef = useRef(false);
+  const rafIdRef = useRef<number | null>(null);
+  const latestMouseRef = useRef({ x: 0, y: 0, buttons: 0 });
+
+  const handleDragStart = useCallback(
+    (e: React.MouseEvent) => {
+      if ((e.target as HTMLElement).closest(".window-controls")) return;
+      if (isMaximized) return;
+
+      e.preventDefault();
+      onFocus?.();
+
+      isDraggingRef.current = true;
+      didMoveRef.current = false;
+      dragOffsetRef.current = { x: e.clientX - position.x, y: e.clientY - position.y };
+      dragSizeRef.current = { width: size.width, height: size.height };
+      currentPosRef.current = { x: position.x, y: position.y };
+      setIsInteracting(true);
+    },
+    [position, size, isMaximized, onFocus]
+  );
+
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent, direction: ResizeDirection) => {
+      if (isMaximized) return;
+      e.preventDefault();
+      e.stopPropagation();
+      onFocus?.();
+
+      resizeDirRef.current = direction;
+      didResizeRef.current = false;
+      resizeStartRef.current = {
+        x: e.clientX,
+        y: e.clientY,
+        width: size.width,
+        height: size.height,
+        posX: position.x,
+        posY: position.y,
+      };
+      currentSizeRef.current = { width: size.width, height: size.height };
+      currentResizePosRef.current = { x: position.x, y: position.y };
+      setIsInteracting(true);
+    },
+    [isMaximized, size, position, onFocus]
+  );
+
+  useEffect(() => {
+    if (!isInteracting) return;
+
+    const el = windowRef.current;
+
+    const endInteraction = () => {
+      if (isDraggingRef.current) {
+        isDraggingRef.current = false;
+        if (didMoveRef.current) {
+          onMove(currentPosRef.current);
+        }
+      }
+      if (resizeDirRef.current) {
+        resizeDirRef.current = null;
+        if (didResizeRef.current) {
+          onResize(currentSizeRef.current, currentResizePosRef.current);
+        }
+      }
+      setIsInteracting(false);
+    };
+
+    const applyPosition = (target: HTMLDivElement, x: number, y: number) => {
+      if (positionMode === "top-left") {
+        target.style.transform = "";
+        target.style.left = `${x}px`;
+        target.style.top = `${y}px`;
+        return;
+      }
+      target.style.transform = `translate(${x}px, ${y}px)`;
+    };
+
+    const processMouseMove = (x: number, y: number, buttons: number) => {
+      // Some embedded content (for example PDF iframes) can swallow mouseup.
+      // If buttons are no longer pressed, end interaction immediately.
+      if ((isDraggingRef.current || resizeDirRef.current) && buttons === 0) {
+        endInteraction();
+        return;
+      }
+
+      if (isDraggingRef.current && el) {
+        let newX = x - dragOffsetRef.current.x;
+        let newY = y - dragOffsetRef.current.y;
+
+        const minX = -(dragSizeRef.current.width - 100);
+        const maxX = window.innerWidth - 100;
+        const minY = MENU_BAR_HEIGHT;
+        const maxY = window.innerHeight - DOCK_HEIGHT - 50;
+
+        newX = Math.max(minX, Math.min(maxX, newX));
+        newY = Math.max(minY, Math.min(maxY, newY));
+
+        if (newX !== currentPosRef.current.x || newY !== currentPosRef.current.y) {
+          didMoveRef.current = true;
+        }
+        currentPosRef.current = { x: newX, y: newY };
+        applyPosition(el, newX, newY);
+      } else if (resizeDirRef.current && el) {
+        const dir = resizeDirRef.current;
+        const start = resizeStartRef.current;
+        const dx = x - start.x;
+        const dy = y - start.y;
+
+        let newWidth = start.width;
+        let newHeight = start.height;
+        let newX = start.posX;
+        let newY = start.posY;
+
+        if (dir.includes("e")) {
+          const maxWidth = window.innerWidth - start.posX;
+          newWidth = Math.max(minSize.width, Math.min(maxWidth, start.width + dx));
+        } else if (dir.includes("w")) {
+          const proposedWidth = start.width - dx;
+          const maxLeftExpand = start.posX;
+          const maxWidthFromLeft = start.width + maxLeftExpand;
+          newWidth = Math.max(minSize.width, Math.min(maxWidthFromLeft, proposedWidth));
+          newX = start.posX + (start.width - newWidth);
+        }
+
+        if (dir.includes("s")) {
+          const maxHeight = window.innerHeight - DOCK_HEIGHT - start.posY;
+          newHeight = Math.max(minSize.height, Math.min(maxHeight, start.height + dy));
+        } else if (dir.includes("n")) {
+          const proposedHeight = start.height - dy;
+          const maxTopExpand = start.posY - MENU_BAR_HEIGHT;
+          const maxHeightFromTop = start.height + maxTopExpand;
+          newHeight = Math.max(minSize.height, Math.min(maxHeightFromTop, proposedHeight));
+          newY = start.posY + (start.height - newHeight);
+        }
+
+        if (
+          newWidth !== currentSizeRef.current.width ||
+          newHeight !== currentSizeRef.current.height ||
+          newX !== currentResizePosRef.current.x ||
+          newY !== currentResizePosRef.current.y
+        ) {
+          didResizeRef.current = true;
+        }
+        currentSizeRef.current = { width: newWidth, height: newHeight };
+        currentResizePosRef.current = { x: newX, y: newY };
+
+        applyPosition(el, newX, newY);
+        el.style.width = `${newWidth}px`;
+        el.style.height = `${newHeight}px`;
+      }
+    };
+
+    const flushMouseMove = () => {
+      rafIdRef.current = null;
+      const { x, y, buttons } = latestMouseRef.current;
+      processMouseMove(x, y, buttons);
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      latestMouseRef.current = { x: e.clientX, y: e.clientY, buttons: e.buttons };
+      if (rafIdRef.current === null) {
+        rafIdRef.current = window.requestAnimationFrame(flushMouseMove);
+      }
+    };
+
+    const handleMouseUp = () => endInteraction();
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    window.addEventListener("blur", handleMouseUp);
+    return () => {
+      if (rafIdRef.current !== null) {
+        window.cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("blur", handleMouseUp);
+    };
+  }, [isInteracting, windowRef, minSize, onMove, onResize, positionMode]);
+
+  return {
+    isInteracting,
+    handleDragStart,
+    handleResizeStart,
+  };
+}
+
+// Shared resize handle sizes
+export const CORNER_SIZE = 12;
+export const EDGE_SIZE = 6;

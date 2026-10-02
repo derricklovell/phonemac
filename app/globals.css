@@ -1,0 +1,470 @@
+@import './tiptap.css';
+@import './(desktop)/notes/styles/github-markdown.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Enable SF Pro font smoothing */
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@keyframes scaleIn {
+  0% {
+    opacity: 0;
+    transform: scaleX(0) translateX(50%);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: scaleX(1) translateX(0);
+  }
+}
+
+.animate-scale-in {
+  display: inline-block;
+  animation: scaleIn 0.3s cubic-bezier(0.17, 0.67, 0.29, 1) forwards;
+  transform-origin: center;
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 20%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
+  }
+  .dark {
+    --background: 0 0% 10%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Prevent iOS overscroll behavior */
+html, body {
+  overscroll-behavior-y: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Typing indicator animation */
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  padding: 0 4px;
+}
+
+@keyframes blink {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.typing-indicator .dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: currentColor;
+  animation: typing 1.5s infinite;
+  margin: 0 3px;
+  opacity: 0.3;
+}
+
+.typing-indicator .dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-indicator .dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Reaction Animations */
+@keyframes popIn {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.reaction-menu {
+  animation: popIn 0.3s ease-out forwards;
+  box-shadow: none;
+  border: none;
+}
+
+.reaction-icon {
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+@media (any-hover: hover) and (any-pointer: fine) {
+  .reaction-icon:hover {
+    transform: scale(1.2);
+  }
+}
+
+@keyframes reactionPop {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.reaction-pop {
+  animation: reactionPop 0.3s cubic-bezier(0.17, 0.67, 0.29, 1) forwards;
+  transform-origin: center;
+}
+
+/* Remove focus rings from reaction buttons */
+.reaction-menu button {
+  outline: none !important;
+}
+
+.reaction-menu button:focus {
+  outline: none !important;
+}
+
+.reaction-menu button:focus-visible {
+  outline: none !important;
+}
+
+/* Global caret styling - blue for Messages */
+* {
+  caret-color: #0A7CFF;
+}
+
+/* Golden caret for Notes app */
+.notes-app * {
+  caret-color: #e2a727;
+}
+
+/* Let Messages long presses open actions instead of selecting row text. */
+.messages-context-menu-trigger,
+.messages-context-menu-trigger * {
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+
+/* Let gallery-card long presses open Notes actions instead of selecting text. */
+.notes-gallery-context-trigger,
+.notes-gallery-context-trigger * {
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+
+/* Green caret for iTerm app */
+.iterm-app * {
+  caret-color: #22c55e;
+}
+
+/* Dock icon enter/exit animations */
+@keyframes dockEnter {
+  0% {
+    transform: translateY(100%);
+  }
+  55% {
+    transform: translateY(-15%);
+  }
+  80% {
+    transform: translateY(5%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes dockExit {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    transform: translateY(100%) scale(0.8);
+  }
+}
+
+.animate-dock-enter {
+  animation: dockEnter 0.7s ease-out forwards;
+}
+
+.animate-dock-exit {
+  animation: dockExit 0.35s ease-in forwards;
+}
+
+@keyframes weatherRainDropFall {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -10vh, 0);
+  }
+  8% {
+    opacity: 1;
+  }
+  92% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--rain-drift, 6px), 118vh, 0);
+  }
+}
+
+@keyframes weatherSnowFlakeFall {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -10vh, 0) scale(0.92);
+  }
+  10% {
+    opacity: 1;
+  }
+  50% {
+    transform: translate3d(calc(var(--snow-drift, 14px) * 0.45), 54vh, 0)
+      scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--snow-drift, 14px), 118vh, 0) scale(0.96);
+  }
+}
+
+@keyframes weatherStormFlash {
+  0%, 18%, 100% {
+    opacity: 0;
+  }
+  19% {
+    opacity: 0.08;
+  }
+  20% {
+    opacity: 0.58;
+  }
+  21% {
+    opacity: 0.12;
+  }
+  22% {
+    opacity: 0.32;
+  }
+  24%, 66% {
+    opacity: 0;
+  }
+  67% {
+    opacity: 0.12;
+  }
+  68% {
+    opacity: 0.38;
+  }
+  69% {
+    opacity: 0;
+  }
+}
+
+@keyframes weatherLightningStrike {
+  0%, 18%, 100% {
+    opacity: 0;
+    transform: translateY(-6px) scaleY(0.9);
+  }
+  19% {
+    opacity: 0.96;
+    transform: translateY(0) scaleY(1);
+  }
+  20% {
+    opacity: 0.22;
+  }
+  21% {
+    opacity: 0.84;
+  }
+  23%, 66% {
+    opacity: 0;
+    transform: translateY(2px) scaleY(1.03);
+  }
+  67% {
+    opacity: 0.78;
+    transform: translateY(0) scaleY(1);
+  }
+  68% {
+    opacity: 0;
+  }
+}
+
+@keyframes weatherCloudDrift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(
+      calc(var(--cloud-drift-x, 24px) * 0.65),
+      calc(var(--cloud-drift-y, 6px) * 0.65),
+      0
+    ) scale(1.06);
+  }
+  100% {
+    transform: translate3d(
+      var(--cloud-drift-x, 24px),
+      var(--cloud-drift-y, 6px),
+      0
+    ) scale(1.12);
+  }
+}
+
+@keyframes weatherCloudPan {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(var(--cloud-pan-distance, 24%));
+  }
+}
+
+@keyframes weatherFogPan {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(var(--fog-pan-distance, 12%));
+  }
+}
+
+.weather-rain-drop {
+  animation: weatherRainDropFall var(--rain-duration, 1.2s) linear infinite;
+  animation-delay: var(--rain-delay, 0s);
+  will-change: transform, opacity;
+}
+
+.weather-snow-flake {
+  animation: weatherSnowFlakeFall var(--snow-duration, 6s) linear infinite;
+  animation-delay: var(--snow-delay, 0s);
+  will-change: transform, opacity;
+}
+
+.weather-storm-flash {
+  animation: weatherStormFlash 9s linear infinite;
+  will-change: opacity;
+}
+
+.weather-lightning-bolt {
+  animation: weatherLightningStrike 9s linear infinite;
+  opacity: 0;
+  transform-origin: top center;
+  will-change: opacity, transform;
+}
+
+.weather-cloud-drift {
+  animation: weatherCloudDrift var(--cloud-drift-duration, 28s) ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.weather-cloud-pan {
+  animation: weatherCloudPan var(--cloud-pan-duration, 16s) ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.weather-fog-pan {
+  animation: weatherFogPan var(--fog-pan-duration, 20s) ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .weather-rain-drop,
+  .weather-cloud-pan,
+  .weather-cloud-drift,
+  .weather-fog-pan,
+  .weather-snow-flake,
+  .weather-storm-flash,
+  .weather-lightning-bolt {
+    animation: none;
+  }
+}

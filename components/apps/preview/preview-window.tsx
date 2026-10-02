@@ -1,0 +1,571 @@
+"use client";
+
+import Image from "next/image";
+import { useRef, useEffect, useLayoutEffect, useState, useCallback } from "react";
+import { cn } from "@/lib/utils";
+import { WindowControls } from "@/components/window-controls";
+import { RotateCcwSquare } from "lucide-react";
+import {
+  useWindowBehavior,
+  Position,
+  Size,
+  MENU_BAR_HEIGHT,
+  DOCK_HEIGHT,
+  CORNER_SIZE,
+  EDGE_SIZE,
+} from "@/lib/use-window-behavior";
+import { MAXIMIZED_Z_INDEX, useWindowManager } from "@/lib/window-context";
+import { PdfViewer } from "@/components/apps/preview/pdf-viewer";
+
+export type PreviewFileType = "image" | "pdf";
+
+interface PreviewWindowProps {
+  filePath: string;
+  fileUrl: string;
+  fileType: PreviewFileType;
+  position: Position;
+  size: Size;
+  zIndex: number;
+  isFocused: boolean;
+  isMaximized: boolean;
+  initialZoom?: number;
+  initialScrollLeft?: number;
+  initialScrollTop?: number;
+  onFocus: () => void;
+  onClose: () => void;
+  onMinimize: () => void;
+  onToggleMaximize: () => void;
+  onMove: (position: Position) => void;
+  onResize: (size: Size, position?: Position) => void;
+  onZoomChange?: (zoom: number) => void;
+  onScrollChange?: (scrollLeft: number, scrollTop: number) => void;
+}
+
+export function PreviewWindow({
+  filePath,
+  fileUrl,
+  fileType,
+  position,
+  size,
+  zIndex,
+  isFocused,
+  isMaximized,
+  initialZoom = 1,
+  initialScrollLeft = 0,
+  initialScrollTop = 0,
+  onFocus,
+  onClose,
+  onMinimize,
+  onToggleMaximize,
+  onMove,
+  onResize,
+  onZoomChange,
+  onScrollChange,
+}: PreviewWindowProps) {
+  const windowRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const fileName = filePath?.split("/").pop() || "Untitled";
+  const { isMenuOpenRef } = useWindowManager();
+  const [zoom, setZoom] = useState(initialZoom);
+  const [rotation, setRotation] = useState(0);
+  const [imageError, setImageError] = useState<"network" | "unknown" | null>(null);
+  const [naturalSize, setNaturalSize] = useState<{ width: number; height: number } | null>(null);
+  const [containerSize, setContainerSize] = useState<{ width: number; height: number } | null>(null);
+  const [isPanning, setIsPanning] = useState(false);
+  const [isScrollRestored, setIsScrollRestored] = useState(false);
+  const panStartRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number } | null>(null);
+  const pendingScrollRef = useRef<{ left: number; top: number } | null>(
+    initialZoom > 1 ? { left: initialScrollLeft, top: initialScrollTop } : null
+  );
+
+  const { isInteracting, handleDragStart, handleResizeStart } = useWindowBehavior({
+    position,
+    size,
+    minSize: { width: 400, height: 300 },
+    isMaximized,
+    onMove,
+    onResize,
+    onFocus,
+    windowRef,
+  });
+
+  // Track container size for responsive image fitting (debounced for smoothness)
+  useEffect(() => {
+    if (!containerRef.current) return;
+    let timeoutId: NodeJS.Timeout;
+    const updateSize = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        if (containerRef.current) {
+          const rect = containerRef.current.getBoundingClientRect();
+          setContainerSize({ width: rect.width, height: rect.height });
+        }
+      }, 16); // ~60fps
+    };
+    updateSize();
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(containerRef.current);
+    return () => {
+      clearTimeout(timeoutId);
+      observer.disconnect();
+    };
+  }, []);
+
+  // Calculate "fit" size - what the image would be at zoom=1 (contained within container)
+  const getFitSize = useCallback(() => {
+    if (!naturalSize || !containerSize) return null;
+    const isQuarterTurn = rotation % 180 !== 0;
+    const imageWidth = isQuarterTurn ? naturalSize.height : naturalSize.width;
+    const imageHeight = isQuarterTurn ? naturalSize.width : naturalSize.height;
+    const containerAspect = containerSize.width / containerSize.height;
+    const imageAspect = imageWidth / imageHeight;
+
+    if (imageAspect > containerAspect) {
+      // Image is wider than container - fit to width
+      return { width: containerSize.width, height: containerSize.width / imageAspect };
+    } else {
+      // Image is taller than container - fit to height
+      return { width: containerSize.height * imageAspect, height: containerSize.height };
+    }
+  }, [naturalSize, containerSize, rotation]);
+
+  // Store callbacks in refs to avoid stale closures
+  const onZoomChangeRef = useRef(onZoomChange);
+  onZoomChangeRef.current = onZoomChange;
+  const onScrollChangeRef = useRef(onScrollChange);
+  onScrollChangeRef.current = onScrollChange;
+
+  // Restore scroll position when zoomed in content becomes ready
+  useLayoutEffect(() => {
+    if (isScrollRestored || zoom <= 1) return;
+    if (!pendingScrollRef.current || !containerRef.current) return;
+    const fitSize = getFitSize();
+    if (!fitSize) return;
+
+    containerRef.current.scrollLeft = pendingScrollRef.current.left;
+    containerRef.current.scrollTop = pendingScrollRef.current.top;
+    pendingScrollRef.current = null;
+    setIsScrollRestored(true);
+  }, [isScrollRestored, zoom, getFitSize]);
+
+  // Persist scroll position when user scrolls (debounced)
+  // Re-attaches listener when zoom changes to ensure correct zoom check
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || zoom <= 1) return;
+
+    let timeoutId: NodeJS.Timeout;
+    const handleScroll = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        onScrollChangeRef.current?.(container.scrollLeft, container.scrollTop);
+      }, 100);
+    };
+
+    container.addEventListener("scroll", handleScroll);
+    return () => {
+      clearTimeout(timeoutId);
+      container.removeEventListener("scroll", handleScroll);
+    };
+  }, [zoom]);
+
+  // Zoom controls - persist changes and clear scroll when returning to fit
+  const zoomIn = useCallback(() => {
+    setZoom((z) => {
+      const newZoom = Math.min(z + 0.25, 5);
+      setTimeout(() => onZoomChangeRef.current?.(newZoom), 0);
+      return newZoom;
+    });
+  }, []);
+
+  const zoomOut = useCallback(() => {
+    setZoom((z) => {
+      const newZoom = Math.max(z - 0.25, 0.25);
+      setTimeout(() => {
+        onZoomChangeRef.current?.(newZoom);
+        if (newZoom === 1) onScrollChangeRef.current?.(0, 0);
+      }, 0);
+      return newZoom;
+    });
+  }, []);
+
+  const resetZoom = useCallback(() => {
+    setZoom(1);
+    setTimeout(() => {
+      onZoomChangeRef.current?.(1);
+      onScrollChangeRef.current?.(0, 0);
+    }, 0);
+  }, []);
+
+  const rotateLeft = useCallback(() => {
+    setRotation((currentRotation) => currentRotation - 90);
+    setTimeout(() => {
+      if (containerRef.current) {
+        containerRef.current.scrollLeft = 0;
+        containerRef.current.scrollTop = 0;
+      }
+      onScrollChangeRef.current?.(0, 0);
+    }, 0);
+  }, []);
+
+  // Pan handlers for drag-to-scroll when zoomed in
+  const handlePanStart = useCallback((e: React.MouseEvent) => {
+    const fitSize = getFitSize();
+    if (zoom <= 1 || !fitSize || !containerRef.current) return;
+
+    e.preventDefault();
+    setIsPanning(true);
+    panStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      scrollLeft: containerRef.current.scrollLeft,
+      scrollTop: containerRef.current.scrollTop,
+    };
+  }, [zoom, getFitSize]);
+
+  const handlePanMove = useCallback((e: React.MouseEvent) => {
+    if (!isPanning || !panStartRef.current || !containerRef.current) return;
+
+    const deltaX = e.clientX - panStartRef.current.x;
+    const deltaY = e.clientY - panStartRef.current.y;
+
+    containerRef.current.scrollLeft = panStartRef.current.scrollLeft - deltaX;
+    containerRef.current.scrollTop = panStartRef.current.scrollTop - deltaY;
+  }, [isPanning]);
+
+  const handlePanEnd = useCallback(() => {
+    setIsPanning(false);
+    panStartRef.current = null;
+  }, []);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isFocused) return;
+
+      if (e.key === "Escape") {
+        (document.activeElement as HTMLElement)?.blur();
+        return;
+      }
+
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) {
+        return;
+      }
+
+      if (e.key.toLowerCase() === "q") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (e.metaKey || e.ctrlKey) {
+        if (e.key === "=" || e.key === "+") {
+          e.preventDefault();
+          zoomIn();
+        } else if (e.key === "-") {
+          e.preventDefault();
+          zoomOut();
+        } else if (e.key === "0") {
+          e.preventDefault();
+          resetZoom();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isFocused, onClose, zoomIn, zoomOut, resetZoom]);
+
+  // Reset error/size/loading state when file changes (zoom is initialized from prop)
+  useEffect(() => {
+    setImageError(null);
+    setNaturalSize(null);
+    setRotation(0);
+  }, [filePath, fileUrl, fileType]);
+
+  const windowStyle: React.CSSProperties = isMaximized
+    ? { top: MENU_BAR_HEIGHT, left: 0, right: 0, bottom: DOCK_HEIGHT, width: "auto", height: "auto", zIndex: MAXIMIZED_Z_INDEX }
+    : {
+        transform: `translate(${position.x}px, ${position.y}px)`,
+        width: size.width,
+        height: size.height,
+        zIndex,
+        willChange: isInteracting ? "transform,width,height" : undefined,
+      };
+
+  // Handle image load errors with network detection
+  const handleImageError = useCallback(() => {
+    // Check if likely a network error (offline or CORS)
+    if (!navigator.onLine) {
+      setImageError("network");
+    } else {
+      setImageError("unknown");
+    }
+  }, []);
+
+  const renderContent = () => {
+    if (fileType === "pdf") {
+      return (
+        <PdfViewer
+          fileUrl={fileUrl}
+          fileName={fileName}
+          focusOverlayActive={!isFocused}
+          onRequestFocus={onFocus}
+        />
+      );
+    }
+
+    if (imageError) {
+      return (
+        <div className="flex items-center justify-center h-full text-zinc-500 dark:text-zinc-400">
+          <div className="text-center">
+            <svg className="w-16 h-16 mx-auto mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <path d="M21 15l-5-5L5 21" />
+              <line x1="2" y1="2" x2="22" y2="22" />
+            </svg>
+            <p className="font-medium">Unable to load image</p>
+            <p className="text-sm mt-1">
+              {imageError === "network"
+                ? "Check your internet connection"
+                : "The file may be missing or inaccessible"}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // At zoom=1, use pure CSS for smooth resizing
+    // At other zoom levels, calculate explicit dimensions for scrollable area
+    const fitSize = getFitSize();
+
+    // Zoomed and rotated images need fitSize to calculate dimensions
+    // Render image invisibly to load it and get naturalSize, then show once fitSize is ready
+    const needsFitSize = zoom !== 1 || rotation !== 0;
+    if (needsFitSize && !fitSize) {
+      return (
+        <div ref={containerRef} className="w-full h-full relative">
+          <Image
+            src={fileUrl}
+            alt=""
+            width={naturalSize?.width ?? 1}
+            height={naturalSize?.height ?? 1}
+            className="absolute invisible w-auto h-auto"
+            onLoad={(e) => {
+              const img = e.currentTarget;
+              setNaturalSize({ width: img.naturalWidth, height: img.naturalHeight });
+            }}
+            onError={handleImageError}
+            unoptimized
+          />
+        </div>
+      );
+    }
+
+    const hasExplicitSize = needsFitSize && fitSize !== null;
+    const canPan = hasExplicitSize && zoom > 1;
+    const isQuarterTurn = rotation % 180 !== 0;
+
+    // Calculate explicit dimensions when transformed and fitSize is available
+    const displayWidth = hasExplicitSize ? fitSize!.width * zoom : undefined;
+    const displayHeight = hasExplicitSize ? fitSize!.height * zoom : undefined;
+    const imageWidth = isQuarterTurn ? displayHeight : displayWidth;
+    const imageHeight = isQuarterTurn ? displayWidth : displayHeight;
+    const renderedWidth = Math.max(1, Math.round(imageWidth ?? naturalSize?.width ?? 1));
+    const renderedHeight = Math.max(1, Math.round(imageHeight ?? naturalSize?.height ?? 1));
+
+    return (
+      <div
+        ref={containerRef}
+        className="w-full h-full select-none"
+        style={{
+          overflow: canPan ? "auto" : "hidden",
+          cursor: canPan ? (isPanning ? "grabbing" : "grab") : "default",
+        }}
+        onMouseDown={handlePanStart}
+        onMouseMove={handlePanMove}
+        onMouseUp={handlePanEnd}
+        onMouseLeave={handlePanEnd}
+      >
+        {/* Inner wrapper for centering and scroll area */}
+        <div
+          className="flex items-center justify-center"
+          style={{
+            width: canPan && displayWidth ? Math.max(displayWidth, containerSize?.width || 0) : "100%",
+            height: canPan && displayHeight ? Math.max(displayHeight, containerSize?.height || 0) : "100%",
+            minWidth: "100%",
+            minHeight: "100%",
+          }}
+        >
+          <Image
+            src={fileUrl}
+            alt={fileName}
+            width={renderedWidth}
+            height={renderedHeight}
+            draggable={false}
+            className={hasExplicitSize ? "" : "w-full h-full object-contain"}
+            style={{
+              width: imageWidth,
+              height: imageHeight,
+              flexShrink: hasExplicitSize ? 0 : undefined,
+              pointerEvents: "none",
+              transform: rotation ? `rotate(${rotation}deg)` : undefined,
+              transition: hasExplicitSize
+                ? "width 0.15s ease-out, height 0.15s ease-out, transform 0.2s ease-out"
+                : undefined,
+            }}
+            onError={handleImageError}
+            onLoad={(e) => {
+              const img = e.currentTarget;
+              setNaturalSize({ width: img.naturalWidth, height: img.naturalHeight });
+            }}
+            unoptimized
+          />
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div
+      ref={windowRef}
+      className={cn("fixed", !isFocused && !isMaximized && "opacity-95")}
+      style={windowStyle}
+      onMouseDownCapture={(e) => {
+        if (isMenuOpenRef.current) {
+          e.stopPropagation();
+          e.preventDefault();
+          return;
+        }
+        onFocus();
+      }}
+      onClickCapture={(e) => {
+        if (isMenuOpenRef.current) {
+          e.stopPropagation();
+          e.preventDefault();
+        }
+      }}
+    >
+      {/* Window chrome */}
+      <div
+        className={cn(
+          "absolute inset-0 bg-zinc-100 dark:bg-zinc-900 overflow-hidden shadow-2xl border border-black/10 dark:border-white/10 flex flex-col",
+          isMaximized ? "rounded-none" : "rounded-xl",
+          !isFocused && "[&_*]:!cursor-default"
+        )}
+      >
+        {/* Title bar */}
+        <div
+          className="px-4 py-2 flex min-w-0 items-center justify-between select-none bg-zinc-200 dark:bg-zinc-800 border-b border-zinc-300 dark:border-zinc-700 cursor-default"
+          onMouseDown={handleDragStart}
+        >
+          <WindowControls
+            inShell={true}
+            className="p-2 window-controls"
+            onClose={onClose}
+            onMinimize={onMinimize}
+            onToggleMaximize={onToggleMaximize}
+            isMaximized={isMaximized}
+            closeLabel="Close window"
+          />
+          <div className="flex-1 min-w-0 px-2 text-center">
+            <span className="block truncate text-zinc-600 dark:text-zinc-400 text-sm">{fileName}</span>
+          </div>
+          {/* Image controls - stopPropagation prevents window drag */}
+          {fileType === "image" && (
+            <div className="flex shrink-0 items-center gap-1" onMouseDown={(e) => e.stopPropagation()}>
+              <button
+                onClick={rotateLeft}
+                className="p-1 rounded text-zinc-600 dark:text-zinc-400 transition-colors can-hover:hover:bg-zinc-300 can-hover:dark:hover:bg-zinc-700 can-hover:hover:text-zinc-800 can-hover:dark:hover:text-zinc-200"
+                aria-label="Rotate left"
+                title="Rotate Left"
+              >
+                <RotateCcwSquare
+                  aria-hidden="true"
+                  className="h-4 w-4"
+                  strokeWidth={2}
+                />
+              </button>
+              <button
+                onClick={zoomOut}
+                className="p-1 rounded hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
+                title="Zoom out (Cmd -)"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="M21 21l-4.35-4.35M8 11h6" />
+                </svg>
+              </button>
+              <span className="text-zinc-600 dark:text-zinc-400 text-xs w-12 text-center">{Math.round(zoom * 100)}%</span>
+              <button
+                onClick={zoomIn}
+                className="p-1 rounded hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
+                title="Zoom in (Cmd +)"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="M21 21l-4.35-4.35M11 8v6M8 11h6" />
+                </svg>
+              </button>
+            </div>
+          )}
+          {fileType === "pdf" && <div className="w-[68px] shrink-0" />}
+        </div>
+
+        {/* Content */}
+        <div className="relative flex-1 min-h-0 bg-zinc-100 dark:bg-zinc-900">
+          {renderContent()}
+          {fileType === "pdf" && isInteracting && <div className="absolute inset-0 z-30" />}
+        </div>
+      </div>
+
+      {/* Resize handles */}
+      {!isMaximized && (
+        <>
+          <div
+            className="absolute cursor-nw-resize"
+            style={{ top: -3, left: -3, width: CORNER_SIZE, height: CORNER_SIZE, zIndex: 20 }}
+            onMouseDown={(e) => handleResizeStart(e, "nw")}
+          />
+          <div
+            className="absolute cursor-ne-resize"
+            style={{ top: -3, right: -3, width: CORNER_SIZE, height: CORNER_SIZE, zIndex: 20 }}
+            onMouseDown={(e) => handleResizeStart(e, "ne")}
+          />
+          <div
+            className="absolute cursor-sw-resize"
+            style={{ bottom: -3, left: -3, width: CORNER_SIZE, height: CORNER_SIZE, zIndex: 20 }}
+            onMouseDown={(e) => handleResizeStart(e, "sw")}
+          />
+          <div
+            className="absolute cursor-se-resize"
+            style={{ bottom: -3, right: -3, width: CORNER_SIZE, height: CORNER_SIZE, zIndex: 20 }}
+            onMouseDown={(e) => handleResizeStart(e, "se")}
+          />
+          <div
+            className="absolute cursor-n-resize"
+            style={{ top: -3, left: CORNER_SIZE, right: CORNER_SIZE, height: EDGE_SIZE, zIndex: 10 }}
+            onMouseDown={(e) => handleResizeStart(e, "n")}
+          />
+          <div
+            className="absolute cursor-s-resize"
+            style={{ bottom: -3, left: CORNER_SIZE, right: CORNER_SIZE, height: EDGE_SIZE, zIndex: 10 }}
+            onMouseDown={(e) => handleResizeStart(e, "s")}
+          />
+          <div
+            className="absolute cursor-w-resize"
+            style={{ left: -3, top: CORNER_SIZE, bottom: CORNER_SIZE, width: EDGE_SIZE, zIndex: 10 }}
+            onMouseDown={(e) => handleResizeStart(e, "w")}
+          />
+          <div
+            className="absolute cursor-e-resize"
+            style={{ right: -3, top: CORNER_SIZE, bottom: CORNER_SIZE, width: EDGE_SIZE, zIndex: 10 }}
+            onMouseDown={(e) => handleResizeStart(e, "e")}
+          />
+        </>
+      )}
+    </div>
+  );
+}

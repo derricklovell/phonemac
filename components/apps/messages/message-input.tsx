@@ -1,0 +1,482 @@
+import { Recipient } from "@/types/messages";
+import {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
+import { Icons } from "./icons";
+import { useTheme } from "next-themes";
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Mention from "@tiptap/extension-mention";
+import { SuggestionProps } from "@tiptap/suggestion";
+import Placeholder from "@tiptap/extension-placeholder";
+import { soundEffects } from "@/lib/messages/sound-effects";
+
+interface MessageInputProps {
+  message: string;
+  setMessage: (value: string) => void;
+  handleSend: () => boolean;
+  disabled?: boolean;
+  recipients: Recipient[];
+  isMobileView?: boolean;
+  conversationId?: string;
+  isNewChat?: boolean;
+}
+
+type EmojiPickerProps = {
+  data: unknown;
+  onEmojiSelect?: (emoji: { native: string }) => void;
+  onClickOutside?: () => void;
+  theme?: "light" | "dark" | "auto";
+};
+
+// Export type for message input's focus method
+export type MessageInputHandle = {
+  focus: () => void;
+};
+
+function normalizeMentionQuery(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function getRecipientMentionLabel(recipient: Recipient) {
+  const parts = recipient.name.split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return recipient.name;
+
+  const leadingInitials = parts
+    .slice(0, -1)
+    .filter((part) => /^[A-Za-z]\.?$/.test(part));
+
+  if (leadingInitials.length > 1 && leadingInitials.length === parts.length - 1) {
+    return leadingInitials.join(" ");
+  }
+
+  return parts[0];
+}
+
+function getRecipientMentionAliases(recipient: Recipient) {
+  const parts = recipient.name.split(/\s+/).filter(Boolean);
+  const aliases = new Set<string>();
+
+  aliases.add(normalizeMentionQuery(recipient.name));
+
+  const firstPart = parts[0];
+  const lastPart = parts.at(-1);
+
+  if (firstPart) {
+    aliases.add(normalizeMentionQuery(firstPart));
+  }
+
+  if (lastPart) {
+    aliases.add(normalizeMentionQuery(lastPart));
+  }
+
+  const initials = parts
+    .slice(0, -1)
+    .filter((part) => /^[A-Za-z]\.?$/.test(part))
+    .map((part) => normalizeMentionQuery(part))
+    .join("");
+
+  if (initials.length > 1) {
+    aliases.add(initials);
+  }
+
+  return aliases;
+}
+
+function findUniqueRecipientMatch(query: string, recipients: Recipient[]) {
+  const normalizedQuery = normalizeMentionQuery(query);
+  if (!normalizedQuery) return null;
+
+  const matches = recipients.filter((recipient) =>
+    getRecipientMentionAliases(recipient).has(normalizedQuery)
+  );
+
+  return matches.length === 1 ? matches[0] : null;
+}
+
+// Forward ref component to expose focus method to parent
+export const MessageInput = forwardRef<
+  MessageInputHandle,
+  Omit<MessageInputProps, "ref">
+>(function MessageInput(
+  {
+    message,
+    setMessage,
+    handleSend,
+    disabled = false,
+    recipients,
+    isMobileView = false,
+    conversationId,
+    isNewChat = false,
+  },
+  ref
+) {
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [emojiPickerLoaded, setEmojiPickerLoaded] = useState(false);
+  const [emojiPickerLoading, setEmojiPickerLoading] = useState(false);
+  const [PickerComponent, setPickerComponent] = useState<React.ComponentType<EmojiPickerProps> | null>(null);
+  const [emojiData, setEmojiData] = useState<unknown>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const { theme, systemTheme } = useTheme();
+  const effectiveTheme = theme === "system" ? systemTheme : theme;
+
+  const loadEmojiPicker = useCallback(async () => {
+    if (emojiPickerLoaded || emojiPickerLoading) return;
+    setEmojiPickerLoading(true);
+    try {
+      const [pickerModule, dataModule] = await Promise.all([
+        import("@emoji-mart/react"),
+        import("@emoji-mart/data"),
+      ]);
+      setPickerComponent(() => pickerModule.default);
+      setEmojiData(dataModule.default);
+      setEmojiPickerLoaded(true);
+    } catch (error) {
+      console.error("Failed to load emoji picker modules:", error);
+    } finally {
+      setEmojiPickerLoading(false);
+    }
+  }, [emojiPickerLoaded, emojiPickerLoading]);
+
+  // Tiptap editor definition
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Placeholder.configure({
+        placeholder: "Type a message...",
+      }),
+      Mention.configure({
+        HTMLAttributes: {
+          class: "mention-node",
+          style: "color: #0A7CFF !important; font-weight: 500 !important;",
+          onanimationend: 'this.classList.add("shimmer-done")',
+        },
+        renderText: ({ node }) => {
+          const recipient = recipients.find((r) => r.id === node.attrs.id);
+          return (
+            node.attrs.label ??
+            (recipient ? getRecipientMentionLabel(recipient) : node.attrs.id)
+          );
+        },
+        renderHTML: ({ node }) => {
+          const recipient = recipients.find((r) => r.id === node.attrs.id);
+          const label =
+            node.attrs.label ??
+            (recipient ? getRecipientMentionLabel(recipient) : node.attrs.id);
+          return [
+            "span",
+            {
+              "data-type": "mention",
+              "data-id": node.attrs.id,
+              "data-label": label,
+              "data-name": recipient?.name ?? node.attrs.name ?? label,
+              class: "mention-node",
+              style: "color: #0A7CFF !important; font-weight: 500 !important;",
+            },
+            label,
+          ];
+        },
+        suggestion: {
+          items: ({ query }: { query: string }) => {
+            const match = findUniqueRecipientMatch(query, recipients);
+            if (!match) return [];
+
+            return [
+              {
+                id: match.id,
+                label: getRecipientMentionLabel(match),
+                name: match.name,
+              },
+            ];
+          },
+          render: () => {
+            let component: {
+              element: HTMLElement;
+              update: (props: {
+                items: Array<{ id: string; label: string; name: string }>;
+                query: string;
+                command: (attrs: { id: string; label: string; name: string }) => void;
+              }) => void;
+            };
+            return {
+              onStart: (props: SuggestionProps) => {
+                const { editor } = props;
+                component = {
+                  element: document.createElement("div"),
+                  update: (props) => {
+                    if (props.items.length === 1) {
+                      const [match] = props.items;
+                      const { tr } = editor.state;
+                      const start = tr.selection.from - props.query.length - 1;
+                      const end = tr.selection.from;
+                      editor
+                        .chain()
+                        .focus()
+                        .deleteRange({ from: start, to: end })
+                        .insertContent([
+                          {
+                            type: "mention",
+                            attrs: { id: match.id, label: match.label, name: match.name },
+                          },
+                        ])
+                        .run();
+                    }
+                  },
+                };
+                return component;
+              },
+              onUpdate: (props: SuggestionProps) => {
+                component?.update(props);
+              },
+              onExit: () => {
+                component?.element.remove();
+              },
+            };
+          },
+          char: "@",
+          allowSpaces: false,
+          decorationClass: "suggestion",
+        },
+      }),
+    ],
+    content: message,
+    autofocus: !isMobileView && !isNewChat ? "end" : false,
+    onUpdate: ({ editor }) => {
+      // Debounce setMessage to avoid re-renders on every keystroke
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+      debounceRef.current = setTimeout(() => {
+        setMessage(editor.getHTML());
+      }, 16); // ~1 frame delay
+    },
+    onCreate: ({ editor }) => {
+      if (!isMobileView && !isNewChat) {
+        editor.commands.focus("end");
+      }
+    },
+    editorProps: {
+      attributes: {
+        class:
+          "w-full bg-background/80 border border-muted-foreground/20 rounded-[18px] pl-4 pr-8 py-1 text-base desktop:text-sm focus:outline-none disabled:opacity-50 prose-sm prose-neutral dark:prose-invert prose flex items-center",
+        enterKeyHint: "send",
+        style: "min-height: 32px; max-height: 200px; overflow-y: hidden;",
+      },
+      handleKeyDown: (view, event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+          event.preventDefault();
+          handleSubmit();
+          if (isMobileView) {
+            view.dom.blur();
+          }
+          return true;
+        }
+        return false;
+      },
+    },
+    immediatelyRender: false,
+  });
+
+  const handleSubmit = () => {
+    if (handleSend()) {
+      soundEffects.playSentSound();
+    }
+  };
+
+  // Expose focus method to parent through ref
+  useImperativeHandle(
+    ref,
+    () => ({
+      focus: () => {
+        // Focus editor at end of content
+        if (editor) {
+          editor.commands.focus("end");
+        }
+      },
+    }),
+    [editor]
+  );
+
+  // Effects
+  // Update editor content when message changes
+  useEffect(() => {
+    if (editor && message !== editor.getHTML()) {
+      editor.commands.setContent(message);
+    }
+  }, [message, editor, isMobileView, disabled, conversationId]);
+
+  // Focus editor at end of content
+  useEffect(() => {
+    if (editor && conversationId && !isMobileView && !isNewChat) {
+      editor.commands.focus("end");
+    }
+  }, [editor, conversationId, isMobileView, isNewChat]);
+
+  // Update editor height for multi-line messages
+  useEffect(() => {
+    const updateHeight = () => {
+      if (editor) {
+        const element = editor.view.dom as HTMLElement;
+        // Force reflow to get accurate scrollHeight
+        element.style.height = "auto";
+        // Get the scroll height including all content
+        const contentHeight = element.scrollHeight;
+        // Set the height considering padding and ensuring we don't exceed max height
+        const height = Math.min(200, Math.max(32, contentHeight));
+        const containerHeight = height + 32;
+
+        // Handle height for both mobile and desktop
+        element.style.height = `${height}px`;
+        element.style.overflowY = height >= 200 ? "auto" : "hidden";
+        document.documentElement.style.setProperty(
+          "--dynamic-height",
+          `${containerHeight}px`
+        );
+      }
+    };
+
+    // Update height on editor changes
+    editor?.on("update", updateHeight);
+
+    // Update height on window resize
+    window.addEventListener("resize", updateHeight);
+
+    // Initial height calculation
+    updateHeight();
+
+    return () => {
+      window.removeEventListener("resize", updateHeight);
+      editor?.off("update", updateHeight);
+    };
+  }, [editor, isMobileView]);
+
+  // Reset editor height when message is cleared (e.g. after sending)
+  useEffect(() => {
+    if (message === "") {
+      const element = editor?.view.dom as HTMLElement;
+      if (element) {
+        element.style.height = "32px";
+        document.documentElement.style.setProperty("--dynamic-height", "64px");
+      }
+    }
+  }, [message, editor]);
+
+  // Handle blur with click outside and escape
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        pickerRef.current &&
+        buttonRef.current &&
+        !pickerRef.current.contains(event.target as Node) &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        if (showEmojiPicker) {
+          setShowEmojiPicker(false);
+        } else if (editor) {
+          editor.commands.blur();
+        }
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [showEmojiPicker, editor]);
+
+  // Cleanup debounce timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, []);
+
+  return (
+    <div
+      className="w-full bg-background/50 backdrop-blur-md"
+      style={{ height: "var(--dynamic-height, 64px)" }}
+    >
+      <div className="flex gap-2 p-4 h-full">
+        <div className="relative w-full">
+          <EditorContent editor={editor} className="w-full" />
+          {/* Show send button for mobile when there's text */}
+          {isMobileView && editor?.getText().trim() && (
+            <button
+              type="submit"
+              onClick={handleSubmit}
+              disabled={disabled || !message.trim()}
+              className="absolute right-1 bottom-1 bg-[#0A7CFF] rounded-full p-1 text-white font-bold transition-colors"
+              aria-label="Send message"
+            >
+              <Icons.arrowUp className="h-4 w-4" strokeWidth={3} />
+            </button>
+          )}
+        </div>
+        {/* Show emoji picker for desktop */}
+        {!isMobileView && (
+          <button
+            ref={buttonRef}
+            type="button"
+            onClick={async () => {
+              const nextOpenState = !showEmojiPicker;
+              if (nextOpenState) {
+                await loadEmojiPicker();
+              }
+              setShowEmojiPicker(nextOpenState);
+            }}
+            onMouseEnter={() => {
+              void loadEmojiPicker();
+            }}
+            onFocus={() => {
+              void loadEmojiPicker();
+            }}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Icons.smile className="h-5 w-5" />
+          </button>
+        )}
+        {showEmojiPicker && !isMobileView && (
+          <div
+            ref={pickerRef}
+            className="absolute bottom-12 right-0 z-50"
+            style={{ width: "352px" }}
+          >
+            {PickerComponent && emojiData ? (
+              <PickerComponent
+                data={emojiData}
+                onEmojiSelect={(emoji: { native: string }) => {
+                  if (editor) {
+                    editor.commands.insertContent(emoji.native);
+                  }
+                  setShowEmojiPicker(false);
+                }}
+                onClickOutside={() => setShowEmojiPicker(false)}
+                theme={effectiveTheme === "dark" ? "dark" : "light"}
+              />
+            ) : (
+              <div className="h-[435px] w-[352px] rounded-lg border border-muted-foreground/20 bg-background/90" />
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});

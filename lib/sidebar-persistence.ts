@@ -1,0 +1,826 @@
+/**
+ * Sidebar/View Persistence Utility
+ *
+ * Persists sidebar and view state across page refreshes using sessionStorage.
+ * State resets when the browser window is closed (matches macOS behavior).
+ *
+ * ## Design Patterns
+ *
+ * 1. **Simple enum-like values** (e.g., Finder sidebar):
+ *    Use `createSidebarPersistence()` factory with validation.
+ *
+ * 2. **Dynamic values** (e.g., Photos with collection IDs):
+ *    Use simple load/save functions that accept any string.
+ *
+ * 3. **Compound state** (e.g., Settings with category + panel):
+ *    Use JSON serialization with validation on load.
+ *
+ * ## Adding Persistence to a New App
+ *
+ * 1. Add a storage key constant below
+ * 2. Create load/save functions following existing patterns
+ * 3. In your component:
+ *    - Initialize state with loader: `useState(() => loadMyAppState())`
+ *    - Save on change: `useEffect(() => { saveMyAppState(state) }, [state])`
+ *    - Guard saves until after first render to avoid overwriting with defaults
+ */
+
+// ============================================================================
+// Storage Keys (centralized to avoid conflicts)
+// ============================================================================
+
+const STORAGE_KEYS = {
+  // Session storage (resets on window close)
+  FINDER_SIDEBAR: "finder-sidebar",
+  FINDER_PATH: "finder-path",
+  PHOTOS_VIEW: "photos-view",
+  PHOTOS_SHOW_GRID: "photos-show-grid",
+  PHOTOS_SELECTED: "photos-selected-id",
+  PHOTOS_ROTATIONS: "photos-rotations",
+  SETTINGS_STATE: "settings-state",
+  CALENDAR_VIEW: "calendar-view",
+  CALENDAR_DATE: "calendar-date",
+  CALENDAR_SCROLL: "calendar-scroll",
+  MUSIC_STATE: "music-state",
+  MUSIC_SHOW_CONTENT: "music-show-content",
+  NOTES_SELECTED: "notes-selected-slug",
+  MESSAGES_CONVERSATION: "messages-conversation",
+  WEATHER_SELECTED_CITY: "weather-selected-city",
+  WEATHER_DATA_CACHE: "weather-data-cache",
+  // Local storage (durable user content)
+  WEATHER_CUSTOM_CITIES: "weather-custom-cities",
+} as const;
+
+type StorageArea = Pick<Storage, "getItem" | "setItem" | "removeItem">;
+
+// ============================================================================
+// Generic Factory (for simple enum-like sidebar values)
+// ============================================================================
+
+interface SidebarPersistence<T extends string> {
+  load: () => T;
+  save: (value: T) => void;
+  clear: () => void;
+}
+
+/**
+ * Creates a type-safe persistence manager for sidebar state.
+ * Use this when sidebar items are a fixed set of known values.
+ *
+ * @param key - sessionStorage key
+ * @param defaultValue - fallback when no saved state exists
+ * @param validValues - array of valid values for validation
+ */
+export function createSidebarPersistence<T extends string>(
+  key: string,
+  defaultValue: T,
+  validValues: readonly T[]
+): SidebarPersistence<T> {
+  const isValid = (value: string | null): value is T => {
+    return value !== null && validValues.includes(value as T);
+  };
+
+  return {
+    load: (): T => {
+      if (typeof window === "undefined") return defaultValue;
+      try {
+        const saved = sessionStorage.getItem(key);
+        return isValid(saved) ? saved : defaultValue;
+      } catch {
+        return defaultValue;
+      }
+    },
+
+    save: (value: T): void => {
+      if (typeof window === "undefined") return;
+      try {
+        sessionStorage.setItem(key, value);
+      } catch {
+        // Ignore storage errors (e.g., quota exceeded, private browsing)
+      }
+    },
+
+    clear: (): void => {
+      if (typeof window === "undefined") return;
+      try {
+        sessionStorage.removeItem(key);
+      } catch {
+        // Ignore storage errors
+      }
+    },
+  };
+}
+
+// ============================================================================
+// Finder Persistence
+// ============================================================================
+
+// Note: SidebarItem type is defined in finder-app.tsx as the source of truth.
+// This array must match that type.
+const FINDER_SIDEBAR_ITEMS = [
+  "recents",
+  "applications",
+  "desktop",
+  "documents",
+  "downloads",
+  "projects",
+  "trash",
+] as const;
+
+type FinderSidebarItem = (typeof FINDER_SIDEBAR_ITEMS)[number];
+
+export const finderSidebarPersistence = createSidebarPersistence<FinderSidebarItem>(
+  STORAGE_KEYS.FINDER_SIDEBAR,
+  "recents",
+  FINDER_SIDEBAR_ITEMS
+);
+
+// Path persistence for full navigation path (e.g., /Users/alanagoyal/Projects/repo/folder)
+export function loadFinderPath(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return sessionStorage.getItem(STORAGE_KEYS.FINDER_PATH);
+  } catch {
+    return null;
+  }
+}
+
+export function saveFinderPath(path: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(STORAGE_KEYS.FINDER_PATH, path);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export function clearFinderState(): void {
+  finderSidebarPersistence.clear();
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(STORAGE_KEYS.FINDER_PATH);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+// ============================================================================
+// Photos Persistence
+// ============================================================================
+
+// Photos accepts dynamic collection IDs, so we can't use the factory.
+// Any non-empty string is valid (library, favorites, or collection IDs).
+
+export function loadPhotosView(): string {
+  if (typeof window === "undefined") return "library";
+  try {
+    return sessionStorage.getItem(STORAGE_KEYS.PHOTOS_VIEW) || "library";
+  } catch {
+    return "library";
+  }
+}
+
+export function savePhotosView(view: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(STORAGE_KEYS.PHOTOS_VIEW, view);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export function loadPhotosShowGrid(storage?: StorageArea): boolean {
+  const target = getPhotosSessionStorage(storage);
+  if (!target) return true;
+
+  try {
+    return target.getItem(STORAGE_KEYS.PHOTOS_SHOW_GRID) !== "false";
+  } catch {
+    return true;
+  }
+}
+
+export function savePhotosShowGrid(
+  showGrid: boolean,
+  storage?: StorageArea,
+): void {
+  const target = getPhotosSessionStorage(storage);
+  if (!target) return;
+
+  try {
+    target.setItem(STORAGE_KEYS.PHOTOS_SHOW_GRID, String(showGrid));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export function loadPhotosSelectedId(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return sessionStorage.getItem(STORAGE_KEYS.PHOTOS_SELECTED);
+  } catch {
+    return null;
+  }
+}
+
+export function savePhotosSelectedId(photoId: string | null): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (photoId) {
+      sessionStorage.setItem(STORAGE_KEYS.PHOTOS_SELECTED, photoId);
+    } else {
+      sessionStorage.removeItem(STORAGE_KEYS.PHOTOS_SELECTED);
+    }
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export type PhotoRotations = Record<string, number>;
+
+function getPhotosSessionStorage(storage?: StorageArea): StorageArea | null {
+  if (storage) return storage;
+  if (typeof window === "undefined") return null;
+
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+export function loadPhotosRotations(storage?: StorageArea): PhotoRotations {
+  const target = getPhotosSessionStorage(storage);
+  if (!target) return {};
+
+  try {
+    const saved = target.getItem(STORAGE_KEYS.PHOTOS_ROTATIONS);
+    if (!saved) return {};
+
+    const parsed: unknown = JSON.parse(saved);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return {};
+    }
+
+    return Object.fromEntries(
+      Object.entries(parsed).filter(
+        ([photoId, rotation]) =>
+          photoId.length > 0 &&
+          typeof rotation === "number" &&
+          Number.isFinite(rotation) &&
+          rotation % 90 === 0,
+      ),
+    );
+  } catch {
+    return {};
+  }
+}
+
+export function savePhotosRotations(
+  rotations: PhotoRotations,
+  storage?: StorageArea,
+): void {
+  const target = getPhotosSessionStorage(storage);
+  if (!target) return;
+
+  try {
+    target.setItem(STORAGE_KEYS.PHOTOS_ROTATIONS, JSON.stringify(rotations));
+  } catch {
+    // Ignore storage errors (e.g., quota exceeded, private browsing)
+  }
+}
+
+export function clearPhotosState(storage?: StorageArea): void {
+  const target = getPhotosSessionStorage(storage);
+  if (!target) return;
+
+  try {
+    target.removeItem(STORAGE_KEYS.PHOTOS_VIEW);
+    target.removeItem(STORAGE_KEYS.PHOTOS_SHOW_GRID);
+    target.removeItem(STORAGE_KEYS.PHOTOS_SELECTED);
+    target.removeItem(STORAGE_KEYS.PHOTOS_ROTATIONS);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+// ============================================================================
+// Settings Persistence
+// ============================================================================
+
+// Note: SettingsCategory and SettingsPanel types are defined in settings-app.tsx.
+// These arrays must match those types.
+const SETTINGS_CATEGORIES = ["general", "appearance", "wallpaper", "wifi", "bluetooth", "focus", "menu-bar"] as const;
+const SETTINGS_PANELS = ["about", "personal-info", "storage"] as const;
+
+type SettingsCategory = (typeof SETTINGS_CATEGORIES)[number];
+type SettingsPanel = (typeof SETTINGS_PANELS)[number] | null;
+
+interface SettingsState {
+  category: SettingsCategory;
+  panel: SettingsPanel;
+}
+
+export function loadSettingsState(): SettingsState {
+  const defaultState: SettingsState = { category: "general", panel: null };
+
+  if (typeof window === "undefined") return defaultState;
+
+  try {
+    const saved = sessionStorage.getItem(STORAGE_KEYS.SETTINGS_STATE);
+    if (!saved) return defaultState;
+
+    const parsed = JSON.parse(saved);
+
+    // Validate category
+    const category: SettingsCategory = SETTINGS_CATEGORIES.includes(parsed.category)
+      ? parsed.category
+      : "general";
+
+    // Validate panel (null is valid)
+    const panel: SettingsPanel =
+      parsed.panel === null || SETTINGS_PANELS.includes(parsed.panel)
+        ? parsed.panel
+        : null;
+
+    return { category, panel };
+  } catch {
+    return defaultState;
+  }
+}
+
+export function saveSettingsState(
+  category: SettingsCategory,
+  panel: SettingsPanel
+): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(
+      STORAGE_KEYS.SETTINGS_STATE,
+      JSON.stringify({ category, panel })
+    );
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export function clearSettingsState(): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(STORAGE_KEYS.SETTINGS_STATE);
+    // Note: WiFi/Bluetooth toggles are managed by SystemSettingsContext and persist until user changes them
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+// ============================================================================
+// App Close Handler
+// Called when an app window is closed (not minimized) to reset sidebar state
+// ============================================================================
+
+export function clearCalendarState(): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(STORAGE_KEYS.CALENDAR_VIEW);
+    sessionStorage.removeItem(STORAGE_KEYS.CALENDAR_DATE);
+    sessionStorage.removeItem(STORAGE_KEYS.CALENDAR_SCROLL);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+// ============================================================================
+// Music Persistence
+// ============================================================================
+
+import type { MusicView } from "@/components/apps/music/types";
+import { clearItermStorage } from "@/components/apps/iterm/terminal";
+import { clearNotesDisplayPreferences } from "@/lib/notes/display-preferences";
+import { clearNotesSelectedSlugMemory } from "@/lib/notes/selection-state";
+
+// Valid views for validation - must match MusicView type
+const MUSIC_VIEWS: readonly MusicView[] = [
+  "home",
+  "browse",
+  "artists",
+  "albums",
+  "songs",
+  "playlist",
+];
+
+interface MusicState {
+  view: MusicView;
+  playlistId: string | null;
+}
+
+export function loadMusicState(): MusicState {
+  const defaultState: MusicState = { view: "home", playlistId: null };
+
+  if (typeof window === "undefined") return defaultState;
+
+  try {
+    const saved = sessionStorage.getItem(STORAGE_KEYS.MUSIC_STATE);
+    if (!saved) return defaultState;
+
+    const parsed = JSON.parse(saved);
+
+    // Validate view
+    const view: MusicView = MUSIC_VIEWS.includes(parsed.view)
+      ? parsed.view
+      : "home";
+
+    // playlistId can be any string or null
+    const playlistId: string | null =
+      typeof parsed.playlistId === "string" ? parsed.playlistId : null;
+
+    return { view, playlistId };
+  } catch {
+    return defaultState;
+  }
+}
+
+export function saveMusicState(view: MusicView, playlistId: string | null): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(
+      STORAGE_KEYS.MUSIC_STATE,
+      JSON.stringify({ view, playlistId })
+    );
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export function loadMusicShowContent(storage?: StorageArea): boolean {
+  try {
+    const target =
+      storage ?? (typeof window !== "undefined" ? window.sessionStorage : null);
+    if (!target) return true;
+    return target.getItem(STORAGE_KEYS.MUSIC_SHOW_CONTENT) !== "false";
+  } catch {
+    return true;
+  }
+}
+
+export function saveMusicShowContent(
+  showContent: boolean,
+  storage?: StorageArea,
+): void {
+  try {
+    const target =
+      storage ?? (typeof window !== "undefined" ? window.sessionStorage : null);
+    if (!target) return;
+    target.setItem(STORAGE_KEYS.MUSIC_SHOW_CONTENT, String(showContent));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export function clearMusicState(storage?: StorageArea): void {
+  try {
+    const target =
+      storage ?? (typeof window !== "undefined" ? window.sessionStorage : null);
+    if (!target) return;
+    target.removeItem(STORAGE_KEYS.MUSIC_STATE);
+    target.removeItem(STORAGE_KEYS.MUSIC_SHOW_CONTENT);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+// ============================================================================
+// Notes Persistence
+// ============================================================================
+
+export function loadNotesSelectedSlug(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return sessionStorage.getItem(STORAGE_KEYS.NOTES_SELECTED);
+  } catch {
+    return null;
+  }
+}
+
+export function saveNotesSelectedSlug(slug: string | null): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (slug) {
+      sessionStorage.setItem(STORAGE_KEYS.NOTES_SELECTED, slug);
+    } else {
+      sessionStorage.removeItem(STORAGE_KEYS.NOTES_SELECTED);
+    }
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export function clearNotesState(): void {
+  clearNotesSelectedSlugMemory();
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(STORAGE_KEYS.NOTES_SELECTED);
+    clearNotesDisplayPreferences(sessionStorage);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+// ============================================================================
+// Messages Persistence
+// ============================================================================
+
+// Messages uses dynamic conversation IDs, similar to Photos.
+
+export function loadMessagesConversation(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return sessionStorage.getItem(STORAGE_KEYS.MESSAGES_CONVERSATION);
+  } catch {
+    return null;
+  }
+}
+
+export function saveMessagesConversation(id: string | null): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (id) {
+      sessionStorage.setItem(STORAGE_KEYS.MESSAGES_CONVERSATION, id);
+    } else {
+      sessionStorage.removeItem(STORAGE_KEYS.MESSAGES_CONVERSATION);
+    }
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export function clearMessagesState(): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(STORAGE_KEYS.MESSAGES_CONVERSATION);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+// ============================================================================
+// Weather Persistence
+// ============================================================================
+
+export interface WeatherCustomCity {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+}
+
+export interface WeatherCachedHourForecast {
+  time: string;
+  temperature: number;
+  weatherCode: number;
+  precipitationChance: number;
+}
+
+export interface WeatherCachedDailyForecast {
+  date: string;
+  high: number;
+  low: number;
+  weatherCode: number;
+  precipitationChance: number;
+}
+
+export interface WeatherCachedCity {
+  cityId: string;
+  cityName: string;
+  currentTime: string;
+  currentTemp: number;
+  weatherCode: number;
+  high: number;
+  low: number;
+  feelsLike: number;
+  humidity: number;
+  windMph: number;
+  sunrise?: string;
+  sunset?: string;
+  hourly: WeatherCachedHourForecast[];
+  daily: WeatherCachedDailyForecast[];
+  updatedAt: string;
+}
+
+export type WeatherDataCache = Record<string, WeatherCachedCity>;
+
+function parseWeatherCustomCities(payload: string | null): WeatherCustomCity[] {
+  if (!payload) return [];
+
+  try {
+    const parsed = JSON.parse(payload);
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed.filter((city): city is WeatherCustomCity => {
+      return (
+        city &&
+        typeof city === "object" &&
+        typeof city.id === "string" &&
+        typeof city.name === "string" &&
+        typeof city.latitude === "number" &&
+        Number.isFinite(city.latitude) &&
+        typeof city.longitude === "number" &&
+        Number.isFinite(city.longitude)
+      );
+    });
+  } catch {
+    return [];
+  }
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function isValidWeatherHour(value: unknown): value is WeatherCachedHourForecast {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<WeatherCachedHourForecast>;
+  return (
+    typeof candidate.time === "string" &&
+    isFiniteNumber(candidate.temperature) &&
+    isFiniteNumber(candidate.weatherCode) &&
+    isFiniteNumber(candidate.precipitationChance)
+  );
+}
+
+function isValidWeatherDay(value: unknown): value is WeatherCachedDailyForecast {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<WeatherCachedDailyForecast>;
+  return (
+    typeof candidate.date === "string" &&
+    isFiniteNumber(candidate.high) &&
+    isFiniteNumber(candidate.low) &&
+    isFiniteNumber(candidate.weatherCode) &&
+    isFiniteNumber(candidate.precipitationChance)
+  );
+}
+
+function isValidWeatherCacheEntry(value: unknown): value is WeatherCachedCity {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<WeatherCachedCity>;
+  return (
+    typeof candidate.cityId === "string" &&
+    typeof candidate.cityName === "string" &&
+    typeof candidate.currentTime === "string" &&
+    isFiniteNumber(candidate.currentTemp) &&
+    isFiniteNumber(candidate.weatherCode) &&
+    isFiniteNumber(candidate.high) &&
+    isFiniteNumber(candidate.low) &&
+    isFiniteNumber(candidate.feelsLike) &&
+    isFiniteNumber(candidate.humidity) &&
+    isFiniteNumber(candidate.windMph) &&
+    (candidate.sunrise === undefined || typeof candidate.sunrise === "string") &&
+    (candidate.sunset === undefined || typeof candidate.sunset === "string") &&
+    typeof candidate.updatedAt === "string" &&
+    Array.isArray(candidate.hourly) &&
+    candidate.hourly.every(isValidWeatherHour) &&
+    Array.isArray(candidate.daily) &&
+    candidate.daily.every(isValidWeatherDay)
+  );
+}
+
+export function loadWeatherCustomCities(): WeatherCustomCity[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const localSaved = localStorage.getItem(STORAGE_KEYS.WEATHER_CUSTOM_CITIES);
+    const localCities = parseWeatherCustomCities(localSaved);
+    if (localCities.length > 0 || localSaved === "[]") {
+      return localCities;
+    }
+
+    // One-time migration from older sessionStorage implementation.
+    const legacySessionSaved = sessionStorage.getItem(STORAGE_KEYS.WEATHER_CUSTOM_CITIES);
+    const migratedCities = parseWeatherCustomCities(legacySessionSaved);
+    if (migratedCities.length > 0 || legacySessionSaved === "[]") {
+      localStorage.setItem(
+        STORAGE_KEYS.WEATHER_CUSTOM_CITIES,
+        JSON.stringify(migratedCities)
+      );
+      sessionStorage.removeItem(STORAGE_KEYS.WEATHER_CUSTOM_CITIES);
+      return migratedCities;
+    }
+
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveWeatherCustomCities(cities: WeatherCustomCity[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(STORAGE_KEYS.WEATHER_CUSTOM_CITIES, JSON.stringify(cities));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export function loadWeatherSelectedCity(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return sessionStorage.getItem(STORAGE_KEYS.WEATHER_SELECTED_CITY);
+  } catch {
+    return null;
+  }
+}
+
+export function saveWeatherSelectedCity(cityId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(STORAGE_KEYS.WEATHER_SELECTED_CITY, cityId);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export function loadWeatherDataCache(): WeatherDataCache {
+  if (typeof window === "undefined") return {};
+  try {
+    const payload = sessionStorage.getItem(STORAGE_KEYS.WEATHER_DATA_CACHE);
+    if (!payload) return {};
+
+    const parsed = JSON.parse(payload);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+
+    const cache: WeatherDataCache = {};
+    for (const [cityId, value] of Object.entries(parsed)) {
+      if (!isValidWeatherCacheEntry(value)) continue;
+      cache[cityId] = value;
+    }
+    return cache;
+  } catch {
+    return {};
+  }
+}
+
+export function saveWeatherDataCache(cache: WeatherDataCache): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(STORAGE_KEYS.WEATHER_DATA_CACHE, JSON.stringify(cache));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export function clearWeatherState(): void {
+  if (typeof window === "undefined") return;
+  try {
+    // Keep WEATHER_CUSTOM_CITIES (localStorage) since it's user-created content.
+    // Keep WEATHER_DATA_CACHE so weather can render instantly after refresh/reopen.
+    // Only clear volatile weather view state on app close.
+    sessionStorage.removeItem(STORAGE_KEYS.WEATHER_SELECTED_CITY);
+    // Legacy cleanup for older sessionStorage key.
+    sessionStorage.removeItem(STORAGE_KEYS.WEATHER_CUSTOM_CITIES);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export function clearAppState(appId: string): void {
+  switch (appId) {
+    case "finder":
+      clearFinderState();
+      break;
+    case "photos":
+      clearPhotosState();
+      break;
+    case "settings":
+      clearSettingsState();
+      break;
+    case "calendar":
+      clearCalendarState();
+      break;
+    case "music":
+      clearMusicState();
+      break;
+    case "notes":
+      clearNotesState();
+      break;
+    case "messages":
+      clearMessagesState();
+      break;
+    case "weather":
+      clearWeatherState();
+      break;
+    case "iterm":
+      clearItermStorage();
+      break;
+  }
+}
+
+export function clearAllAppState(): void {
+  clearFinderState();
+  clearPhotosState();
+  clearSettingsState();
+  clearCalendarState();
+  clearMusicState();
+  clearNotesState();
+  clearMessagesState();
+  clearWeatherState();
+  clearItermStorage();
+}

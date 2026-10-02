@@ -1,0 +1,1541 @@
+"use client";
+
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import Image from "next/image";
+import { useWindowFocus } from "@/lib/window-focus-context";
+import { useRecents } from "@/lib/recents-context";
+import { cn } from "@/lib/utils";
+import { FinderNav } from "./nav";
+import { APPS } from "@/lib/app-config";
+import {
+  HOME_DIR,
+  LOCAL_FINDER_FILES,
+  getAllLocalFinderFiles,
+  getLocalFinderFiles,
+  getLocalTextFileContent,
+  PROJECTS_DIR,
+} from "@/lib/file-route-utils";
+import { getFinderVisibleApps } from "@/lib/app-availability";
+import {
+  getFileModifiedDate,
+  TEXTEDIT_DOCUMENTS_CHANGED_EVENT,
+} from "@/lib/file-storage";
+import { loadFinderPath, saveFinderPath } from "@/lib/sidebar-persistence";
+import { getPreviewMetadataFromPath } from "@/lib/preview-utils";
+import {
+  fetchGitHubFileContentOrNull,
+  fetchGitHubRecentFiles,
+  fetchGitHubRepoTree,
+  fetchGitHubRepos,
+  getCachedRepoTrees,
+  prefetchAllRepoTrees,
+  type GitHubRecentFile,
+} from "@/lib/github-client";
+import { useRouter } from "next/navigation";
+import { FinderSearchEngine, type EntryInput } from "./search-engine";
+import type { FinderViewMode } from "./view-mode";
+import { getFinderPathSegments } from "@/lib/finder-path";
+
+const USERNAME = HOME_DIR.split("/").pop() ?? "alanagoyal";
+
+interface FileItem {
+  name: string;
+  type: "file" | "dir" | "app";
+  path: string;
+  icon?: string;
+  displayName?: string;
+}
+
+// Sidebar items
+export type SidebarItem = "recents" | "applications" | "desktop" | "documents" | "downloads" | "projects" | "trash";
+
+const SIDEBAR_ITEMS: { id: SidebarItem; label: string; icon: string }[] = [
+  { id: "recents", label: "Recents", icon: "clock" },
+  { id: "applications", label: "Applications", icon: "grid" },
+  { id: "desktop", label: "Desktop", icon: "desktop" },
+  { id: "documents", label: "Documents", icon: "document" },
+  { id: "downloads", label: "Downloads", icon: "download" },
+  { id: "projects", label: "Projects", icon: "code" },
+  { id: "trash", label: "Trash", icon: "trash" },
+];
+
+// Mock deleted files for Trash
+const TRASH_FILES: FileItem[] = [
+  { name: "old-notes.md", type: "file", path: "trash/old-notes.md" },
+  { name: "draft-v1.tsx", type: "file", path: "trash/draft-v1.tsx" },
+  { name: "unused-assets", type: "dir", path: "trash/unused-assets" },
+  { name: "backup-2024", type: "dir", path: "trash/backup-2024" },
+  { name: "config.old.json", type: "file", path: "trash/config.old.json" },
+];
+
+interface FinderAppProps {
+  inShell?: boolean;
+  viewMode?: FinderViewMode;
+  onViewModeChange?: (mode: FinderViewMode) => void;
+  showStatusBar?: boolean;
+  showPathBar?: boolean;
+  onOpenApp?: (appId: string) => void;
+  onOpenTextFile?: (filePath: string, content: string) => void;
+  onOpenPreviewFile?: (filePath: string, fileUrl: string, fileType: "image" | "pdf") => void;
+  initialPath?: string;
+  onPathChange?: (path: string) => void;
+}
+
+// Image extensions that should open in Preview
+const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico"];
+
+function isImageFile(filename: string): boolean {
+  const ext = filename.split(".").pop()?.toLowerCase() || "";
+  return IMAGE_EXTENSIONS.includes(ext);
+}
+
+function isPdfFile(filename: string): boolean {
+  const ext = filename.split(".").pop()?.toLowerCase() || "";
+  return ext === "pdf";
+}
+
+// Preview handles images and PDFs
+function isPreviewFile(filename: string): boolean {
+  return isImageFile(filename) || isPdfFile(filename);
+}
+// Icon component
+function FileIcon({ type, name, icon, className }: { type: "file" | "dir" | "app"; name: string; icon?: string; className?: string }) {
+  // File type icons based on extension
+  const getFileIcon = () => {
+    if (type === "dir") {
+      return (
+        <svg className={cn("text-blue-500", className)} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
+        </svg>
+      );
+    }
+    if (type === "app") {
+      const cleanName = name.replace(/\.app$/i, '');
+
+      // Use the passed icon prop if available, otherwise look up by name
+      const appIcon = icon || APPS.find(a => {
+        return a.name === cleanName || a.id === cleanName.toLowerCase();
+      })?.icon;
+      if (appIcon) {
+        return (
+          <Image
+            src={appIcon}
+            alt={name}
+            width={48}
+            height={48}
+            className={className}
+          />
+        );
+      }
+    }
+    // File icon
+    const ext = name.split('.').pop()?.toLowerCase();
+    let color = "text-zinc-400";
+    if (ext === "md") color = "text-blue-400";
+    else if (ext === "ts" || ext === "tsx") color = "text-blue-600";
+    else if (ext === "js" || ext === "jsx") color = "text-yellow-500";
+    else if (ext === "json") color = "text-green-500";
+    else if (ext === "css") color = "text-pink-500";
+
+    return (
+      <svg className={cn(color, className)} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z" />
+      </svg>
+    );
+  };
+
+  return getFileIcon();
+}
+
+// Sidebar icon component
+function SidebarIcon({ icon, className }: { icon: string; className?: string }) {
+  const icons: Record<string, JSX.Element> = {
+    clock: (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 6v6l4 2" />
+      </svg>
+    ),
+    grid: (
+      <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M4 4h4v4H4V4zm6 0h4v4h-4V4zm6 0h4v4h-4V4zM4 10h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 16h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z" />
+      </svg>
+    ),
+    desktop: (
+      <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M21 2H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7v2H8v2h8v-2h-2v-2h7c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H3V4h18v12z" />
+      </svg>
+    ),
+    folder: (
+      <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
+      </svg>
+    ),
+    document: (
+      <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z" />
+      </svg>
+    ),
+    download: (
+      <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
+      </svg>
+    ),
+    code: (
+      <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z" />
+      </svg>
+    ),
+    trash: (
+      <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
+      </svg>
+    ),
+  };
+  return icons[icon] || null;
+}
+
+export function FinderApp({
+  inShell = false,
+  viewMode: controlledViewMode,
+  onViewModeChange,
+  showStatusBar = false,
+  showPathBar = false,
+  onOpenApp,
+  onOpenTextFile,
+  onOpenPreviewFile,
+  initialPath,
+  onPathChange,
+}: FinderAppProps) {
+  const router = useRouter();
+  const windowFocus = useWindowFocus();
+  const { recents, addRecent, fileModifiedVersion } = useRecents();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Map sidebar item to its base path
+  const getPathForSidebarItem = useCallback((tab: SidebarItem): string => {
+    switch (tab) {
+      case "recents": return "recents";
+      case "applications": return "applications";
+      case "desktop": return `${HOME_DIR}/Desktop`;
+      case "documents": return `${HOME_DIR}/Documents`;
+      case "downloads": return `${HOME_DIR}/Downloads`;
+      case "projects": return PROJECTS_DIR;
+      case "trash": return "trash";
+      default: return "recents";
+    }
+  }, []);
+
+  // Derive sidebar item from a path (inverse of getPathForSidebarItem)
+  const getSidebarForPath = (path: string): SidebarItem => {
+    if (path === "recents") return "recents";
+    if (path === "applications") return "applications";
+    if (path === "trash" || path.startsWith("trash/")) return "trash";
+    if (path === `${HOME_DIR}/Desktop` || path.startsWith(`${HOME_DIR}/Desktop/`)) return "desktop";
+    if (path === `${HOME_DIR}/Documents` || path.startsWith(`${HOME_DIR}/Documents/`)) return "documents";
+    if (path === `${HOME_DIR}/Downloads` || path.startsWith(`${HOME_DIR}/Downloads/`)) return "downloads";
+    if (path === PROJECTS_DIR || path.startsWith(`${PROJECTS_DIR}/`)) return "projects";
+    return "recents";
+  };
+
+  // Desktop shell windows are path-driven; standalone Finder keeps its persisted path.
+  const getInitialPath = (): string => {
+    if (initialPath) return initialPath;
+    if (!inShell) {
+      return loadFinderPath() || "recents";
+    }
+    return "recents";
+  };
+
+  const [currentPath, setCurrentPathRaw] = useState(getInitialPath);
+  const [pathHistory, setPathHistory] = useState<string[]>(() => [getInitialPath()]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+  const [selectedSidebar, setSelectedSidebar] = useState<SidebarItem>(() => getSidebarForPath(currentPath));
+  const [files, setFiles] = useState<FileItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [previewContent, setPreviewContent] = useState<string | null>(null);
+  const [standaloneViewMode, setStandaloneViewMode] = useState<FinderViewMode>("list");
+  const viewMode = controlledViewMode ?? standaloneViewMode;
+  const setViewMode = useCallback((mode: FinderViewMode) => {
+    if (onViewModeChange) {
+      onViewModeChange(mode);
+      return;
+    }
+    setStandaloneViewMode(mode);
+  }, [onViewModeChange]);
+  const [showViewDropdown, setShowViewDropdown] = useState(false);
+  const [githubRecentFiles, setGithubRecentFiles] = useState<GitHubRecentFile[]>([]);
+  const [textEditDocumentsVersion, setTextEditDocumentsVersion] = useState(0);
+
+  const [searchActive, setSearchActive] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchScope, setSearchScope] = useState<"current" | "all">("all");
+  const [searchHighlightIndex, setSearchHighlightIndex] = useState(-1);
+  const [searchIndexSize, setSearchIndexSize] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchResultsRef = useRef<HTMLDivElement>(null);
+  const searchPrefetchStartedRef = useRef(false);
+  const searchEngine = useMemo(() => new FinderSearchEngine(), []);
+
+  const historyIndexRef = useRef(historyIndex);
+  historyIndexRef.current = historyIndex;
+  const currentPathRef = useRef(currentPath);
+  currentPathRef.current = currentPath;
+  const lastReportedPathRef = useRef<string | null>(null);
+
+  const setCurrentPath = useCallback((path: string) => {
+    if (path === currentPathRef.current) return;
+    setCurrentPathRaw(path);
+    setPathHistory((prev) => [...prev.slice(0, historyIndexRef.current + 1), path]);
+    setHistoryIndex((prev) => prev + 1);
+  }, []);
+
+  const canGoForward = historyIndex < pathHistory.length - 1;
+  const finderVisibleApps = useMemo(() => getFinderVisibleApps("desktop"), []);
+
+  const handleForward = useCallback(() => {
+    if (!canGoForward) return;
+    const nextIndex = historyIndex + 1;
+    setHistoryIndex(nextIndex);
+    setCurrentPathRaw(pathHistory[nextIndex]);
+    setSelectedSidebar(getSidebarForPath(pathHistory[nextIndex]));
+  }, [canGoForward, historyIndex, pathHistory]);
+
+  const inDesktopShell = !!(inShell && windowFocus);
+
+  // Load files for current path
+  const loadFiles = useCallback(async (path: string) => {
+    setLoading(true);
+    setPreviewContent(null);
+
+    try {
+      // Special handling for Recents - handled separately via useEffect
+      if (path === "recents") {
+        setLoading(false);
+        return;
+      }
+
+      // Special handling for Applications
+      if (path === "applications") {
+        const apps: FileItem[] = finderVisibleApps
+          .map(app => ({
+            name: app.name,
+            type: "app" as const,
+            path: `/${app.id}`, // Route path for navigation
+            icon: app.icon,
+          }));
+        setFiles(apps);
+        setLoading(false);
+        return;
+      }
+
+      // Special handling for Trash
+      if (path === "trash") {
+        setFiles(TRASH_FILES);
+        setLoading(false);
+        return;
+      }
+
+      // Handle trash subdirectories (show as empty for mock data)
+      if (path.startsWith("trash/")) {
+        setFiles([]);
+        setLoading(false);
+        return;
+      }
+
+      // Projects directory - fetch from GitHub
+      if (path === PROJECTS_DIR) {
+        const repos = await fetchGitHubRepos();
+        setFiles(repos.map(repo => ({
+          name: repo,
+          type: "dir" as const,
+          path: `${PROJECTS_DIR}/${repo}`,
+        })));
+        setLoading(false);
+        return;
+      }
+
+      // Inside a GitHub repo
+      if (path.startsWith(PROJECTS_DIR + "/")) {
+        const relativePath = path.slice(PROJECTS_DIR.length + 1);
+        const parts = relativePath.split("/");
+        const repo = parts[0];
+        const repoPath = parts.slice(1).join("/");
+
+        const tree = await fetchGitHubRepoTree(repo);
+
+        // Filter to show only items at current level
+        const items = tree.filter(item => {
+          if (!repoPath) {
+            return !item.path.includes("/");
+          }
+          if (!item.path.startsWith(repoPath + "/")) {
+            return false;
+          }
+          const remaining = item.path.slice(repoPath.length + 1);
+          return remaining && !remaining.includes("/");
+        });
+
+        setFiles(items.map(item => ({
+          name: item.name,
+          type: item.type,
+          path: `${PROJECTS_DIR}/${repo}/${item.path}`,
+        })));
+        setLoading(false);
+        return;
+      }
+
+      // Static file system
+      if (LOCAL_FINDER_FILES[path]) {
+        setFiles(getLocalFinderFiles(path));
+      } else {
+        setFiles([]);
+      }
+    } catch {
+      setFiles([]);
+    }
+
+    setLoading(false);
+  }, [finderVisibleApps]);
+
+  // Load files when path changes
+  useEffect(() => {
+    loadFiles(currentPath);
+  }, [currentPath, loadFiles]);
+
+  useEffect(() => {
+    const handleTextEditDocumentsChanged = () => {
+      setTextEditDocumentsVersion((version) => version + 1);
+      void loadFiles(currentPathRef.current);
+    };
+
+    window.addEventListener(TEXTEDIT_DOCUMENTS_CHANGED_EVENT, handleTextEditDocumentsChanged);
+    return () => window.removeEventListener(TEXTEDIT_DOCUMENTS_CHANGED_EVENT, handleTextEditDocumentsChanged);
+  }, [loadFiles]);
+
+  // Desktop windows sync path back into window metadata; standalone Finder keeps the legacy session path.
+  useEffect(() => {
+    if (lastReportedPathRef.current !== currentPath) {
+      onPathChange?.(currentPath);
+      lastReportedPathRef.current = currentPath;
+    }
+    if (!inShell) {
+      saveFinderPath(currentPath);
+    }
+  }, [currentPath, inShell, onPathChange]);
+
+  // Fetch GitHub files when entering Recents (only fetches, doesn't sort)
+  useEffect(() => {
+    if (currentPath !== "recents") return;
+
+    const abortController = new AbortController();
+    let cancelled = false;
+
+    const fetchGithubData = async () => {
+      setLoading(true);
+      try {
+        const files = await fetchGitHubRecentFiles(abortController.signal);
+        if (!cancelled) {
+          setGithubRecentFiles(files);
+        }
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") return;
+        // Silently handle fetch errors - will show empty recents
+      }
+      if (!cancelled) setLoading(false);
+    };
+
+    fetchGithubData();
+    return () => {
+      cancelled = true;
+      abortController.abort();
+    };
+  }, [currentPath]);
+
+  // Compute sorted recents from GitHub files + local recents (re-sorts when either changes)
+  const sortedRecentFiles = useMemo(() => {
+    // Force recalculation when file modified timestamps are bumped via context.
+    void fileModifiedVersion;
+    const allFiles: Array<{ file: FileItem; timestamp: number }> = [];
+    const seenPaths = new Set<string>();
+
+    // Add GitHub files
+    for (const gf of githubRecentFiles) {
+      const fullPath = `${PROJECTS_DIR}/${gf.repo}/${gf.path}`;
+      const githubTime = new Date(gf.modifiedAt).getTime();
+      const textEditTime = getFileModifiedDate(fullPath);
+      const effectiveTime = textEditTime && textEditTime > githubTime ? textEditTime : githubTime;
+
+      seenPaths.add(fullPath);
+      allFiles.push({
+        file: {
+          name: gf.path.split("/").pop() || gf.path,
+          type: "file" as const,
+          path: fullPath,
+        },
+        timestamp: effectiveTime,
+      });
+    }
+
+    // Add local recents not in GitHub files
+    for (const r of recents) {
+      if (!seenPaths.has(r.path)) {
+        const textEditTime = getFileModifiedDate(r.path);
+        const effectiveTime = textEditTime || r.accessedAt;
+        allFiles.push({
+          file: { name: r.name, type: r.type, path: r.path },
+          timestamp: effectiveTime,
+        });
+      }
+    }
+
+    // Sort by timestamp (most recent first)
+    allFiles.sort((a, b) => b.timestamp - a.timestamp);
+
+    // Disambiguate duplicate file names by walking up the path
+    const nameCount = new Map<string, number>();
+    for (const entry of allFiles) {
+      nameCount.set(entry.file.name, (nameCount.get(entry.file.name) || 0) + 1);
+    }
+    const dupes = allFiles.filter(e => (nameCount.get(e.file.name) || 0) > 1);
+    if (dupes.length > 0) {
+      const segments = dupes.map(e => e.file.path.split("/"));
+      // Walk up from parent dir until all display names are unique
+      for (let depth = 2; depth <= Math.max(...segments.map(s => s.length)); depth++) {
+        const names = segments.map(s =>
+          s.length >= depth ? s.slice(-depth).join("/") : s.join("/")
+        );
+        const unique = new Set(names).size === names.length;
+        if (unique) {
+          dupes.forEach((entry, i) => {
+            entry.file = { ...entry.file, displayName: names[i] };
+          });
+          break;
+        }
+      }
+    }
+
+    return allFiles.map(f => f.file);
+  }, [githubRecentFiles, recents, fileModifiedVersion]);
+
+  // Update files state when viewing Recents
+  useEffect(() => {
+    if (currentPath === "recents") {
+      setFiles(sortedRecentFiles);
+    }
+  }, [currentPath, sortedRecentFiles]);
+
+  useEffect(() => {
+    const entries: EntryInput[] = [];
+
+    for (const items of Object.values(getAllLocalFinderFiles())) {
+      for (const item of items) {
+        const section: SidebarItem = item.path.includes("/Desktop")
+          ? "desktop"
+          : item.path.includes("/Documents")
+            ? "documents"
+            : item.path.includes("/Downloads")
+              ? "downloads"
+              : item.path.includes("/Projects")
+                ? "projects"
+                : "desktop";
+        entries.push({ ...item, section });
+      }
+    }
+
+    for (const item of TRASH_FILES) {
+      entries.push({ ...item, section: "trash" });
+    }
+
+    for (const app of finderVisibleApps) {
+      entries.push({
+        name: app.name,
+        type: "app",
+        path: `/${app.id}`,
+        icon: app.icon,
+        section: "applications",
+      });
+    }
+
+    for (const [repo, tree] of Object.entries(getCachedRepoTrees())) {
+      const basePath = `${PROJECTS_DIR}/${repo}`;
+      entries.push({ name: repo, type: "dir", path: basePath, section: "projects" });
+      for (const item of tree) {
+        entries.push({
+          name: item.name,
+          type: item.type,
+          path: `${basePath}/${item.path}`,
+          section: "projects",
+        });
+      }
+    }
+
+    searchEngine.buildIndex(entries);
+    setSearchIndexSize(searchEngine.version);
+  }, [searchEngine, finderVisibleApps, textEditDocumentsVersion]);
+
+  useEffect(() => {
+    if (!searchActive || searchPrefetchStartedRef.current) return;
+    searchPrefetchStartedRef.current = true;
+    let cancelled = false;
+
+    const repoEntry = (repo: string): EntryInput => ({
+      name: repo, type: "dir", path: `${PROJECTS_DIR}/${repo}`, section: "projects",
+    });
+
+    const hydrateProjectsIndex = async () => {
+      try {
+        const repos = await fetchGitHubRepos();
+        if (cancelled) return;
+        searchEngine.addEntries(repos.map(repoEntry));
+        setSearchIndexSize(searchEngine.version);
+
+        await prefetchAllRepoTrees();
+        if (cancelled) return;
+
+        const projectEntries: EntryInput[] = [];
+        for (const [repo, tree] of Object.entries(getCachedRepoTrees())) {
+          const basePath = `${PROJECTS_DIR}/${repo}`;
+          projectEntries.push(repoEntry(repo));
+          for (const item of tree) {
+            projectEntries.push({
+              name: item.name,
+              type: item.type,
+              path: `${basePath}/${item.path}`,
+              section: "projects",
+            });
+          }
+        }
+
+        searchEngine.addEntries(projectEntries);
+        setSearchIndexSize(searchEngine.version);
+      } catch {
+        // Ignore network failures and preserve partial index results.
+      }
+    };
+
+    void hydrateProjectsIndex();
+    return () => {
+      cancelled = true;
+    };
+  }, [searchActive, searchEngine]);
+
+  const computedSearchResults = useMemo(() => {
+    void searchIndexSize;
+    if (!searchActive || !searchQuery) return [];
+
+    if (searchScope === "current" && selectedSidebar === "recents") {
+      const allResults = searchEngine.search({ query: searchQuery, scope: "all" });
+      const recentPaths = new Set(files.map((f) => f.path));
+      return allResults.filter((r) => recentPaths.has(r.entry.path));
+    }
+
+    return searchEngine.search({
+      query: searchQuery,
+      scope: searchScope,
+      section: searchScope === "current" ? selectedSidebar : undefined,
+    });
+  }, [searchQuery, searchScope, selectedSidebar, searchActive, searchIndexSize, files, searchEngine]);
+
+  useEffect(() => {
+    setSearchHighlightIndex(-1);
+  }, [searchQuery, searchScope, selectedSidebar]);
+
+  // Handle sidebar selection
+  const handleSidebarSelect = useCallback((item: SidebarItem) => {
+    setSelectedSidebar(item);
+    setCurrentPath(getPathForSidebarItem(item));
+    setSelectedFile(null);
+  }, [getPathForSidebarItem, setCurrentPath]);
+
+  // Handle file/folder click
+  const handleFileClick = useCallback((file: FileItem) => {
+    // Don't select files in trash (they don't exist)
+    if (file.type === "file" && file.path.startsWith("trash/")) return;
+    setSelectedFile(file.path);
+  }, []);
+
+  // Handle file/folder double-click
+  const handleFileDoubleClick = useCallback(async (file: FileItem) => {
+    if (file.type === "dir") {
+      setCurrentPath(file.path);
+      setSelectedFile(null);
+    } else if (file.type === "app") {
+      const appId = file.path.replace("/", ""); // "/notes" -> "notes"
+      if (onOpenApp) {
+        // Use window manager callback (desktop shell)
+        onOpenApp(appId);
+      } else {
+        // Fallback to soft navigation for standalone Finder.
+        router.push(file.path);
+      }
+    } else if (file.type === "file") {
+      // Don't preview files in trash (they don't exist)
+      if (file.path.startsWith("trash/")) return;
+
+      // Clear selection immediately when opening a file
+      setSelectedFile(null);
+
+      // Add to recents when viewing a file
+      addRecent({ path: file.path, name: file.name, type: file.type });
+
+      // Check if it's a preview file (image or PDF)
+      if (isPreviewFile(file.name) && onOpenPreviewFile) {
+        const previewMeta = getPreviewMetadataFromPath(file.path);
+        if (previewMeta) {
+          onOpenPreviewFile(file.path, previewMeta.fileUrl, previewMeta.fileType);
+        }
+        return;
+      }
+
+      // Get file content for text files
+      let content: string | null = "";
+      if (file.path.startsWith(PROJECTS_DIR + "/")) {
+        const relativePath = file.path.slice(PROJECTS_DIR.length + 1);
+        const parts = relativePath.split("/");
+        const repo = parts[0];
+        const filePath = parts.slice(1).join("/");
+        try {
+          content = await fetchGitHubFileContentOrNull(repo, filePath);
+        } catch {
+          content = null;
+        }
+      } else {
+        content = getLocalTextFileContent(file.path);
+      }
+
+      // Handle file not found (shouldn't happen after tree verification, but just in case)
+      if (content === null) {
+        return;
+      }
+
+      // Open all non-preview files in TextEdit
+      if (onOpenTextFile) {
+        onOpenTextFile(file.path, content);
+      } else {
+        // Fallback to preview panel
+        setPreviewContent(content);
+      }
+    }
+  }, [onOpenApp, onOpenTextFile, onOpenPreviewFile, addRecent, router, setCurrentPath]);
+
+  const openSearchResult = useCallback((file: FileItem) => {
+    setSearchActive(false);
+    setSearchQuery("");
+    if (file.type === "dir") {
+      setCurrentPath(file.path);
+      setSelectedSidebar(getSidebarForPath(file.path));
+      setSelectedFile(null);
+    } else {
+      handleFileDoubleClick(file);
+    }
+  }, [handleFileDoubleClick, setCurrentPath]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (windowFocus && !windowFocus.isFocused) return;
+      const target = e.target as HTMLElement | null;
+      const isTypingTarget =
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.isContentEditable;
+
+      if (e.key === "Escape" && searchActive) {
+        e.preventDefault();
+        if (searchQuery) {
+          setSearchQuery("");
+        } else {
+          setSearchActive(false);
+        }
+        (document.activeElement as HTMLElement)?.blur();
+        return;
+      }
+
+      if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey && !isTypingTarget) {
+        e.preventDefault();
+        setSearchActive(true);
+        setTimeout(() => searchInputRef.current?.focus(), 0);
+        return;
+      }
+
+      if (!searchActive) return;
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSearchHighlightIndex((prev) => Math.min(prev + 1, computedSearchResults.length - 1));
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSearchHighlightIndex((prev) => prev <= 0 ? -1 : prev - 1);
+        return;
+      }
+
+      if (e.key === "Enter" && computedSearchResults.length > 0 && searchHighlightIndex >= 0) {
+        e.preventDefault();
+        const result = computedSearchResults[searchHighlightIndex];
+        if (result) {
+          openSearchResult({
+            name: result.entry.name,
+            type: result.entry.type,
+            path: result.entry.path,
+            icon: result.entry.icon,
+          });
+        }
+        return;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [windowFocus, searchActive, searchQuery, computedSearchResults, searchHighlightIndex, openSearchResult]);
+
+  useEffect(() => {
+    if (!searchActive || computedSearchResults.length === 0 || searchHighlightIndex < 0) return;
+    const container = searchResultsRef.current;
+    if (!container) return;
+    if (viewMode !== "list" && viewMode !== "icons") return;
+    const row = viewMode === "list"
+      ? (container.children[1]?.children[searchHighlightIndex] as HTMLElement)
+      : (container.children[searchHighlightIndex] as HTMLElement);
+    row?.scrollIntoView({ block: "nearest" });
+  }, [searchHighlightIndex, searchActive, computedSearchResults.length, viewMode]);
+
+  const handleBack = useCallback(() => {
+    if (historyIndex > 0) {
+      const prevIndex = historyIndex - 1;
+      setHistoryIndex(prevIndex);
+      setCurrentPathRaw(pathHistory[prevIndex]);
+      setSelectedSidebar(getSidebarForPath(pathHistory[prevIndex]));
+    }
+  }, [historyIndex, pathHistory]);
+
+  // Get breadcrumb parts
+  const getBreadcrumbs = useCallback(() => {
+    if (currentPath === "recents") return ["Recents"];
+    if (currentPath === "applications") return ["Applications"];
+    if (currentPath === "trash") return ["Trash"];
+    // Handle trash subdirectories
+    if (currentPath.startsWith("trash/")) {
+      const parts = currentPath.split("/");
+      parts[0] = "Trash"; // Capitalize Trash
+      return parts;
+    }
+
+    const parts = currentPath.replace(HOME_DIR, USERNAME).split("/").filter(Boolean);
+    return parts;
+  }, [currentPath]);
+
+  // Check if can go back
+  const canGoBack = useCallback(() => {
+    return historyIndex > 0;
+  }, [historyIndex]);
+
+  // Render sidebar
+  const renderSidebar = () => {
+    return (
+      <div className="flex flex-col w-48 border-r border-zinc-200 dark:border-zinc-700 bg-zinc-100/80 dark:bg-zinc-800/80 backdrop-blur-xl">
+        <div className="flex-1 overflow-y-auto py-2">
+          {SIDEBAR_ITEMS.map(item => (
+            <button
+              key={item.id}
+              onClick={() => handleSidebarSelect(item.id)}
+              className={cn(
+                "w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left rounded-md",
+                selectedSidebar === item.id
+                  ? "bg-zinc-200/70 dark:bg-zinc-700/70 text-blue-500"
+                  : "text-zinc-900 dark:text-zinc-100"
+              )}
+            >
+              <SidebarIcon
+                icon={item.icon}
+                className={cn(
+                  "w-4 h-4",
+                  selectedSidebar === item.id ? "text-blue-500" : "text-zinc-900 dark:text-zinc-100"
+                )}
+              />
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Format a date as a display string
+  const formatDateString = (date: Date): string => {
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const isPM = hours >= 12;
+    const displayHours = hours % 12 || 12;
+    const timeStr = `${displayHours}:${minutes.toString().padStart(2, '0')} ${isPM ? 'PM' : 'AM'}`;
+
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) {
+      return `Today at ${timeStr}`;
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return `Yesterday at ${timeStr}`;
+    } else {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()} at ${timeStr}`;
+    }
+  };
+
+  // Get file date - uses real modified date if available, otherwise generates pseudo-random
+  const getFileDate = (file: FileItem): string => {
+    const textEditDate = getFileModifiedDate(file.path);
+
+    // Check if this is a GitHub file
+    const githubFile = githubRecentFiles.find(gf =>
+      `${PROJECTS_DIR}/${gf.repo}/${gf.path}` === file.path
+    );
+    const githubDate = githubFile ? new Date(githubFile.modifiedAt).getTime() : null;
+
+    // Use most recent of TextEdit date or GitHub date
+    if (textEditDate && githubDate) {
+      return formatDateString(new Date(Math.max(textEditDate, githubDate)));
+    }
+    if (textEditDate) {
+      return formatDateString(new Date(textEditDate));
+    }
+    if (githubDate) {
+      return formatDateString(new Date(githubDate));
+    }
+
+    // Check local recents for accessedAt
+    const recentFile = recents.find(r => r.path === file.path);
+    if (recentFile) {
+      return formatDateString(new Date(recentFile.accessedAt));
+    }
+
+    // Fall back to pseudo-random date based on filename (deterministic)
+    const filename = file.name;
+    let hash = 0;
+    for (let i = 0; i < filename.length; i++) {
+      hash = ((hash << 5) - hash) + filename.charCodeAt(i);
+      hash = hash & hash;
+    }
+    const daysAgo = Math.abs(hash) % 7;
+    const hours12 = Math.abs(hash >> 3) % 12 + 1; // 1-12
+    const minutes = Math.abs(hash >> 7) % 60;
+    const isPM = (hash >> 11) % 2 === 0;
+
+    // Convert 12-hour to 24-hour format
+    const hours24 = isPM
+      ? (hours12 === 12 ? 12 : hours12 + 12)  // 12 PM = 12, 1-11 PM = 13-23
+      : (hours12 === 12 ? 0 : hours12);        // 12 AM = 0, 1-11 AM = 1-11
+
+    const date = new Date();
+    date.setDate(date.getDate() - daysAgo);
+    date.setHours(hours24, minutes, 0, 0);
+
+    return formatDateString(date);
+  };
+
+  // Get file kind description
+  const getFileKind = (file: FileItem): string => {
+    if (file.type === "dir") return "Folder";
+    if (file.type === "app") return "Application";
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    switch (ext) {
+      case "md": return "Markdown";
+      case "ts": case "tsx": return "TypeScript";
+      case "js": case "jsx": return "JavaScript";
+      case "json": return "JSON";
+      case "css": return "CSS";
+      case "html": return "HTML";
+      case "svg": return "SVG Image";
+      case "png": return "PNG Image";
+      case "jpg": case "jpeg": return "JPEG Image";
+      case "pdf": return "PDF Document";
+      default: return "Document";
+    }
+  };
+
+  // Skeleton loading for desktop list view
+  const renderDesktopListSkeleton = () => (
+    <div className="flex flex-col animate-pulse">
+      {/* Column headers */}
+      <div className="flex items-center px-4 py-1 border-b border-zinc-200 dark:border-zinc-700 text-xs text-zinc-500 dark:text-zinc-400">
+        <div className="flex-1 min-w-0">Name</div>
+        <div className="w-32 text-left">Kind</div>
+        <div className="w-52 text-left">Date Modified</div>
+      </div>
+      {/* Skeleton rows */}
+      <div className="flex-1">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="w-full flex items-center px-4 py-1">
+            <div className="flex-1 min-w-0 flex items-center gap-2">
+              <div className="w-4 h-4 rounded bg-zinc-200 dark:bg-zinc-700 flex-shrink-0" />
+              <div className="h-4 rounded bg-zinc-200 dark:bg-zinc-700" style={{ width: `${120 + (i * 17) % 80}px` }} />
+            </div>
+            <div className="w-32">
+              <div className="h-4 w-16 rounded bg-zinc-200 dark:bg-zinc-700" />
+            </div>
+            <div className="w-52">
+              <div className="h-4 w-32 rounded bg-zinc-200 dark:bg-zinc-700" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  // Skeleton loading for desktop icons view
+  const renderIconsGridSkeleton = () => (
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(90px,1fr))] gap-2 p-4 animate-pulse">
+      {Array.from({ length: 12 }).map((_, i) => (
+        <div key={i} className="flex flex-col items-center gap-1 p-2">
+          <div className="w-12 h-12 rounded bg-zinc-200 dark:bg-zinc-700" />
+          <div className="h-3 rounded bg-zinc-200 dark:bg-zinc-700" style={{ width: `${40 + (i * 13) % 30}px` }} />
+        </div>
+      ))}
+    </div>
+  );
+
+  // Render file grid (desktop icons view)
+  const renderFileGrid = () => (
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(90px,1fr))] gap-2 p-4">
+      {files.map(file => (
+        <button
+          key={file.path}
+          onClick={(e) => { e.stopPropagation(); handleFileClick(file); }}
+          onDoubleClick={() => handleFileDoubleClick(file)}
+          className={cn(
+            "flex flex-col items-center gap-1 p-2 rounded-lg text-center",
+            selectedFile === file.path && "bg-zinc-200/70 dark:bg-zinc-700/70"
+          )}
+        >
+          <FileIcon type={file.type} name={file.name} icon={file.icon} className="w-12 h-12" />
+          <span className={cn(
+            "text-xs break-all line-clamp-2 px-1 rounded",
+            selectedFile === file.path
+              ? "bg-blue-500 text-white"
+              : "text-zinc-700 dark:text-zinc-300"
+          )}>
+            {file.displayName || file.name}
+          </span>
+        </button>
+      ))}
+      {files.length === 0 && !loading && (
+        <div className="col-span-full text-center text-sm text-zinc-400 dark:text-zinc-500 py-8">
+          This folder is empty
+        </div>
+      )}
+    </div>
+  );
+
+  // Render desktop list view
+  const renderDesktopListView = () => (
+    <div className="flex flex-col">
+      {/* Column headers */}
+      <div className="flex items-center px-4 py-1 border-b border-zinc-200 dark:border-zinc-700 text-xs text-zinc-500 dark:text-zinc-400">
+        <div className="flex-1 min-w-0">Name</div>
+        <div className="w-32 text-left">Kind</div>
+        <div className="w-52 text-left">Date Modified</div>
+      </div>
+      {/* File rows */}
+      <div className="flex-1">
+        {files.map(file => (
+          <button
+            key={file.path}
+            onClick={(e) => { e.stopPropagation(); handleFileClick(file); }}
+            onDoubleClick={() => handleFileDoubleClick(file)}
+            className={cn(
+              "w-full flex items-center px-4 py-1 text-left text-sm text-zinc-900 dark:text-zinc-100",
+              selectedFile === file.path && "bg-blue-500 text-white"
+            )}
+          >
+            <div className="flex-1 min-w-0 flex items-center gap-2">
+              <FileIcon
+                type={file.type}
+                name={file.name}
+                icon={file.icon}
+                className={cn("w-4 h-4 flex-shrink-0", selectedFile === file.path && file.type !== "app" && "brightness-0 invert")}
+              />
+              <span className="truncate">{file.displayName || file.name}</span>
+            </div>
+            <div className={cn(
+              "w-32 text-left truncate",
+              selectedFile === file.path ? "text-white/80" : "text-zinc-500 dark:text-zinc-400"
+            )}>
+              {getFileKind(file)}
+            </div>
+            <div className={cn(
+              "w-52 text-left truncate",
+              selectedFile === file.path ? "text-white/80" : "text-zinc-500 dark:text-zinc-400"
+            )}>
+              {getFileDate(file)}
+            </div>
+          </button>
+        ))}
+        {files.length === 0 && !loading && (
+          <div className="text-center text-sm text-zinc-400 dark:text-zinc-500 py-8">
+            This folder is empty
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderColumnsView = (
+    items: FileItem[],
+    selectedPath: string | null,
+    onSelect: (file: FileItem, index: number) => void,
+    onOpen: (file: FileItem) => void,
+  ) => {
+    const selectedItem = items.find((file) => file.path === selectedPath) ?? null;
+
+    return (
+      <div className="flex h-full min-h-0">
+        <div className="w-64 shrink-0 overflow-y-auto border-r border-zinc-200 py-1 dark:border-zinc-700">
+          {items.map((file, index) => (
+            <button
+              key={file.path}
+              onClick={(event) => {
+                event.stopPropagation();
+                onSelect(file, index);
+              }}
+              onDoubleClick={() => onOpen(file)}
+              className={cn(
+                "flex w-full items-center gap-2 px-3 py-1 text-left text-sm",
+                selectedPath === file.path
+                  ? "bg-blue-500 text-white"
+                  : "text-zinc-900 dark:text-zinc-100"
+              )}
+            >
+              <FileIcon
+                type={file.type}
+                name={file.name}
+                icon={file.icon}
+                className={cn("h-4 w-4 shrink-0", selectedPath === file.path && file.type !== "app" && "brightness-0 invert")}
+              />
+              <span className="min-w-0 flex-1 truncate">{file.displayName || file.name}</span>
+              {file.type === "dir" && <span className="text-xs opacity-60">›</span>}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex min-w-0 flex-1 items-center justify-center p-6">
+          {selectedItem ? (
+            <div className="flex max-w-sm flex-col items-center text-center">
+              <FileIcon
+                type={selectedItem.type}
+                name={selectedItem.name}
+                icon={selectedItem.icon}
+                className="h-20 w-20"
+              />
+              <p className="mt-3 max-w-full truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                {selectedItem.displayName || selectedItem.name}
+              </p>
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                {getFileKind(selectedItem)} · {getFileDate(selectedItem)}
+              </p>
+            </div>
+          ) : (
+            <p className="text-xs text-zinc-400 dark:text-zinc-500">Select an item</p>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderGalleryView = (
+    items: FileItem[],
+    selectedPath: string | null,
+    onSelect: (file: FileItem, index: number) => void,
+    onOpen: (file: FileItem) => void,
+  ) => {
+    const selectedItem = items.find((file) => file.path === selectedPath) ?? null;
+
+    return (
+      <div className="flex h-full min-h-0 flex-col">
+        <div className="flex min-h-0 flex-1 items-center justify-center p-6">
+          {selectedItem ? (
+            <button
+              onClick={(event) => event.stopPropagation()}
+              onDoubleClick={() => onOpen(selectedItem)}
+              className="flex max-w-md flex-col items-center rounded-xl p-3 text-center"
+            >
+              <FileIcon
+                type={selectedItem.type}
+                name={selectedItem.name}
+                icon={selectedItem.icon}
+                className="h-24 w-24"
+              />
+              <p className="mt-4 max-w-full truncate text-base font-medium text-zinc-900 dark:text-zinc-100">
+                {selectedItem.displayName || selectedItem.name}
+              </p>
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                {getFileKind(selectedItem)} · {getFileDate(selectedItem)}
+              </p>
+            </button>
+          ) : (
+            <p className="text-xs text-zinc-400 dark:text-zinc-500">Select an item below</p>
+          )}
+        </div>
+
+        <div className="flex h-28 shrink-0 items-center gap-2 overflow-x-auto border-t border-zinc-200 px-3 dark:border-zinc-700">
+          {items.map((file, index) => (
+            <button
+              key={file.path}
+              onClick={(event) => {
+                event.stopPropagation();
+                onSelect(file, index);
+              }}
+              onDoubleClick={() => onOpen(file)}
+              className={cn(
+                "flex h-20 w-20 shrink-0 flex-col items-center justify-center gap-1 rounded-lg border-2 p-1",
+                selectedPath === file.path
+                  ? "border-blue-500 bg-blue-500/10"
+                  : "border-transparent can-hover:hover:bg-zinc-100 dark:can-hover:hover:bg-zinc-800"
+              )}
+            >
+              <FileIcon type={file.type} name={file.name} icon={file.icon} className="h-10 w-10" />
+              <span className="w-full truncate text-[10px] text-zinc-700 dark:text-zinc-300">
+                {file.displayName || file.name}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const getLocationLabel = (path: string): string => {
+    if (path.startsWith(PROJECTS_DIR + "/")) {
+      const rel = path.slice(PROJECTS_DIR.length + 1);
+      const parts = rel.split("/");
+      if (parts.length <= 2) return parts[0];
+      return parts.slice(0, -1).join("/");
+    }
+    if (path.startsWith(HOME_DIR + "/")) {
+      return path.slice(HOME_DIR.length + 1).split("/").slice(0, -1).join("/") || "Home";
+    }
+    if (path.startsWith("trash")) return "Trash";
+    if (path.startsWith("/")) return "Applications";
+    return path;
+  };
+
+  const renderSearchResults = () => {
+    if (computedSearchResults.length === 0) {
+      return (
+        <div className="h-full flex items-center justify-center text-muted-foreground">
+          <p className="text-sm">No results</p>
+        </div>
+      );
+    }
+
+    const searchFiles = computedSearchResults.map(({ entry }) => ({
+      name: entry.name,
+      type: entry.type,
+      path: entry.path,
+      icon: entry.icon,
+    }));
+    const selectedSearchPath = searchHighlightIndex >= 0
+      ? searchFiles[searchHighlightIndex]?.path ?? null
+      : null;
+
+    if (viewMode === "columns") {
+      return renderColumnsView(
+        searchFiles,
+        selectedSearchPath,
+        (_file, index) => setSearchHighlightIndex(index),
+        openSearchResult,
+      );
+    }
+
+    if (viewMode === "gallery") {
+      return renderGalleryView(
+        searchFiles,
+        selectedSearchPath,
+        (_file, index) => setSearchHighlightIndex(index),
+        openSearchResult,
+      );
+    }
+
+    if (viewMode === "icons") {
+      return (
+        <div ref={searchResultsRef} className="grid grid-cols-[repeat(auto-fill,minmax(90px,1fr))] gap-2 p-4">
+          {computedSearchResults.map((result, i) => {
+            const file = result.entry;
+            const isSelected = i === searchHighlightIndex;
+            return (
+              <button
+                key={file.path}
+                onClick={(e) => { e.stopPropagation(); setSearchHighlightIndex(i); }}
+                onDoubleClick={() => openSearchResult({
+                  name: file.name, type: file.type, path: file.path, icon: file.icon,
+                })}
+                className={cn(
+                  "flex flex-col items-center gap-1 p-2 rounded-lg text-center",
+                  isSelected && "bg-zinc-200/70 dark:bg-zinc-700/70"
+                )}
+              >
+                <FileIcon type={file.type} name={file.name} icon={file.icon} className="w-12 h-12" />
+                <span className={cn(
+                  "text-xs break-all line-clamp-2 px-1 rounded",
+                  isSelected
+                    ? "bg-blue-500 text-white"
+                    : "text-zinc-700 dark:text-zinc-300"
+                )}>
+                  {file.name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+
+    return (
+      <div ref={searchResultsRef} className="flex flex-col">
+        <div className="sticky top-0 z-[1] flex items-center px-4 py-1 border-b border-zinc-200 dark:border-zinc-700 text-xs text-zinc-500 dark:text-zinc-400 bg-white dark:bg-zinc-900">
+          <div className="flex-1 min-w-0">Name</div>
+          <div className="w-32 text-left">Kind</div>
+          <div className="w-52 text-left">Location</div>
+        </div>
+        <div className="flex-1">
+          {computedSearchResults.map((result, i) => {
+            const isSelected = i === searchHighlightIndex;
+            const file = result.entry;
+            return (
+              <button
+                key={file.path}
+                onClick={(e) => { e.stopPropagation(); setSearchHighlightIndex(i); }}
+                onDoubleClick={() => openSearchResult({
+                  name: file.name, type: file.type, path: file.path, icon: file.icon,
+                })}
+                className={cn(
+                  "w-full flex items-center px-4 py-1 text-left text-sm text-zinc-900 dark:text-zinc-100",
+                  isSelected && "bg-blue-500 text-white"
+                )}
+              >
+                <div className="flex-1 min-w-0 flex items-center gap-2">
+                  <FileIcon
+                    type={file.type}
+                    name={file.name}
+                    icon={file.icon}
+                    className={cn("w-4 h-4 flex-shrink-0", isSelected && file.type !== "app" && "brightness-0 invert")}
+                  />
+                  <span className="truncate">{file.name}</span>
+                </div>
+                <div className={cn(
+                  "w-32 text-left truncate",
+                  isSelected ? "text-white/80" : "text-zinc-500 dark:text-zinc-400"
+                )}>
+                  {getFileKind({ name: file.name, type: file.type, path: file.path })}
+                </div>
+                <div className={cn(
+                  "w-52 text-left truncate",
+                  isSelected ? "text-white/80" : "text-zinc-500 dark:text-zinc-400"
+                )}>
+                  {getLocationLabel(file.path)}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const currentSectionLabel = SIDEBAR_ITEMS.find(item => item.id === selectedSidebar)?.label || "";
+  const statusItemCount = searchActive && searchQuery
+    ? computedSearchResults.length
+    : files.length;
+  const hasStatusSelection = searchActive && searchQuery
+    ? searchHighlightIndex >= 0
+    : selectedFile !== null;
+  const statusLabel = loading
+    ? "Loading…"
+    : hasStatusSelection
+      ? `1 of ${statusItemCount} selected`
+      : `${statusItemCount} ${statusItemCount === 1 ? "item" : "items"}`;
+  const pathSegments = getFinderPathSegments(currentPath);
+
+  const handlePathSegmentClick = (path: string) => {
+    setSearchActive(false);
+    setSearchQuery("");
+    setPreviewContent(null);
+    setSelectedFile(null);
+    setSelectedSidebar(getSidebarForPath(path));
+    setCurrentPath(path);
+  };
+
+  const renderPathBar = () => (
+    <nav
+      aria-label="Path Bar"
+      className="flex h-7 items-center justify-start overflow-x-auto border-t border-zinc-200 bg-zinc-100 px-3 text-[11px] text-zinc-600 select-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+    >
+      <div className="flex min-w-max items-center">
+        {pathSegments.map((segment, index) => {
+          const isCurrent = index === pathSegments.length - 1;
+          return (
+            <div key={segment.path} className="flex items-center">
+              {index > 0 && (
+                <svg aria-hidden="true" className="mx-0.5 h-3 w-3 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="m9 18 6-6-6-6" />
+                </svg>
+              )}
+              <button
+                type="button"
+                disabled={isCurrent}
+                aria-current={isCurrent ? "location" : undefined}
+                aria-label={isCurrent ? `${segment.label}, current folder` : `Open ${segment.label}`}
+                title={segment.path}
+                onClick={() => handlePathSegmentClick(segment.path)}
+                className={cn(
+                  "flex items-center gap-1 rounded px-1.5 py-0.5",
+                  isCurrent
+                    ? "font-medium text-zinc-800 dark:text-zinc-100"
+                    : "can-hover:hover:bg-zinc-200 can-hover:hover:text-zinc-950 dark:can-hover:hover:bg-zinc-700 dark:can-hover:hover:text-white"
+                )}
+              >
+                <svg aria-hidden="true" className="h-3.5 w-3.5 text-blue-500" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
+                </svg>
+                <span>{segment.label}</span>
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </nav>
+  );
+
+  const renderScopeBar = () => (
+    <div className="flex items-center gap-1.5 px-4 py-1 bg-zinc-100 dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700 select-none">
+      <span className="text-xs text-zinc-500 dark:text-zinc-400">Search:</span>
+      <button
+        onClick={() => setSearchScope("all")}
+        className={cn(
+          "px-2 py-0.5 rounded text-xs transition-colors",
+          searchScope === "all"
+            ? "bg-zinc-300 dark:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium"
+            : "text-zinc-500 dark:text-zinc-400"
+        )}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        This Mac
+      </button>
+      <button
+        onClick={() => setSearchScope("current")}
+        className={cn(
+          "px-2 py-0.5 rounded text-xs transition-colors",
+          searchScope === "current"
+            ? "bg-zinc-300 dark:bg-zinc-600 text-zinc-900 dark:text-zinc-100 font-medium"
+            : "text-zinc-500 dark:text-zinc-400"
+        )}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        {currentSectionLabel}
+      </button>
+    </div>
+  );
+
+  // Render nav bar
+  const renderNav = () => (
+    <FinderNav
+      isDesktopShell={inDesktopShell}
+      breadcrumbs={getBreadcrumbs()}
+      canGoBack={canGoBack()}
+      canGoForward={canGoForward}
+      onBack={handleBack}
+      onForward={handleForward}
+      searchActive={searchActive}
+      searchQuery={searchQuery}
+      showViewDropdown={showViewDropdown}
+      viewMode={viewMode}
+      searchInputRef={searchInputRef}
+      onToggleViewDropdown={() => setShowViewDropdown((prev) => !prev)}
+      onCloseViewDropdown={() => setShowViewDropdown(false)}
+      onSetViewMode={(mode) => {
+        setViewMode(mode);
+        setShowViewDropdown(false);
+      }}
+      onSearchQueryChange={setSearchQuery}
+      onSearchActivate={() => {
+        setSearchActive(true);
+        window.setTimeout(() => searchInputRef.current?.focus(), 0);
+      }}
+      onSearchBlur={() => {
+        if (!searchQuery) setSearchActive(false);
+      }}
+      onSearchClear={() => setSearchQuery("")}
+    />
+  );
+
+  return (
+    <div
+      ref={containerRef}
+      className="flex flex-col h-full bg-white dark:bg-zinc-900"
+      data-app="finder"
+    >
+      {renderNav()}
+      <div className="relative flex flex-1 min-h-0">
+        {renderSidebar()}
+        <div className="flex-1 flex flex-col min-w-0">
+          {searchActive && searchQuery && renderScopeBar()}
+          <div
+            className={cn(
+              "flex-1",
+              viewMode === "columns" || viewMode === "gallery"
+                ? "min-h-0 overflow-hidden"
+                : "overflow-y-auto"
+            )}
+            onClick={() => setSelectedFile(null)}
+          >
+          {searchActive && searchQuery ? (
+            renderSearchResults()
+          ) : loading ? (
+            viewMode === "list" || viewMode === "columns" ? renderDesktopListSkeleton() : renderIconsGridSkeleton()
+          ) : previewContent !== null ? (
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-zinc-900 dark:text-white">
+                  {selectedFile?.split("/").pop()}
+                </h3>
+                <button
+                  onClick={() => { setPreviewContent(null); setSelectedFile(null); }}
+                  className="text-sm text-blue-500 hover:text-blue-600"
+                >
+                  Close Preview
+                </button>
+              </div>
+              <pre className="text-sm text-zinc-700 dark:text-zinc-300 whitespace-pre-wrap font-mono bg-zinc-50 dark:bg-zinc-800 p-4 rounded-lg overflow-auto max-h-[60vh]">
+                {previewContent}
+              </pre>
+            </div>
+          ) : viewMode === "list" ? (
+            renderDesktopListView()
+          ) : viewMode === "columns" ? (
+            renderColumnsView(files, selectedFile, (file) => handleFileClick(file), (file) => { void handleFileDoubleClick(file); })
+          ) : viewMode === "gallery" ? (
+            renderGalleryView(files, selectedFile, (file) => handleFileClick(file), (file) => { void handleFileDoubleClick(file); })
+          ) : (
+            renderFileGrid()
+          )}
+          </div>
+          {(showPathBar || showStatusBar) && (
+            <footer className="shrink-0">
+              {showPathBar && renderPathBar()}
+              {showStatusBar && (
+                <div
+                  role="status"
+                  className="flex h-[22px] items-center justify-center border-t border-zinc-200 bg-white px-3 text-[10px] leading-none text-zinc-500 select-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400"
+                >
+                  {statusLabel}
+                </div>
+              )}
+            </footer>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
