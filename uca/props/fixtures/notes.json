@@ -1,0 +1,68 @@
+[
+  {
+    "id": "0b6f1c1e-0001-4c3a-9a51-000000000001",
+    "slug": "about-me",
+    "title": "about me",
+    "emoji": "👋🏼",
+    "category": "today",
+    "public": true,
+    "session_id": null,
+    "created_at": "2024-07-10T18:00:00.000Z",
+    "content": "Sample data — not your workspace. Replace this note through `props.notes`.\n\n## who\n\ni'm obsessed with re-creating apple products. this site is a macos-inspired desktop with notes, messages, photos, music, calendar and more.\n\n## currently\n\n- building things on the internet\n- reading on weekends\n- [ ] finish the reading list\n- [x] ship the desktop\n\n> the best way to predict the future is to build it\n"
+  },
+  {
+    "id": "0b6f1c1e-0002-4c3a-9a51-000000000002",
+    "slug": "quick-links",
+    "title": "quick links",
+    "emoji": "🔗",
+    "category": "today",
+    "public": true,
+    "session_id": null,
+    "created_at": "2024-07-10T17:00:00.000Z",
+    "content": "Sample data — not your workspace.\n\n- [github](https://github.com/alanagoyal)\n- [x / twitter](https://x.com)\n- [linkedin](https://linkedin.com)\n\n| site | what |\n|------|------|\n| github | code |\n| x | posts |\n"
+  },
+  {
+    "id": "0b6f1c1e-0003-4c3a-9a51-000000000003",
+    "slug": "reading-list",
+    "title": "reading list",
+    "emoji": "📚",
+    "category": "yesterday",
+    "public": true,
+    "session_id": null,
+    "created_at": "2024-07-09T12:00:00.000Z",
+    "content": "Sample data — not your workspace.\n\n| book | author | year read |\n|------|--------|-----------|\n| the great gatsby | f. scott fitzgerald | 2023 |\n| 1984 | george orwell | 2024 |\n"
+  },
+  {
+    "id": "0b6f1c1e-0004-4c3a-9a51-000000000004",
+    "slug": "principles",
+    "title": "principles",
+    "emoji": "🧭",
+    "category": "7",
+    "public": true,
+    "session_id": null,
+    "created_at": "2024-07-05T12:00:00.000Z",
+    "content": "Sample data — not your workspace.\n\n1. ship early\n2. talk to users\n3. keep it simple\n\n`code` and **bold** and *italic* and ~~strike~~.\n"
+  },
+  {
+    "id": "0b6f1c1e-0005-4c3a-9a51-000000000005",
+    "slug": "recipes",
+    "title": "recipes",
+    "emoji": "🍝",
+    "category": "30",
+    "public": true,
+    "session_id": null,
+    "created_at": "2024-06-20T12:00:00.000Z",
+    "content": "Sample data — not your workspace.\n\n### cacio e pepe\n\n- pasta\n- pecorino\n- black pepper\n"
+  },
+  {
+    "id": "0b6f1c1e-0006-4c3a-9a51-000000000006",
+    "slug": "travel",
+    "title": "travel",
+    "emoji": "✈️",
+    "category": "older",
+    "public": true,
+    "session_id": null,
+    "created_at": "2024-01-02T12:00:00.000Z",
+    "content": "Sample data — not your workspace.\n\n- tokyo\n- lisbon\n- mexico city\n"
+  }
+]
