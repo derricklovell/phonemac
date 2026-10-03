@@ -470,6 +470,39 @@ for (const width of [320, 360, 414]) {
   await c3.context.close();
 }
 
+// Loading screen: 1ovr1 logo on #262626. The vault host isn't reachable from the test machine, so the
+// request for that exact URL is answered with a stand-in image.
+{
+  const { context, p } = await page(1440);
+  const LOGO = "https://api.1ovr1.com/vault/Mnkcxzwv/einxV-Okg8ydi0B5SQ69dA3RKHc/WR46_A../1ovr1+logo.JPG";
+  let requested = null;
+  await p.route("https://api.1ovr1.com/vault/**", (r) => {
+    requested = r.request().url();
+    r.fulfill({ status: 200, contentType: "image/png", body: readFileSync(join(ROOT, "assets/notes.png")) });
+  });
+  await p.goto(`${base}/index.html#/notes`, { waitUntil: "networkidle" });
+  await p.locator('[data-menu="apple"]').click();
+  await p.locator('[data-item="restart"]').click();
+  await p.locator("[data-boot-logo]").waitFor();
+  await p.waitForTimeout(400);
+  const boot = await p.evaluate(() => {
+    const img = document.querySelector("[data-boot-logo]");
+    return {
+      bg: getComputedStyle(img.closest(".fixed")).backgroundColor,
+      src: img.getAttribute("src"),
+      loaded: img.complete && img.naturalWidth > 0,
+      height: img.getBoundingClientRect().height,
+      apple: !!document.querySelector(".fixed svg[data-icon='apple']"),
+    };
+  });
+  await p.screenshot({ path: join(OUT, "boot-screen.png") });
+  results.checks.push([
+    `loading screen: 1ovr1 logo (${boot.height}px tall) on #262626, no Apple icon`,
+    boot.bg === "rgb(38, 38, 38)" && boot.src === LOGO && boot.loaded && requested !== null && boot.height === 80 && !boot.apple,
+  ]);
+  await context.close();
+}
+
 // Shell handshake inside an iframe.
 {
   const { context, p } = await page(1200);

@@ -1,5 +1,5 @@
 // System overlays: sleep, lock screen, restart, shut down, log out.
-import { need, t, el, html, icon, asset, on } from "./core.js";
+import { need, t, el, html, asset, on } from "./core.js";
 import { settings } from "./settings-store.js";
 
 let host;
@@ -14,13 +14,20 @@ function wallpaperSrc() {
   return s.wallpaperUrl ?? need(`desktop.wallpapers.${s.osVersion}`).src;
 }
 
-function bootSequence(onDone) {
+// Loading screen: the brand logo (componentProps.assets.bootLogo) on its own background colour
+// (desktop.boot.background), so the logo's edges disappear into the screen.
+function bootSequence(screen, onDone) {
+  const boot = need("desktop.boot");
+  screen.style.background = boot.background;
   const node = el(html`<div class="flex flex-col items-center gap-8">
-    ${icon("apple", "w-20 h-20 text-white/80")}
-    <div class="w-48 h-1.5 bg-white/20 rounded-full overflow-hidden"><div class="h-full bg-white/80 rounded-full transition-all duration-150" style="width:0%"></div></div>
+    <img src="${asset("bootLogo")}" alt="${t("overlay.bootLogoAlt")}" decoding="async" draggable="false" data-boot-logo
+      class="w-auto max-w-[60vw] object-contain select-none" style="height:${boot.logoHeight}px">
+    <div class="w-48 h-1.5 bg-white/20 rounded-full overflow-hidden"><div class="h-full bg-white/80 rounded-full transition-all duration-150" style="width:0%" data-boot-progress></div></div>
   </div>`);
-  const bar = node.querySelector("div > div");
-  const { stepMs, stepPercent, finishDelayMs } = need("desktop.boot");
+  // A logo that can't load leaves the progress bar alone rather than a broken-image icon.
+  node.querySelector("[data-boot-logo]").addEventListener("error", (e) => (e.target.hidden = true));
+  const bar = node.querySelector("[data-boot-progress]");
+  const { stepMs, stepPercent, finishDelayMs } = boot;
   let progress = 0;
   const timer = setInterval(() => {
     progress = Math.min(100, progress + stepPercent);
@@ -80,7 +87,7 @@ function show(kind, onReset) {
   } else if (kind === "restart" || kind === "logout") {
     node = el(`<div class="fixed inset-0 z-[100] bg-black flex items-center justify-center"></div>`);
     node.appendChild(
-      bootSequence(() => {
+      bootSequence(node, () => {
         onReset();
         close(0);
       }),
@@ -91,7 +98,7 @@ function show(kind, onReset) {
       "click",
       () =>
         node.appendChild(
-          bootSequence(() => {
+          bootSequence(node, () => {
             onReset();
             close(0);
           }),

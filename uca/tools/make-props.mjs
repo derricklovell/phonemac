@@ -72,7 +72,6 @@ const ICONS = {
   arrowUpDown: lucide("arrow-up-down", 1.8),
   calendarDays: lucide("calendar-days", 1.8),
   // Font Awesome
-  apple: fontAwesome("@fortawesome/free-brands-svg-icons", "faApple"),
   wifi: fontAwesome("@fortawesome/free-solid-svg-icons", "faWifi"),
   battery: fontAwesome("@fortawesome/free-solid-svg-icons", "faBatteryFull"),
   sliders: fontAwesome("@fortawesome/free-solid-svg-icons", "faSliders"),
@@ -120,6 +119,7 @@ const STRINGS = {
   "overlay.wake": "Wake",
   "overlay.unlock": "Unlock",
   "overlay.powerOn": "Power on",
+  "overlay.bootLogoAlt": "1ovr1",
   "overlay.touchId": "Touch ID or Enter Password",
   "theme.label": "Theme",
   "theme.light": "Light",
@@ -165,6 +165,7 @@ export async function makeTestProps({ theme, assetBase }) {
   const assets = {
     trash: `${assetBase}trash.png`,
     avatar: `${assetBase}headshot.jpg`,
+    bootLogo: "https://api.1ovr1.com/vault/Mnkcxzwv/einxV-Okg8ydi0B5SQ69dA3RKHc/WR46_A../1ovr1+logo.JPG",
   };
   const apps = APPS.map((a) => {
     const key = a.icon.replace(/^\//, "").replace(/\.png$/, "");
@@ -278,7 +279,7 @@ export async function makeTestProps({ theme, assetBase }) {
         focusedAppId: "notes",
       },
       wallpapers,
-      boot: { stepMs: 150, stepPercent: 5, finishDelayMs: 500 },
+      boot: { stepMs: 150, stepPercent: 5, finishDelayMs: 500, background: "#262626", logoHeight: 80 },
     },
     dock: {
       iconSize: 48,
