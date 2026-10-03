@@ -165,7 +165,7 @@ export async function makeTestProps({ theme, assetBase }) {
   const assets = {
     trash: `${assetBase}trash.png`,
     avatar: `${assetBase}headshot.jpg`,
-    bootLogo: "https://api.1ovr1.com/vault/Mnkcxzwv/einxV-Okg8ydi0B5SQ69dA3RKHc/WR46_A../1ovr1+logo.JPG",
+    bootLogo: "https://storage.googleapis.com/xsxx-a39r-0vrj.n7e.xano.io/vault/Mnkcxzwv/einxV-Okg8ydi0B5SQ69dA3RKHc/WR46_A../1ovr1%20logo.JPG",
   };
   const apps = APPS.map((a) => {
     const key = a.icon.replace(/^\//, "").replace(/\.png$/, "");
@@ -279,7 +279,7 @@ export async function makeTestProps({ theme, assetBase }) {
         focusedAppId: "notes",
       },
       wallpapers,
-      boot: { stepMs: 150, stepPercent: 5, finishDelayMs: 500, background: "#262626", logoHeight: 80 },
+      boot: { stepMs: 150, stepPercent: 5, finishDelayMs: 500, background: "#262626", logoHeight: 200, logoGap: 0 },
     },
     dock: {
       iconSize: 48,

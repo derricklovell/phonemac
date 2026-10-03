@@ -56,6 +56,12 @@ The Apple menu button shows the user's avatar, using the appshell's bar-avatar l
 - **Live updates:** `{gin:'profile:avatar', url}` from the host shell or a hosted record swaps the picture. Only http(s), root-relative and `data:image/` URLs are accepted.
 - **Signing out:** `auth:user` with `authed:false` reverts to `componentProps.user`.
 
+## Loading screen
+
+Restart, Log Out, and powering on after Shut Down all show `assets.bootLogo` on `desktop.boot.background`. The image is `desktop.boot.logoHeight` px tall, with `desktop.boot.logoGap` px between it and the progress bar.
+
+The test logo is a 1080px square on #262626 with its own padding. At 200px tall its mark is about 80px, which was the Apple icon's size.
+
 ## Props used by the phone shell
 
 `phone.{barAppIds, barHeight, handleHeight, itemSize, iconSize, gap, paddingX, dotSize, warmLimit, swipeThreshold, tapSlop}`, `storage.phoneState`, and the strings `phone.*` and `record.*`. The test values are in `tools/make-props.mjs`.

@@ -2,6 +2,7 @@
 // original's reference shots, phone layout (no horizontal scroll), keyboard path, shell handshake.
 import { chromium } from "playwright";
 import { createServer } from "node:http";
+import { execFileSync } from "node:child_process";
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
 import { PNG } from "pngjs";
@@ -82,7 +83,21 @@ const results = { errors: [], diffs: [], checks: [] };
 // Chrome flags every frame sandboxed with allow-scripts + allow-same-origin. That is the appshell's
 // own sandbox for view frames, kept as-is, so the warning is expected wherever a record is hosted.
 const KNOWN = [/both allow-scripts and allow-same-origin/];
+// Sandboxed CI/cloud machines reach the internet only through HTTPS_PROXY, which the test browser
+// can't use without breaking its localhost pages. There, remote assets the tests need (the boot
+// logo) are fetched with curl (proxy-aware) and handed to the page unchanged.
+const PROXY = process.env.HTTPS_PROXY || process.env.https_proxy;
 const browser = await chromium.launch();
+async function viaProxy(p, url) {
+  if (!PROXY) return;
+  await p.route(url, (r) => {
+    try {
+      r.fulfill({ status: 200, contentType: "image/jpeg", body: execFileSync("curl", ["-sSf", url], { maxBuffer: 1 << 24 }) });
+    } catch {
+      r.abort();
+    }
+  });
+}
 
 function crop(png, height) {
   const out = new PNG({ width: png.width, height });
@@ -470,21 +485,16 @@ for (const width of [320, 360, 414]) {
   await c3.context.close();
 }
 
-// Loading screen: 1ovr1 logo on #262626. The vault host isn't reachable from the test machine, so the
-// request for that exact URL is answered with a stand-in image.
+// Loading screen: the real 1ovr1 logo (from storage) on #262626.
 {
   const { context, p } = await page(1440);
-  const LOGO = "https://api.1ovr1.com/vault/Mnkcxzwv/einxV-Okg8ydi0B5SQ69dA3RKHc/WR46_A../1ovr1+logo.JPG";
-  let requested = null;
-  await p.route("https://api.1ovr1.com/vault/**", (r) => {
-    requested = r.request().url();
-    r.fulfill({ status: 200, contentType: "image/png", body: readFileSync(join(ROOT, "assets/notes.png")) });
-  });
+  const LOGO = "https://storage.googleapis.com/xsxx-a39r-0vrj.n7e.xano.io/vault/Mnkcxzwv/einxV-Okg8ydi0B5SQ69dA3RKHc/WR46_A../1ovr1%20logo.JPG";
+  await viaProxy(p, LOGO);
   await p.goto(`${base}/index.html#/notes`, { waitUntil: "networkidle" });
   await p.locator('[data-menu="apple"]').click();
   await p.locator('[data-item="restart"]').click();
-  await p.locator("[data-boot-logo]").waitFor();
-  await p.waitForTimeout(400);
+  await p.waitForFunction(() => document.querySelector("[data-boot-logo]")?.complete, null, { timeout: 10000 });
+  await p.waitForTimeout(200);
   const boot = await p.evaluate(() => {
     const img = document.querySelector("[data-boot-logo]");
     return {
@@ -498,7 +508,7 @@ for (const width of [320, 360, 414]) {
   await p.screenshot({ path: join(OUT, "boot-screen.png") });
   results.checks.push([
     `loading screen: 1ovr1 logo (${boot.height}px tall) on #262626, no Apple icon`,
-    boot.bg === "rgb(38, 38, 38)" && boot.src === LOGO && boot.loaded && requested !== null && boot.height === 80 && !boot.apple,
+    boot.bg === "rgb(38, 38, 38)" && boot.src === LOGO && boot.loaded && boot.height === 200 && !boot.apple,
   ]);
   await context.close();
 }

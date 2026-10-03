@@ -19,7 +19,7 @@ function wallpaperSrc() {
 function bootSequence(screen, onDone) {
   const boot = need("desktop.boot");
   screen.style.background = boot.background;
-  const node = el(html`<div class="flex flex-col items-center gap-8">
+  const node = el(html`<div class="flex flex-col items-center" style="gap:${boot.logoGap}px">
     <img src="${asset("bootLogo")}" alt="${t("overlay.bootLogoAlt")}" decoding="async" draggable="false" data-boot-logo
       class="w-auto max-w-[60vw] object-contain select-none" style="height:${boot.logoHeight}px">
     <div class="w-48 h-1.5 bg-white/20 rounded-full overflow-hidden"><div class="h-full bg-white/80 rounded-full transition-all duration-150" style="width:0%" data-boot-progress></div></div>
