@@ -62,6 +62,21 @@ Restart, Log Out, and powering on after Shut Down all show `assets.bootLogo` on 
 
 The test logo is a 1080px square on #262626 with its own padding. At 200px tall its mark is about 80px, which was the Apple icon's size.
 
+## Previewing on claude.ai
+
+The artifact host only allows same-origin images and network requests (`img-src 'self' data: blob:`). So the preview build (`dist/local/preview.html`, and the artifact) does two things the record file doesn't:
+
+- It bundles the boot logo as `assets/brand/1ovr1-logo.jpg`.
+- It hosts Messages from a stand-in record, `props/fixtures/records/messages.html`, served at `records/viewer_iframe`. The shell still fetches it as `${viewEndpoint}_iframe?view=<id>`, the same request the database will get.
+
+The record file (`dist/phonemac.html` plus its props) keeps the real URLs, and `view_id` stays null until the real ids are set.
+
+## Window move / resize with hosted apps
+
+While a window is dragged or resized, iframes stop taking pointer events, so the pointer can cross a hosted app without the drag being lost. Moves are applied once per frame, and the release position is applied too, so the window lands exactly where the pointer let go.
+
+Clicking inside a hosted app's iframe brings its window to the front.
+
 ## Props used by the phone shell
 
 `phone.{barAppIds, barHeight, handleHeight, itemSize, iconSize, gap, paddingX, dotSize, warmLimit, swipeThreshold, tapSlop}`, `storage.phoneState`, and the strings `phone.*` and `record.*`. The test values are in `tools/make-props.mjs`.

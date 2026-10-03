@@ -493,8 +493,13 @@ function track(onMove, onEnd) {
       });
     }
   };
-  const end = () => {
+  // Moves are applied once per frame; the release position is applied too, so the window lands
+  // exactly where the pointer let go (a pending frame was otherwise dropped, leaving it short).
+  const end = (e) => {
     if (raf !== null) cancelAnimationFrame(raf);
+    raf = null;
+    const final = e && e.type === "mouseup" ? e : last;
+    if (last && final) onMove(final);
     window.removeEventListener("mousemove", move);
     window.removeEventListener("mouseup", end);
     window.removeEventListener("blur", end);

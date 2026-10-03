@@ -2,6 +2,8 @@
 //   dist/phonemac.html        — the record file (devs01/s01): placeholder `var componentProps = {};`
 //   dist/split/*              — the four UCA source fields + props.json
 //   dist/local/index.html     — the same file with the TEST props injected, plus assets/ (local preview)
+//   dist/local/preview.html   — the artifact preview's props: Messages from the stand-in record,
+//                               logo bundled (records/viewer_iframe, assets/brand/)
 //   dist/local/records.html   — test variant: every app on the phone bar, Messages/Photos hosted as
 //                               records from the test server's mock viewer endpoint
 import { build } from "esbuild";
@@ -274,13 +276,32 @@ export async function buildAll({ assetBase = "assets/" } = {}) {
   // Artifact preview: the publish skeleton supplies doctype/head/body, so ship the inner parts only.
   mkdirSync(join(DIST, "artifact"), { recursive: true });
   const fragment = `<title>${props.meta.previewTitle}</title>\n<style>\n${css}\n</style>\n${body.trim()}\n<script>\n${script}\n</script>\n`;
-  writeFileSync(join(DIST, "artifact/phonemac-preview.html"), injectProps(fragment, props));
+  const preview = previewVariant(props);
+  writeFileSync(join(DIST, "artifact/phonemac-preview.html"), injectProps(fragment, preview));
+  writeFileSync(join(DIST, "local/preview.html"), injectProps(page, preview));
+  // The stand-in Messages record, at the path the preview's viewEndpoint resolves to.
+  mkdirSync(join(DIST, "local/records"), { recursive: true });
+  cpSync(join(UCA_DIR, "props/fixtures/records/messages.html"), join(DIST, "local/records/viewer_iframe"));
+  cpSync(join(UCA_DIR, "assets/brand"), join(DIST, "local/assets/brand"), { recursive: true });
   cpSync(join(UCA_DIR, "assets/wallpapers"), join(DIST, "local/assets/wallpapers"), { recursive: true });
   for (const a of LOCAL_ASSETS) {
     const from = join(REPO, "public", a);
     if (existsSync(from)) cpSync(from, join(DIST, "local/assets", a), { recursive: true });
   }
   return { page, props, sizes: { page: page.length, css: css.length, script: script.length } };
+}
+
+// Preview (claude.ai artifact) variant. The artifact host only allows same-origin images and requests,
+// so remote assets are bundled with the preview, and Messages is hosted as a record from a
+// same-origin stand-in at records/viewer_iframe (the shell fetches `${viewEndpoint}_iframe?view=`
+// exactly as it will from the database). The record file keeps the real URLs and view_ids.
+function previewVariant(props) {
+  return {
+    ...props,
+    config: { ...props.config, viewEndpoint: "records/viewer" },
+    assets: { ...props.assets, bootLogo: "assets/brand/1ovr1-logo.jpg" },
+    apps: props.apps.map((a) => (a.id === "messages" ? { ...a, view_id: "messages-standin" } : a)),
+  };
 }
 
 function recordsVariant(props) {

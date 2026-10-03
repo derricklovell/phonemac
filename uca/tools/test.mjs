@@ -513,6 +513,93 @@ for (const width of [320, 360, 414]) {
   await context.close();
 }
 
+// Messages loaded as a record (stand-in at the preview's viewEndpoint): move and resize its window
+// after it has loaded, with the pointer travelling over the app's iframe the whole way.
+{
+  const { context, p } = await page(1440);
+  await p.goto(`${base}/preview.html#/notes`, { waitUntil: "networkidle" });
+  const win = p.locator('[data-window-id="messages"]');
+  const frame = p.frameLocator('[data-window-id="messages"] iframe');
+  await frame.locator("text=Stand-in record").waitFor({ timeout: 5000 });
+  await p.waitForTimeout(200);
+  const rect = () => win.evaluate((w) => { const r = w.getBoundingClientRect(); return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height), z: +getComputedStyle(w).zIndex }; });
+  const frameSize = () => frame.locator("body").evaluate(() => ({ w: innerWidth, h: innerHeight }));
+  const badge = await p.locator('[data-dock-item="messages"] [data-badge]').textContent();
+  const r0 = await rect();
+  const f0 = await frameSize();
+
+  // Click inside the app (in the iframe) brings its window to the front.
+  await p.locator('[data-window-id="notes"]').click({ position: { x: 400, y: 300 } });
+  const zBack = (await rect()).z;
+  // Notes covers most of Messages: click the part of the app that shows (right of Notes).
+  await p.mouse.click(r0.x + r0.w - 60, r0.y + 300);
+  await p.waitForTimeout(150);
+  const zFront = (await rect()).z;
+  await frame.locator(".chat").first().click(); // now in front: open a conversation in the app
+
+  // Drag by the title bar, sweeping across the iframe area on the way.
+  const t = await p.locator('[data-window-id="messages"] [data-window-drag-handle]').boundingBox();
+  await p.mouse.move(t.x + t.width / 2, t.y + t.height / 2);
+  await p.mouse.down();
+  await p.mouse.move(t.x + t.width / 2 - 60, t.y + 200, { steps: 8 });
+  await p.mouse.move(t.x + t.width / 2 - 200, t.y + t.height / 2 + 90, { steps: 8 });
+  await p.mouse.up();
+  await p.waitForTimeout(100);
+  const r1 = await rect();
+
+  // Resize from the bottom-right corner, then from the left edge — pointer over the iframe.
+  const seBox = await p.locator('[data-window-id="messages"] [data-window-resize-handle="se"]').boundingBox();
+  const se = { x: seBox.x + seBox.width / 2, y: seBox.y + seBox.height / 2 };
+  await p.mouse.move(se.x, se.y);
+  await p.mouse.down();
+  await p.mouse.move(se.x - 100, se.y - 80, { steps: 6 }); // inward, over the app
+  await p.mouse.move(se.x + 140, se.y + 60, { steps: 8 });
+  await p.mouse.up();
+  await p.waitForTimeout(150);
+  const r2 = await rect();
+  const f2 = await frameSize();
+  const shownSize = await frame.locator("#size").textContent();
+
+  const wBox = await p.locator('[data-window-id="messages"] [data-window-resize-handle="w"]').boundingBox();
+  const we = { x: wBox.x + wBox.width / 2, y: wBox.y + wBox.height / 2 };
+  await p.mouse.move(we.x, we.y);
+  await p.mouse.down();
+  await p.mouse.move(we.x + 120, we.y, { steps: 6 });
+  await p.mouse.up();
+  await p.waitForTimeout(150);
+  const r3 = await rect();
+  await p.screenshot({ path: join(OUT, "messages-record-moved-resized.png") });
+
+  // Double-click the title bar: fills the space between menu bar and Dock; again: back.
+  const t2 = await p.locator('[data-window-id="messages"] [data-window-drag-handle]').boundingBox();
+  await p.mouse.dblclick(t2.x + t2.width / 2, t2.y + t2.height / 2);
+  await p.waitForTimeout(250);
+  const rFill = await rect();
+  const fFill = await frameSize();
+  await p.mouse.dblclick(rFill.x + rFill.w / 2, rFill.y + 19);
+  await p.waitForTimeout(250);
+  const rBack = await rect();
+
+  // The app kept its own state through all of it (the chat opened above is still open).
+  const kept = await frame.locator("#title").textContent();
+  // Layout survives a reload.
+  await p.reload({ waitUntil: "networkidle" });
+  await p.waitForTimeout(300);
+  const rReload = await rect();
+
+  results.checks.push([`Messages loads as a record (stand-in) in its window; unread → Dock badge ${badge}`, badge === "4" || badge === "3"]);
+  results.checks.push([`clicking inside the app's iframe brings its window to the front (z ${zBack} → ${zFront})`, zFront > zBack]);
+  results.checks.push([`drag by title bar moves it (${r0.x},${r0.y} → ${r1.x},${r1.y}), size unchanged`, r1.x === r0.x - 200 && r1.y === r0.y + 90 && r1.w === r0.w && r1.h === r0.h]);
+  results.checks.push([
+    `corner resize (${r1.w}×${r1.h} → ${r2.w}×${r2.h}) reaches the app (${f0.w}×${f0.h} → ${f2.w}×${f2.h}, app shows ${shownSize})`,
+    r2.w === r1.w + 140 && r2.h === r1.h + 60 && r2.x === r1.x && f2.w - f0.w === 140 && f2.h - f0.h === 60 && shownSize === `${f2.w}×${f2.h}`,
+  ]);
+  results.checks.push([`left-edge resize keeps the right edge (${r2.x}+${r2.w} → ${r3.x}+${r3.w})`, r3.x === r2.x + 120 && r3.w === r2.w - 120 && r3.x + r3.w === r2.x + r2.w]);
+  results.checks.push([`title double-click fills (${rFill.w}×${rFill.h}, app ${fFill.w}×${fFill.h}) and restores`, rFill.w === 1440 && fFill.w === rFill.w - 2 && rBack.x === r3.x && rBack.w === r3.w && rBack.h === r3.h]);
+  results.checks.push([`the app keeps its state while moved/resized ("${kept}"), layout survives reload`, kept === "Sam" && rReload.x === rBack.x && rReload.w === rBack.w && rReload.h === rBack.h]);
+  await context.close();
+}
+
 // Shell handshake inside an iframe.
 {
   const { context, p } = await page(1200);
