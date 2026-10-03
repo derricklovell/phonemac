@@ -211,7 +211,7 @@ export async function makeTestProps({ theme, assetBase }) {
 
   return {
     meta: { title: "alana goyal", previewTitle: "Phonemac Desktop", description: "Personal website of Alana Goyal", version: "uca-phase-1" },
-    user: { displayName: "Alana Goyal" },
+    user: { displayName: "Alana Goyal", username: "alanagoyal", avatarUrl: assets.avatar },
     shell: { weight: "dom" },
     features: { portedApps: ["notes"] },
     apps,
@@ -261,6 +261,7 @@ export async function makeTestProps({ theme, assetBase }) {
     },
     desktop: {
       menuBarHeight: 28,
+      menuAvatarSize: 18,
       dockHeight: 80,
       windowDockGap: 12,
       windowZMax: 50,

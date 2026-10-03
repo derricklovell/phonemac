@@ -2,6 +2,7 @@
 import { need, t, emit, on, el, html, raw, cn, icon } from "./core.js";
 import * as wm from "./wm.js";
 import { settings, setAppearance, APPEARANCES } from "./settings-store.js";
+import { avatarHtml, identity, pictureFailed } from "./avatar.js";
 
 let bar;
 let openMenu = null;
@@ -32,6 +33,15 @@ export function mount(container) {
     if (barSettingsKey() !== renderedSettings) render();
   });
   on("appearance:change", syncThemeSwitch);
+  on("user:change", render);
+  // A profile picture that fails to load falls back to initials (error events don't bubble).
+  bar.addEventListener(
+    "error",
+    (e) => {
+      if (e.target.matches?.("[data-avatar-img]")) pictureFailed(e.target.getAttribute("src"));
+    },
+    true,
+  );
   on("menu:dismiss", () => setOpen(null));
   document.addEventListener("mousedown", (e) => {
     if (openMenu && !bar.contains(e.target)) setOpen(null);
@@ -235,9 +245,9 @@ function render() {
   const clock = clockText();
   bar.innerHTML = html`
     <div class="flex items-center gap-4">
-      <button type="button" data-menu="apple" aria-label="${t("apple.label")}" aria-haspopup="menu" aria-expanded="${openMenu === "apple"}"
+      <button type="button" data-menu="apple" aria-label="${t("apple.label")}" title="${identity().displayName}" aria-haspopup="menu" aria-expanded="${openMenu === "apple"}"
         class="${cn("flex items-center justify-center w-6 h-5 -ml-1 rounded transition-colors", openMenu === "apple" ? "bg-blue-500" : "can-hover:hover:bg-white/10")}">
-        ${icon("apple", cn("w-4 h-4", openMenu === "apple" ? "text-white" : "text-black dark:text-white"))}
+        ${avatarHtml(need("desktop.menuAvatarSize"))}
       </button>
       <div data-testid="menu-bar-app-commands" class="flex items-center gap-1">
         ${menuButton("appMenu", app.menuBarTitle, true)}

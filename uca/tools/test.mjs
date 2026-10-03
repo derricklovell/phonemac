@@ -412,6 +412,64 @@ for (const width of [320, 360, 414]) {
   await context.close();
 }
 
+// Apple menu avatar (appshell logic): picture → initials fallback → signed-in ring/dot → live picture.
+{
+  const avatar = (frameOrPage) =>
+    frameOrPage.locator('[data-menu="apple"]').evaluate((b) => ({
+      img: b.querySelector("[data-avatar-img]")?.getAttribute("src") ?? null,
+      text: b.querySelector("[data-avatar]")?.textContent.trim() ?? null,
+      dot: !!b.querySelector("[data-avatar-dot]"),
+      label: b.getAttribute("aria-label"),
+    }));
+
+  const { context, p } = await page(1440);
+  await p.goto(`${base}/index.html#/notes`, { waitUntil: "networkidle" });
+  const a = await avatar(p);
+  results.checks.push(["Apple menu shows the user's picture (componentProps.user.avatarUrl), no signed-in dot", a.img === "assets/headshot.jpg" && !a.dot && a.label === "Apple menu"]);
+  await p.screenshot({ path: join(OUT, "menubar-avatar.png"), clip: { x: 0, y: 0, width: 260, height: 28 } });
+  await context.close();
+
+  // Picture that fails to load → first two letters of the username.
+  const c2 = await page(1440);
+  const errorsBefore = results.errors.length;
+  await c2.p.route("**/headshot.jpg", (r) => r.fulfill({ status: 404, body: "" }));
+  await c2.p.goto(`${base}/index.html#/notes`, { waitUntil: "networkidle" });
+  await c2.p.waitForTimeout(100);
+  const b = await avatar(c2.p);
+  results.checks.push([`picture fails → initials ("${b.text}")`, b.img === null && b.text === "AL"]);
+  await c2.p.screenshot({ path: join(OUT, "menubar-avatar-initials.png"), clip: { x: 0, y: 0, width: 260, height: 28 } });
+  await c2.context.close();
+  // The 404 above is the point of this case, not a page error.
+  results.errors.splice(errorsBefore, results.errors.length - errorsBefore, ...results.errors.slice(errorsBefore).filter((e) => !/status of 404/.test(e)));
+
+  // Inside the appshell: auth:user signs someone in, profile:avatar swaps the picture, sign-out reverts.
+  const c3 = await page(1200);
+  await c3.p.goto(`${base}/shell-host.html`, { waitUntil: "networkidle" });
+  await c3.p.waitForTimeout(300);
+  const f = c3.p.frameLocator("#f");
+  const send = (m) => c3.p.evaluate((msg) => document.getElementById("f").contentWindow.postMessage(msg, "*"), m);
+  await send({ gin: "auth:user", authed: true, user: { username: "derrick", user_id: 7 } });
+  await c3.p.waitForTimeout(100);
+  const signedIn = await avatar(f);
+  await send({ gin: "profile:avatar", url: "/assets/notes.png" });
+  await c3.p.waitForTimeout(100);
+  const pictured = await avatar(f);
+  await send({ gin: "profile:avatar", url: "javascript:alert(1)" });
+  await c3.p.waitForTimeout(50);
+  const rejected = await avatar(f);
+  await send({ gin: "auth:user", authed: false, user: null });
+  await c3.p.waitForTimeout(100);
+  const signedOut = await avatar(f);
+  results.checks.push([
+    "shell auth:user → initials + ring/dot; profile:avatar → picture; bad URL ignored; sign-out → props user",
+    signedIn.text === "DE" && signedIn.dot && !signedIn.img &&
+      pictured.img === "/assets/notes.png" && pictured.dot &&
+      rejected.img === "/assets/notes.png" &&
+      signedOut.img === "assets/headshot.jpg" && !signedOut.dot,
+  ]);
+  await c3.context.close();
+}
+
 // Shell handshake inside an iframe.
 {
   const { context, p } = await page(1200);

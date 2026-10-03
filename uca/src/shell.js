@@ -8,6 +8,9 @@ let shellContext = null;
 let embedState = { key: null, content: {}, sources: null };
 
 export const isEmbedded = () => window.parent !== window;
+
+// Pictures may come from the network, the page's own assets, or an uploaded data: image.
+export const isPictureUrl = (url) => typeof url === "string" && url.length <= 4096 && /^(https?:\/\/|\/|data:image\/)/i.test(url);
 export const getShellContext = () => shellContext;
 
 export function boot() {
@@ -24,7 +27,14 @@ export function boot() {
     if (msg.gin === "app:context" || msg.gin === "shell:context") {
       shellContext = msg;
       emit("shell:context", msg);
+      return;
     }
+    // The appshell tells its frames who signed in/out and when the profile picture changes.
+    if (msg.gin === "auth:user") {
+      emit("shell:auth", msg);
+      return;
+    }
+    if (msg.gin === "profile:avatar" && isPictureUrl(msg.url)) emit("profile:avatar", msg.url);
   });
   if (isEmbedded()) window.parent.postMessage({ gin: "app:ready", weight: need("shell.weight") }, "*");
 

@@ -45,6 +45,17 @@ The Apple menu has a Theme switch (Light, Dark, System). Settings stores the cho
 
 Record apps get `appearance` (`light|dark|system`) and `scheme` (`light|dark`) in `app:restore`. They also get `{gin:'shell:appearance', appearance, scheme}` on every change. Inside the record's frame, `prefers-color-scheme` reports the OS, not this setting, so records should follow the message.
 
+## Apple menu avatar
+
+The Apple menu button shows the user's avatar, using the appshell's bar-avatar logic.
+
+- **Who:** the user the host shell reports (`app:context.user`, or `auth:user` when signed in). Otherwise `componentProps.user`, which takes `{displayName, username, avatarUrl}`.
+- **Picture:** `profile_picture_url`, else `avatar_url` / `avatarUrl`, else `avatar`. The picture fills the circle.
+- **No picture, or it fails to load:** the first two letters of the username, uppercased. With no username, the display name's initials, else "?".
+- **Signed in through the shell:** a light ring and a green dot.
+- **Live updates:** `{gin:'profile:avatar', url}` from the host shell or a hosted record swaps the picture. Only http(s), root-relative and `data:image/` URLs are accepted.
+- **Signing out:** `auth:user` with `authed:false` reverts to `componentProps.user`.
+
 ## Props used by the phone shell
 
 `phone.{barAppIds, barHeight, handleHeight, itemSize, iconSize, gap, paddingX, dotSize, warmLimit, swipeThreshold, tapSlop}`, `storage.phoneState`, and the strings `phone.*` and `record.*`. The test values are in `tools/make-props.mjs`.

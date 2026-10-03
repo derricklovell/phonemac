@@ -3,6 +3,7 @@
 // answer its gin: handshake, keep its state, and sleep/wake it when it is hidden/shown.
 import { need, t, on, emit, el, html, raw, cn, store, storageKey } from "../core.js";
 import { settings, appearanceScheme } from "../settings-store.js";
+import { isPictureUrl } from "../shell.js";
 
 const frames = new Map(); // contentWindow -> { viewId, appId, iframe }
 const htmlCache = new Map(); // view_id -> Promise<html>
@@ -71,6 +72,11 @@ function listen() {
     }
     if (d.gin === "route:changed" && typeof d.route === "string" && d.route.startsWith("/") && d.route.length <= 200) {
       store.set("sessionStorage", routeKey(viewId), d.route);
+      return;
+    }
+    // A hosted profile screen changed the picture: the menu-bar avatar follows (as in the appshell).
+    if (d.gin === "profile:avatar" && isPictureUrl(d.url)) {
+      emit("profile:avatar", d.url);
       return;
     }
     // Same message the appshell turns into a bar badge.

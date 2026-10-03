@@ -7,6 +7,7 @@ import * as dock from "./dock.js";
 import * as overlays from "./overlays.js";
 import * as shell from "./shell.js";
 import * as phone from "./phone.js";
+import { watchIdentity } from "./avatar.js";
 import { settings, applyAppearance, watchSystemAppearance } from "./settings-store.js";
 import { createNotesApp } from "./apps/notes.js";
 import { createPendingApp } from "./apps/pending.js";
@@ -62,6 +63,7 @@ function boot() {
   applyAppearance();
   watchSystemAppearance();
   document.title = need("meta.title");
+  watchIdentity();
   shell.boot();
 
   const root = document.getElementById("pc-root");
