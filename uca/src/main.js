@@ -6,9 +6,11 @@ import * as menubar from "./menubar.js";
 import * as dock from "./dock.js";
 import * as overlays from "./overlays.js";
 import * as shell from "./shell.js";
+import * as phone from "./phone.js";
 import { settings, applyAppearance, watchSystemAppearance } from "./settings-store.js";
 import { createNotesApp } from "./apps/notes.js";
 import { createPendingApp } from "./apps/pending.js";
+import { createRecordApp } from "./apps/record.js";
 import { detectMobileClientFromWindow } from "../../lib/device-detection";
 
 const LUT = {};
@@ -21,6 +23,14 @@ function buildLUT() {
 const APP_FACTORIES = {
   notes: createNotesApp,
 };
+
+// An app with a view_id is its own record, loaded the way the appshell loads a tab; otherwise the
+// in-page port if there is one; otherwise a labelled placeholder.
+function factoryFor(app) {
+  if (app.view_id != null) return createRecordApp;
+  if (LUT.ported.has(app.id)) return APP_FACTORIES[app.id];
+  return createPendingApp;
+}
 
 // ---------------------------------------------------------------- routing (hash: #/app/rest)
 function parseRoute() {
@@ -78,7 +88,7 @@ function boot() {
   root.appendChild(layer);
 
   for (const app of need("apps")) {
-    const factory = LUT.ported.has(app.id) ? APP_FACTORIES[app.id] : createPendingApp;
+    const factory = factoryFor(app);
     wm.registerApp(app.id, (ctx) =>
       factory(ctx, { mobile: false, initialSlug: app.id === route.appId ? route.rest || null : null, app }),
     );
@@ -96,6 +106,7 @@ function boot() {
   on("app:launch-empty", (appId) => wm.openWindow(appId));
   on("dock:trash", () => wm.openWindow(need("desktop.trashAppId")));
   on("route:set", setRoute);
+  on("app:badge", ({ appId, count }) => dock.setBadge(appId, count));
   on("wm:change", () => {
     const appId = wm.focusedAppId();
     if (appId && !location.hash.startsWith(`#/${appId}`)) setRoute(appId);
@@ -104,22 +115,8 @@ function boot() {
 }
 
 function bootPhone(root, route) {
-  root.dataset.shell = "mobile";
-  const app = route.appId ? LUT.apps.get(route.appId) : null;
-  const appId = app && app.mobile.supported && LUT.ported.has(app.id) ? app.id : need("responsive.mobileFallbackAppId");
-  const ctx = {
-    windowId: appId,
-    isFocused: () => true,
-    close() {},
-    minimize() {},
-    toggleMaximize() {},
-    startDrag() {},
-    controls: (cls) => wm.windowControls(appId, cls),
-    setMetadata() {},
-  };
-  const instance = APP_FACTORIES[appId](ctx, { mobile: true, initialSlug: route.appId === appId ? route.rest || null : null });
-  root.appendChild(el(`<div class="fixed inset-0 bg-background"></div>`)).appendChild(instance.el);
   on("route:set", setRoute);
+  phone.mount(root, { factoryFor, route, fallbackAppId: need("responsive.mobileFallbackAppId") });
 }
 
 function showMissing(error) {

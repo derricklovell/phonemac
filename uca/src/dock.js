@@ -16,6 +16,7 @@ let frameReq = null;
 let keep = {};
 const initial = new Set();
 let animState = {};
+let overflowing = false; // rail wider than the window: it scrolls sideways, no magnification
 
 const C = () => need("dock");
 
@@ -88,6 +89,7 @@ export function mount(container) {
   wireRail();
   wireHandle();
   reconcile();
+  window.addEventListener("resize", () => layout());
   on("wm:change", reconcile);
   on("menu:dismiss", closeMenu);
   setInterval(refreshCalendarIcon, 60000);
@@ -197,13 +199,47 @@ function reconcile() {
   refreshCalendarIcon();
 }
 
+// Natural (unmagnified) rail width, computed rather than measured so hover magnification can
+// never flip the dock in and out of overflow mode.
+function naturalWidth(m) {
+  const n = items.size;
+  const handle = m.handleHitbox + 2 * m.dividerMarginX;
+  return n * m.icon + handle + n * m.gap + 2 * m.padX + 2;
+}
+
+function applyOverflow(m) {
+  const next = naturalWidth(m) > window.innerWidth - 2 * C().edgeMargin;
+  if (next !== overflowing) {
+    overflowing = next;
+    if (overflowing) resetMagnificationState();
+  }
+  rail.classList.toggle("pc-scroll-hidden", overflowing);
+  rail.classList.toggle("overflow-x-auto", overflowing);
+  rail.classList.toggle("overflow-y-hidden", overflowing);
+  rail.classList.toggle("w-max", !overflowing);
+  rail.style.maxWidth = overflowing ? `calc(100vw - ${2 * C().edgeMargin}px)` : "";
+  updateFades();
+}
+
+function updateFades() {
+  if (!overflowing) {
+    delete rail.dataset.fade;
+    return;
+  }
+  const max = rail.scrollWidth - rail.clientWidth;
+  const left = rail.scrollLeft > 1;
+  const right = max - rail.scrollLeft > 1;
+  rail.dataset.fade = left && right ? "both" : left ? "left" : right ? "right" : "none";
+}
+
 function layout(m = metrics()) {
   rail.style.gap = `${m.gap}px`;
   rail.style.padding = `${m.padY}px ${m.padX}px`;
   rail.classList.toggle("transition-none", resizing);
   rail.classList.toggle("transition-all", !resizing);
+  applyOverflow(m);
   for (const [id, entry] of items) {
-    const s = magnification && !resizing && animState[id] !== "entering" ? (scales[id] ?? 1) : 1;
+    const s = magnifies() && animState[id] !== "entering" ? (scales[id] ?? 1) : 1;
     entry.root.style.width = `${m.icon * s}px`;
     Object.assign(entry.frame.style, {
       width: `${m.icon}px`,
@@ -251,31 +287,42 @@ function showTooltip() {
   const entry = items.get(hovered);
   if (!entry) return;
   const m = metrics();
-  const s = magnification ? (scales[hovered] ?? 1) : 1;
+  const s = magnifies() ? (scales[hovered] ?? 1) : 1;
   const lift = (s - 1) * m.icon;
   const label = entry.root.getAttribute("aria-label");
-  tooltip = el(html`<div class="pointer-events-none absolute left-1/2 z-[1] -translate-x-1/2 transition-[top] duration-100 ease-out" style="top:${-46 - lift}px">
+  // A scrolling rail clips its children, so in overflow mode the tooltip hangs off the dock wrapper.
+  const r = entry.root.getBoundingClientRect();
+  const w = wrap.getBoundingClientRect();
+  const left = overflowing ? `${r.left + r.width / 2 - w.left}px` : "50%";
+  const top = overflowing ? -46 + (r.top - w.top) : -46 - lift;
+  tooltip = el(html`<div class="pointer-events-none absolute z-[1] -translate-x-1/2 transition-[top] duration-100 ease-out" style="left:${left};top:${top}px">
     <svg viewBox="0 0 100 44" class="h-9 min-w-16" style="width:${Math.max(64, label.length * 9 + 24)}px" preserveAspectRatio="none">
       <path d="M 12 0 H 88 Q 100 0 100 12 V 20 Q 100 32 88 32 H 56 L 50 38 L 44 32 H 12 Q 0 32 0 20 V 12 Q 0 0 12 0 Z" class="fill-white/70 dark:fill-zinc-800/70"></path>
     </svg>
     <span class="absolute inset-0 flex items-center justify-center whitespace-nowrap px-3 pb-2 text-xs font-medium text-zinc-800 dark:text-white">${label}</span>
   </div>`);
-  entry.root.prepend(tooltip);
+  if (overflowing) wrap.appendChild(tooltip);
+  else entry.root.prepend(tooltip);
 }
 
-function resetMagnification() {
+const magnifies = () => magnification && !resizing && !overflowing;
+
+function resetMagnificationState() {
   pendingX = null;
   if (frameReq !== null) cancelAnimationFrame(frameReq);
   frameReq = null;
-  if (Object.keys(scales).length) {
-    scales = {};
-    layout();
-  }
+  scales = {};
+}
+
+function resetMagnification() {
+  const had = Object.keys(scales).length > 0;
+  resetMagnificationState();
+  if (had) layout();
 }
 
 function wireRail() {
   rail.addEventListener("pointermove", (e) => {
-    if (e.pointerType !== "mouse" || !magnification || resizing || e.target.closest('[data-dock-static="true"]')) {
+    if (e.pointerType !== "mouse" || !magnifies() || e.target.closest('[data-dock-static="true"]')) {
       resetMagnification();
       return;
     }
@@ -296,6 +343,24 @@ function wireRail() {
       layout(m);
     });
   });
+  rail.addEventListener(
+    "scroll",
+    () => {
+      updateFades();
+      if (hovered) showTooltip();
+    },
+    { passive: true },
+  );
+  // A mouse wheel scrolls an overflowing dock sideways (touch and trackpads already do).
+  rail.addEventListener(
+    "wheel",
+    (e) => {
+      if (!overflowing || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+      e.preventDefault();
+      rail.scrollLeft += e.deltaY;
+    },
+    { passive: false },
+  );
   rail.addEventListener("pointerleave", () => {
     hovered = null;
     resetMagnification();
@@ -407,14 +472,16 @@ function openMagnificationMenu() {
   closeMenu();
   hovered = null;
   resetMagnification();
-  menuEl = el(html`<div role="menu" class="absolute bottom-[calc(100%+8px)] left-1/2 z-[90] w-max -translate-x-1/2 rounded-lg border border-black/10 bg-white/95 py-1 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-zinc-800/95">
+  const hr = handleWrap.getBoundingClientRect();
+  const wr = wrap.getBoundingClientRect();
+  menuEl = el(html`<div role="menu" style="left:${hr.left + hr.width / 2 - wr.left}px" class="absolute bottom-[calc(100%+8px)] z-[90] w-max -translate-x-1/2 rounded-lg border border-black/10 bg-white/95 py-1 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-zinc-800/95">
     <span aria-hidden="true" class="absolute left-1/2 top-full h-2 w-3 -translate-x-1/2 bg-white/95 [clip-path:polygon(0_0,100%_0,50%_100%)] dark:bg-zinc-800/95"></span>
     <button type="button" role="menuitemcheckbox" aria-checked="${magnification}" data-dock-action="magnify"
       class="relative z-[1] flex w-full items-center justify-between whitespace-nowrap px-3 py-1.5 text-left text-xs transition-colors can-hover:hover:bg-blue-500 can-hover:hover:text-white">${
         magnification ? t("dock.magnifyOff") : t("dock.magnifyOn")
       }</button>
   </div>`);
-  handleWrap.appendChild(menuEl);
+  wrap.appendChild(menuEl);
   wm.setMenuOpen(true);
   menuEl.addEventListener("click", () => {
     magnification = !magnification;

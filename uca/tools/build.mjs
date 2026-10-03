@@ -2,6 +2,8 @@
 //   dist/phonemac.html        — the record file (devs01/s01): placeholder `var componentProps = {};`
 //   dist/split/*              — the four UCA source fields + props.json
 //   dist/local/index.html     — the same file with the TEST props injected, plus assets/ (local preview)
+//   dist/local/records.html   — test variant: every app on the phone bar, Messages/Photos hosted as
+//                               records from the test server's mock viewer endpoint
 import { build } from "esbuild";
 import postcss from "postcss";
 import tailwindcss from "tailwindcss";
@@ -268,6 +270,7 @@ export async function buildAll({ assetBase = "assets/" } = {}) {
   writeFileSync(join(DIST, "split/script.js"), script);
   writeFileSync(join(DIST, "split/props.json"), JSON.stringify(props, null, 2));
   writeFileSync(join(DIST, "local/index.html"), injectProps(page, props));
+  writeFileSync(join(DIST, "local/records.html"), injectProps(page, recordsVariant(props)));
   // Artifact preview: the publish skeleton supplies doctype/head/body, so ship the inner parts only.
   mkdirSync(join(DIST, "artifact"), { recursive: true });
   const fragment = `<title>${props.meta.previewTitle}</title>\n<style>\n${css}\n</style>\n${body.trim()}\n<script>\n${script}\n</script>\n`;
@@ -278,6 +281,16 @@ export async function buildAll({ assetBase = "assets/" } = {}) {
     if (existsSync(from)) cpSync(from, join(DIST, "local/assets", a), { recursive: true });
   }
   return { page, props, sizes: { page: page.length, css: css.length, script: script.length } };
+}
+
+function recordsVariant(props) {
+  const RECORDS = { messages: 9001, photos: 9002 };
+  return {
+    ...props,
+    config: { ...props.config, viewEndpoint: "/viewer" },
+    apps: props.apps.map((a) => (a.id in RECORDS ? { ...a, view_id: RECORDS[a.id] } : a)),
+    phone: { ...props.phone, barAppIds: props.apps.map((a) => a.id) },
+  };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

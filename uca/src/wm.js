@@ -321,6 +321,7 @@ function makeContext(windowId) {
       return state.windows[windowId];
     },
     isFocused: () => state.focusedId === windowId,
+    focus: () => focusWindow(windowId),
     close: () => closeWindow(windowId),
     minimize: () => minimizeWindow(windowId),
     toggleMaximize: () => toggleMaximize(windowId),
@@ -480,6 +481,8 @@ function wireWindow(root, id) {
 function track(onMove, onEnd) {
   let raf = null;
   let last = null;
+  // Embedded record frames would swallow the pointer mid-drag; port.css turns them off meanwhile.
+  document.documentElement.dataset.wmTracking = "true";
   const move = (e) => {
     last = e;
     if (raf === null) {
@@ -495,6 +498,7 @@ function track(onMove, onEnd) {
     window.removeEventListener("mousemove", move);
     window.removeEventListener("mouseup", end);
     window.removeEventListener("blur", end);
+    delete document.documentElement.dataset.wmTracking;
     onEnd();
   };
   window.addEventListener("mousemove", move);

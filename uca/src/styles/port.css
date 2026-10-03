@@ -32,3 +32,23 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* Record frames would swallow the pointer while a window is dragged or resized. */
+[data-wm-tracking] iframe {
+  pointer-events: none;
+}
+
+/* Icon rails that scroll sideways (phone bar, dock in overflow mode) fade out on the side(s)
+   that have more icons to scroll to. */
+[data-fade="left"] {
+  -webkit-mask-image: linear-gradient(to right, transparent, black 24px);
+  mask-image: linear-gradient(to right, transparent, black 24px);
+}
+[data-fade="right"] {
+  -webkit-mask-image: linear-gradient(to left, transparent, black 24px);
+  mask-image: linear-gradient(to left, transparent, black 24px);
+}
+[data-fade="both"] {
+  -webkit-mask-image: linear-gradient(to right, transparent, black 24px, black calc(100% - 24px), transparent);
+  mask-image: linear-gradient(to right, transparent, black 24px, black calc(100% - 24px), transparent);
+}

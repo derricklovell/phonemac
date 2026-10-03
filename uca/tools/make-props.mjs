@@ -117,6 +117,12 @@ const STRINGS = {
   "overlay.unlock": "Unlock",
   "overlay.powerOn": "Power on",
   "overlay.touchId": "Touch ID or Enter Password",
+  "phone.bar": "Apps",
+  "phone.toggleBar": "Show or hide the app bar",
+  "phone.badgeLabel": "{app}, {count} new",
+  "record.loading": "Loading {app}…",
+  "record.failed": "{app} couldn't load ({reason}).",
+  "record.empty": "the record returned an empty page",
   "pending.body": "{app} is still being ported to the UCA build. It will appear here in a later phase.",
   "notes.displayOptions": "Notes display options",
   "notes.newNote": "New Note",
@@ -173,8 +179,13 @@ export async function makeTestProps({ theme, assetBase }) {
       canQuit: a.id !== "finder",
       alwaysShowsOpenIndicator: a.id === "finder",
       mobile: { supported: a.mobile.supported },
+      // Set when the app is built as its own record; the shell then loads it like an appshell tab.
+      view_id: null,
     };
   });
+  // Phone bar: the apps the original supports on phones, in Dock order.
+  const byDock = [...apps].sort((l, r) => (l.dockOrder ?? Infinity) - (r.dockOrder ?? Infinity));
+  const barAppIds = byDock.filter((a) => a.mobile.supported).map((a) => a.id);
   // Wallpapers: original file plus, where available, the resized copies the original site
   // served through next/image (uca/assets/wallpapers/<os>-<width>.webp).
   const WIDTHS = [640, 750, 828, 1080, 1200, 1920, 2048, 3840];
@@ -197,6 +208,20 @@ export async function makeTestProps({ theme, assetBase }) {
     features: { portedApps: ["notes"] },
     apps,
     responsive: { mobileFallbackAppId: "notes" },
+    config: { viewEndpoint: "https://api.1ovr1.com/api:9yDRTI1I/viewer" },
+    phone: {
+      barAppIds,
+      barHeight: 52,
+      handleHeight: 8,
+      itemSize: 44,
+      iconSize: 34,
+      gap: 2,
+      paddingX: 8,
+      dotSize: 4,
+      warmLimit: 4,
+      swipeThreshold: 50,
+      tapSlop: 10,
+    },
     formats: { locale: "en-US" },
     storage: {
       windowLayout: "pc-desktop-window-layout",
@@ -207,6 +232,9 @@ export async function makeTestProps({ theme, assetBase }) {
       notesSession: "session_id",
       privateNotes: "pc-private-notes",
       pinnedNotes: "pinnedNotes",
+      phoneState: "pc-phone-state",
+      appStatePrefix: "pc-app-state:",
+      appRoutePrefix: "pc-app-route:",
     },
     settings: {
       defaults: {
@@ -264,6 +292,7 @@ export async function makeTestProps({ theme, assetBase }) {
       magnificationScale: 1.4,
       magnificationRadius: 0.88,
       calendarIconRatio: 0.79,
+      edgeMargin: 8,
       enterMs: 700,
       exitMs: 350,
     },
