@@ -196,7 +196,7 @@ export async function makeTestProps({ theme, assetBase }) {
     shell: { weight: "dom" },
     features: { portedApps: ["notes"] },
     apps,
-    responsive: { mobileMaxWidth: 767, mobileFallbackAppId: "notes" },
+    responsive: { mobileFallbackAppId: "notes" },
     formats: { locale: "en-US" },
     storage: {
       windowLayout: "pc-desktop-window-layout",

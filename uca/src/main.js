@@ -9,6 +9,7 @@ import * as shell from "./shell.js";
 import { settings, applyAppearance, watchSystemAppearance } from "./settings-store.js";
 import { createNotesApp } from "./apps/notes.js";
 import { createPendingApp } from "./apps/pending.js";
+import { detectMobileClientFromWindow } from "../../lib/device-detection";
 
 const LUT = {};
 
@@ -40,8 +41,10 @@ function setRoute(path) {
   emit("route:changed", path);
 }
 
+// Same rule as the original: phone layout only on phones/tablets (user agent, or several
+// touch signals together), never because a desktop browser window is narrow.
 function isPhone() {
-  return window.matchMedia(`(max-width: ${need("responsive.mobileMaxWidth")}px)`).matches;
+  return detectMobileClientFromWindow();
 }
 
 // ---------------------------------------------------------------- boot
