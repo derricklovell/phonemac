@@ -1,11 +1,12 @@
 // Menu bar: Apple menu, focused-app menus, status items and clock.
 import { need, t, emit, on, el, html, raw, cn, icon } from "./core.js";
 import * as wm from "./wm.js";
-import { settings } from "./settings-store.js";
+import { settings, setAppearance, APPEARANCES } from "./settings-store.js";
 
 let bar;
 let openMenu = null;
 let clockTimer = null;
+let renderedSettings = null; // settings the bar was last drawn with, appearance excluded
 const menuProviders = new Map(); // appId -> () => [{ id, label, items: () => [...] }]
 
 // Apps contribute extra menu-bar menus (e.g. Notes "File").
@@ -25,7 +26,12 @@ export function mount(container) {
   container.appendChild(bar);
   render();
   on("wm:change", render);
-  on("settings:change", render);
+  // The theme switch updates itself in place (so its thumb slides and focus stays put); the bar only
+  // redraws for the settings it actually shows.
+  on("settings:change", () => {
+    if (barSettingsKey() !== renderedSettings) render();
+  });
+  on("appearance:change", syncThemeSwitch);
   on("menu:dismiss", () => setOpen(null));
   document.addEventListener("mousedown", (e) => {
     if (openMenu && !bar.contains(e.target)) setOpen(null);
@@ -41,6 +47,7 @@ export function mount(container) {
     }
   });
   bar.addEventListener("click", onClick);
+  bar.addEventListener("keydown", onThemeKey);
   scheduleClock();
 }
 
@@ -83,9 +90,52 @@ function item({ id, label, glyph, shortcut, disabled }) {
 
 const divider = () => html`<div class="my-1 border-t border-black/10 dark:border-white/10"></div>`;
 
+// Inline light / dark / system switch (adapted from the Arc UserMenu "Theme" row). It is one stop
+// in the menu: Tab lands on the chosen segment, Left/Right (Home/End) choose, the menu stays open.
+const THEME_ICONS = { light: "themeSun", dark: "themeMoon", system: "themeMonitor" };
+
+function themeSwitch() {
+  const value = settings().appearance;
+  const index = Math.max(0, APPEARANCES.indexOf(value));
+  const label = t("theme.label");
+  return html`<div data-theme-switch class="w-full flex items-center gap-3 px-3 py-1 text-xs select-none">
+    <span class="text-muted-foreground" aria-hidden="true">${icon("themeSunMoon", "w-4 h-4")}</span>
+    <span aria-hidden="true">${label}</span>
+    <div role="group" aria-label="${label}" class="relative ml-auto grid grid-cols-3 rounded-md bg-black/[0.06] p-0.5 dark:bg-white/10">
+      <span aria-hidden="true" data-theme-thumb
+        class="absolute inset-y-0.5 left-0.5 w-[calc((100%-4px)/3)] rounded-[5px] bg-white shadow-sm transition-transform duration-200 ease-out dark:bg-white/20"
+        style="transform:translateX(${index * 100}%)"></span>
+      ${APPEARANCES.map(
+        (a) => html`<button type="button" role="menuitemradio" data-theme-option="${a}" aria-checked="${a === value}"
+          tabindex="${a === value ? "0" : "-1"}" aria-label="${t(`theme.${a}`)}" title="${t(`theme.${a}`)}"
+          class="${cn(
+            "relative z-[1] flex h-5 w-7 items-center justify-center rounded-[5px] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70",
+            a === value ? "text-foreground" : "text-muted-foreground can-hover:hover:text-foreground",
+          )}">${icon(THEME_ICONS[a], "w-[15px] h-[15px]")}</button>`,
+      )}
+    </div>
+  </div>`;
+}
+
+// Patches the open switch to the current appearance (no redraw: the thumb slides, focus stays).
+function syncThemeSwitch() {
+  const sw = bar?.querySelector("[data-theme-switch]");
+  if (!sw) return;
+  const value = settings().appearance;
+  sw.querySelector("[data-theme-thumb]").style.transform = `translateX(${Math.max(0, APPEARANCES.indexOf(value)) * 100}%)`;
+  for (const b of sw.querySelectorAll("[data-theme-option]")) {
+    const on = b.dataset.themeOption === value;
+    b.setAttribute("aria-checked", String(on));
+    b.tabIndex = on ? 0 : -1;
+    b.classList.toggle("text-foreground", on);
+    b.classList.toggle("text-muted-foreground", !on);
+    b.classList.toggle("can-hover:hover:text-foreground", !on);
+  }
+}
+
 function panel(id, cls, items) {
   return html`<div role="menu" data-panel="${id}" class="${cn(PANEL, cls)}">${items.map((i) =>
-    i === "-" ? divider() : item(i),
+    i === "-" ? divider() : i === "theme" ? themeSwitch() : item(i),
   )}</div>`;
 }
 
@@ -96,6 +146,8 @@ function appleItems() {
     { id: "about-mac", label: t("apple.about"), glyph: "monitor", run: () => emit("system:about") },
     "-",
     { id: "settings", label: t("apple.settings"), glyph: "settings", run: () => wm.openWindow("settings") },
+    "-",
+    "theme",
     "-",
     { id: "sleep", label: t("apple.sleep"), glyph: "moon", run: () => emit("system:overlay", "sleep") },
     { id: "restart", label: t("apple.restart"), glyph: "rotateCcw", run: () => emit("system:overlay", "restart") },
@@ -159,7 +211,8 @@ function render() {
   const app = focusedApp();
   const extra = appMenus(app);
   actions.clear();
-  const reg = (items) => items.forEach((i) => i !== "-" && actions.set(i.id, i.run));
+  const reg = (items) => items.forEach((i) => typeof i === "object" && actions.set(i.id, i.run));
+  renderedSettings = barSettingsKey();
 
   let panels = "";
   if (openMenu === "apple") {
@@ -201,7 +254,30 @@ function render() {
     ${raw(panels)}`;
 }
 
+function barSettingsKey() {
+  const { appearance, ...rest } = settings();
+  return JSON.stringify(rest);
+}
+
+function onThemeKey(e) {
+  const b = e.target.closest?.("[data-theme-option]");
+  if (!b) return;
+  const i = APPEARANCES.indexOf(b.dataset.themeOption);
+  const next = { ArrowLeft: i - 1, ArrowRight: i + 1, Home: 0, End: APPEARANCES.length - 1 }[e.key];
+  if (next === undefined) return;
+  e.preventDefault();
+  const value = APPEARANCES[(next + APPEARANCES.length) % APPEARANCES.length];
+  setAppearance(value);
+  bar.querySelector(`[data-theme-option="${value}"]`)?.focus();
+}
+
 function onClick(e) {
+  const themeBtn = e.target.closest("[data-theme-option]");
+  if (themeBtn) {
+    // Theme choices keep the menu open.
+    setAppearance(themeBtn.dataset.themeOption);
+    return;
+  }
   const itemBtn = e.target.closest("[data-item]");
   if (itemBtn) {
     const run = actions.get(itemBtn.dataset.item);

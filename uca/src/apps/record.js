@@ -1,7 +1,8 @@
 // Apps that live in their own records (built separately) are hosted the way the 1ovr1 appshell
 // hosts a tab: fetch the record from the viewer endpoint, mount it in a sandboxed srcdoc iframe,
 // answer its gin: handshake, keep its state, and sleep/wake it when it is hidden/shown.
-import { need, t, emit, el, html, raw, cn, store, storageKey } from "../core.js";
+import { need, t, on, emit, el, html, raw, cn, store, storageKey } from "../core.js";
+import { settings, appearanceScheme } from "../settings-store.js";
 
 const frames = new Map(); // contentWindow -> { viewId, appId, iframe }
 const htmlCache = new Map(); // view_id -> Promise<html>
@@ -26,9 +27,22 @@ function post(win, msg) {
   }
 }
 
+// Light / dark / system reaches a record two ways: `color-scheme` on its frame (so the frame's
+// backdrop matches while it loads) and, as the source of truth, `appearance`/`scheme` in
+// app:restore plus a `shell:appearance` message on every change. prefers-color-scheme inside the
+// frame reports the OS, not this setting, so records should follow the message.
+const appearanceMessage = () => ({ gin: "shell:appearance", appearance: settings().appearance, scheme: appearanceScheme() });
+
 function listen() {
   if (listening) return;
   listening = true;
+  on("appearance:change", ({ scheme }) => {
+    const msg = appearanceMessage();
+    for (const [win, frame] of frames) {
+      frame.iframe.style.colorScheme = scheme;
+      post(win, msg);
+    }
+  });
   window.addEventListener("message", (e) => {
     const d = e.data;
     if (!d || typeof d !== "object" || typeof d.gin !== "string") return;
@@ -44,6 +58,8 @@ function listen() {
         ts: saved ? saved.ts : 0,
         authed: false,
         user: null,
+        appearance: settings().appearance,
+        scheme: appearanceScheme(),
       });
       const route = store.get("sessionStorage", routeKey(viewId));
       if (route && route !== "/") post(e.source, { gin: "route:set", route });
@@ -105,6 +121,7 @@ export function createRecordApp(ctx, { app, mobile }) {
   iframe.setAttribute("allow", "clipboard-read; clipboard-write");
   iframe.className = cn("absolute inset-0 h-full w-full border-0 bg-background opacity-0 transition-opacity duration-200");
   iframe.dataset.viewId = String(app.view_id);
+  iframe.style.colorScheme = appearanceScheme();
   stage.appendChild(iframe);
 
   if (!mobile) {

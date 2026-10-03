@@ -63,6 +63,11 @@ var got = [];
 addEventListener("message", function (e) {
   var m = e.data; if (!m || !m.gin) return;
   got.push(m.gin); document.body.dataset.got = got.join(",");
+  if (m.scheme) {
+    document.body.dataset.scheme = m.scheme;
+    document.body.dataset.appearance = m.appearance;
+    document.body.dataset.mq = String(matchMedia("(prefers-color-scheme: dark)").matches);
+  }
   if (m.gin === "app:restore") {
     var opened = ((m.state && m.state.opened) || 0) + 1;
     document.getElementById("s").textContent = "record ${view} restored, opened " + opened;
@@ -139,6 +144,9 @@ for (const width of WIDTHS) {
     const { context, p } = await page(width);
     await run(p, width);
     await p.waitForTimeout(800);
+    // Icons use decoding="async"; wait until every image can paint so shots aren't timing-dependent.
+    await p.evaluate(() => Promise.all([...document.images].map((i) => i.decode().catch(() => {}))));
+    await p.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
     await p.mouse.move(width / 2, 300);
     await p.screenshot({ path: join(OUT, `${name}-${width}.png`) });
     let opts = {};
@@ -321,6 +329,86 @@ for (const width of [320, 360, 414]) {
   await p.keyboard.press("j");
   const hash = await p.evaluate(() => location.hash);
   results.checks.push(["j selects the next note", hash === "#/notes/quick-links"]);
+  await context.close();
+}
+
+// Apple menu theme switch: existing items untouched, menu stays open, every surface follows.
+{
+  const { context, p } = await page(1440, { colorScheme: "light" });
+  await p.goto(`${base}/records.html#/notes`, { waitUntil: "networkidle" });
+  await p.frameLocator('[data-window-id="messages"] iframe').locator("text=restored").waitFor({ timeout: 3000 });
+  await p.locator('[data-menu="apple"]').click();
+  const ids = await p.$$eval('[data-panel="apple"] [data-item]', (b) => b.map((x) => x.dataset.item));
+  results.checks.push([
+    "Apple menu keeps its items, in order, plus the Theme switch",
+    JSON.stringify(ids) === JSON.stringify(["about-mac", "settings", "sleep", "restart", "shutdown", "lock", "logout"]) &&
+      (await p.locator('[data-panel="apple"] [data-theme-switch]').count()) === 1,
+  ]);
+  await p.screenshot({ path: join(OUT, "apple-menu-theme-light.png"), clip: { x: 0, y: 0, width: 420, height: 380 } });
+  const notesBg = () => p.evaluate(() => getComputedStyle(document.querySelector('[data-window-id="notes"] .notes-app')).backgroundColor);
+  const lightBg = await notesBg();
+
+  await p.locator('[data-theme-option="dark"]').click();
+  await p.waitForTimeout(300);
+  const dark = await p.evaluate(() => ({
+    cls: document.documentElement.classList.contains("dark"),
+    scheme: document.documentElement.style.colorScheme,
+    open: !!document.querySelector('[data-panel="apple"]'),
+    checked: document.querySelector('[data-theme-option][aria-checked="true"]')?.dataset.themeOption,
+    saved: JSON.parse(localStorage.getItem("pc-system-settings") || "{}").appearance,
+  }));
+  const darkBg = await notesBg();
+  const frame = p.frameLocator('[data-window-id="messages"] iframe').locator("body");
+  const fr = { scheme: await frame.getAttribute("data-scheme"), mq: await frame.getAttribute("data-mq") };
+  await p.screenshot({ path: join(OUT, "apple-menu-theme-dark.png"), clip: { x: 0, y: 0, width: 420, height: 380 } });
+  await p.screenshot({ path: join(OUT, "desktop-1440-dark.png") });
+  results.checks.push([
+    "Dark: page goes dark, menu stays open, choice saved",
+    dark.cls && dark.scheme === "dark" && dark.open && dark.checked === "dark" && dark.saved === "dark" && darkBg !== lightBg,
+  ]);
+  results.checks.push([`Dark reaches record apps (message scheme=${fr.scheme}, prefers-color-scheme dark in frame=${fr.mq})`, fr.scheme === "dark"]);
+
+  // Keyboard: Left/Right choose within the switch.
+  await p.locator('[data-theme-option="dark"]').focus();
+  await p.keyboard.press("ArrowRight");
+  await p.waitForTimeout(50);
+  const kb = await p.evaluate(() => ({
+    checked: document.querySelector('[data-theme-option][aria-checked="true"]')?.dataset.themeOption,
+    focused: document.activeElement?.dataset.themeOption,
+  }));
+  results.checks.push(["ArrowRight moves to System and keeps focus on the switch", kb.checked === "system" && kb.focused === "system"]);
+
+  // System follows the OS live; Light / Dark override it.
+  await p.emulateMedia({ colorScheme: "dark" });
+  await p.waitForTimeout(100);
+  const sysDark = await p.evaluate(() => document.documentElement.classList.contains("dark"));
+  await p.emulateMedia({ colorScheme: "light" });
+  await p.waitForTimeout(100);
+  const sysLight = await p.evaluate(() => !document.documentElement.classList.contains("dark"));
+  await p.locator('[data-theme-option="light"]').click();
+  await p.emulateMedia({ colorScheme: "dark" });
+  await p.waitForTimeout(100);
+  const forcedLight = await p.evaluate(() => !document.documentElement.classList.contains("dark"));
+  results.checks.push(["System follows the OS live; Light overrides a dark OS", sysDark && sysLight && forcedLight]);
+  await p.keyboard.press("Escape");
+
+  // The choice survives a reload (and applies before first paint of the shell).
+  await p.locator('[data-menu="apple"]').click();
+  await p.locator('[data-theme-option="dark"]').click();
+  await p.reload({ waitUntil: "networkidle" });
+  const persisted = await p.evaluate(() => document.documentElement.classList.contains("dark"));
+  results.checks.push(["theme choice persists across reloads", persisted]);
+  await context.close();
+}
+
+// Phone follows the same setting (no Apple menu there).
+{
+  const { context, p } = await page(360, { ...PHONE, colorScheme: "light" });
+  await p.goto(`${base}/index.html#/notes`, { waitUntil: "networkidle" });
+  await p.evaluate(() => localStorage.setItem("pc-system-settings", JSON.stringify({ appearance: "dark" })));
+  await p.reload({ waitUntil: "networkidle" });
+  await p.screenshot({ path: join(OUT, "phone-360-dark.png") });
+  results.checks.push(["phone uses the saved theme", await p.evaluate(() => document.documentElement.classList.contains("dark"))]);
   await context.close();
 }
 

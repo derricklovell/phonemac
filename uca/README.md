@@ -27,12 +27,23 @@ For each entry in `apps[]`, in order:
 
 | from the record | shell does |
 |---|---|
-| `app:ready` | replies `app:restore {view_id, state, ts, authed, user}`, then `route:set` if a route was saved |
+| `app:ready` | replies `app:restore {view_id, state, ts, authed, user, appearance, scheme}`, then `route:set` if a route was saved |
 | `app:state {state}` | saves it to localStorage (`storage.appStatePrefix` + view_id) |
 | `route:changed {route}` | saves it to sessionStorage (`storage.appRoutePrefix` + view_id) |
 | `messages:unread {n}` | shows a badge on the app's phone-bar icon and Dock icon |
 
 The shell sends `shell:sleep` when an app is hidden and `shell:wake` when it is shown again.
+
+## Light / dark / system
+
+The Apple menu has a Theme switch (Light, Dark, System). Settings stores the choice as `settings.appearance`, with the default coming from `settings.defaults`.
+
+- `setAppearance()` in `src/settings-store.js` is the only way to change it.
+- Built-in apps follow the `dark` class on `<html>`. Nothing keys off `prefers-color-scheme`, so a manual choice always wins.
+- Colours swap in one frame, like the original's `disableTransitionOnChange`.
+- System mode follows the OS live. Other open tabs follow too.
+
+Record apps get `appearance` (`light|dark|system`) and `scheme` (`light|dark`) in `app:restore`. They also get `{gin:'shell:appearance', appearance, scheme}` on every change. Inside the record's frame, `prefers-color-scheme` reports the OS, not this setting, so records should follow the message.
 
 ## Props used by the phone shell
 
