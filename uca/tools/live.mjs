@@ -1,5 +1,6 @@
 // Live check against the real 1ovr1 API with a real session, READ-ONLY.
-//   ONEOVR1_AUTH_TOKEN=… node tools/live.mjs
+//   node tools/live.mjs                  reads the token from $auth_token
+//   node tools/live.mjs --env MY_TOKEN   reads it from $MY_TOKEN instead
 // A stand-in appshell restores the token to the desktop (dist/local/index.html), which passes it to
 // Messages (record 74, loaded live via viewer_iframe → get_pages). messages/inbox goes to the real
 // API; messages/send and messages/state are answered locally and never reach the merchant's data.
@@ -12,9 +13,11 @@ import { readFileSync, existsSync, mkdirSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
 import { UCA_DIR, HEIGHT } from "./shared.mjs";
 
-const TOKEN = process.env.ONEOVR1_AUTH_TOKEN;
+const flag = process.argv.indexOf("--env");
+const TOKEN_ENV = flag > -1 ? process.argv[flag + 1] : "auth_token";
+const TOKEN = process.env[TOKEN_ENV];
 if (!TOKEN) {
-  console.error("ONEOVR1_AUTH_TOKEN is not set in this session (environment variables reach new sessions).");
+  console.error(`$${TOKEN_ENV} is not set in this session (environment variables reach sessions started after they're saved).`);
   process.exit(2);
 }
 const ROOT = join(UCA_DIR, "dist/local");
