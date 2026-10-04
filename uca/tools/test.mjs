@@ -20,7 +20,7 @@ const server = createServer((req, res) => {
   if (path === "/" || path === "/index.html") path = "/index.html";
   if (path === "/shell-host.html") {
     res.writeHead(200, { "content-type": "text/html" });
-    return res.end(SHELL_HOST);
+    return res.end(url.searchParams.has("session") ? SESSION_HOST : SHELL_HOST);
   }
   // Mock of the appshell's viewer endpoint (`${viewEndpoint}_iframe?view=<id>`).
   if (path === "/viewer_iframe") {
@@ -79,6 +79,54 @@ addEventListener("message", function (e) {
 parent.postMessage({ gin: "app:ready", weight: "dom" }, "*");
 </script></body></html>`;
 
+// ---------------------------------------------------------------- 1ovr1 API mock
+// Every test context answers https://api.1ovr1.com itself, the way the live API behaves for record 74:
+// viewer_iframe is blank without the merchant's cookie (so the shell falls back to get_pages s01),
+// get_pages/74 is the snapshot of the real record, and messages/* need the session's Bearer token.
+const TEST_TOKEN = "test-session-token"; // what the stand-in appshell restores; not a real credential
+const RECORD_74 = readFileSync(join(UCA_DIR, "props/fixtures/records/74.s01.html"), "utf8");
+const INBOX = readFileSync(join(UCA_DIR, "props/fixtures/inbox.json"), "utf8");
+const api = { inboxAuth: [], sends: [] };
+async function mockApi(route) {
+  const req = route.request();
+  const url = new URL(req.url());
+  const origin = req.headers()["origin"] || "*";
+  const cors = {
+    "access-control-allow-origin": origin,
+    "access-control-allow-credentials": "true",
+    "access-control-allow-headers": "authorization, content-type",
+    "access-control-allow-methods": "GET, POST, OPTIONS",
+  };
+  const json = (status, body) => route.fulfill({ status, headers: { ...cors, "content-type": "application/json" }, body: JSON.stringify(body) });
+  if (req.method() === "OPTIONS") return route.fulfill({ status: 204, headers: cors });
+  if (url.pathname === "/api:9yDRTI1I/viewer_iframe") return route.fulfill({ status: 200, headers: { ...cors, "content-type": "text/html" }, body: "" });
+  if (url.pathname === "/api:o-B1LTj7/get_pages/74") return json(200, [{ id: 74, name: "Messages", s01: RECORD_74 }]);
+  if (url.pathname.startsWith("/api:9yDRTI1I/messages/")) {
+    const auth = req.headers()["authorization"] || null;
+    if (url.pathname === "/api:9yDRTI1I/messages/inbox") api.inboxAuth.push(auth);
+    if (auth !== `Bearer ${TEST_TOKEN}`) return json(401, { message: "Unauthorized" });
+    if (url.pathname === "/api:9yDRTI1I/messages/inbox") return route.fulfill({ status: 200, headers: { ...cors, "content-type": "application/json" }, body: INBOX });
+    if (url.pathname === "/api:9yDRTI1I/messages/send") {
+      api.sends.push(JSON.parse(req.postData() || "{}"));
+      return json(200, { message: { id: 9000 + api.sends.length, ts: Date.now(), via: null } });
+    }
+    return json(200, {});
+  }
+  return route.fulfill({ status: 404, headers: cors, body: "" });
+}
+
+// The appshell with a signed-in merchant: app:ready → app:restore with the user and session token.
+const SESSION_HOST = `<!doctype html><body style="margin:0"><iframe id="f" src="/index.html#/notes" style="border:0;position:fixed;inset:0;width:100%;height:100%"></iframe>
+<script>
+window.received = [];
+addEventListener("message", (e) => {
+  const m = e.data; if (!m || !m.gin) return;
+  window.received.push(m);
+  if (m.gin === "app:ready") e.source.postMessage({ gin: "app:restore", view_id: "desktop", state: null, ts: 0, authed: true,
+    user: { username: "sample-merchant", user_id: "u-1", display_name: "Sample Studio", auth_token: "${TEST_TOKEN}" } }, "*");
+});
+</script></body>`;
+
 const results = { errors: [], diffs: [], checks: [] };
 // Chrome flags every frame sandboxed with allow-scripts + allow-same-origin. That is the appshell's
 // own sandbox for view frames, kept as-is, so the warning is expected wherever a record is hosted.
@@ -129,6 +177,7 @@ const PHONE = { isMobile: true, hasTouch: true, userAgent: PHONE_UA, deviceScale
 async function page(width, opts = {}) {
   const phone = width === 360 ? { isMobile: true, hasTouch: true, userAgent: PHONE_UA, deviceScaleFactor: 1 } : {};
   const context = await browser.newContext({ viewport: { width, height: HEIGHT }, ...phone, ...opts });
+  await context.route("https://api.1ovr1.com/**", mockApi);
   const p = await context.newPage();
   await p.clock.setFixedTime(new Date(FIXED_TIME));
   p.on("pageerror", (e) => results.errors.push(`${width}: ${e.message}`));
@@ -285,7 +334,9 @@ for (const width of [320, 360, 414]) {
   await p.locator('[data-phone-app="messages"]').click();
   await p.waitForTimeout(100);
   const got = await frame.locator("body").getAttribute("data-got");
-  results.checks.push(["record app is slept when hidden and woken when shown (no reload)", got === "app:restore,shell:sleep,shell:wake"]);
+  // Lifecycle only (the record also hears shell:active as the front app changes).
+  const lifecycle = got.split(",").filter((g) => ["app:restore", "shell:sleep", "shell:wake"].includes(g)).join(",");
+  results.checks.push(["record app is slept when hidden and woken when shown (no reload)", lifecycle === "app:restore,shell:sleep,shell:wake"]);
   await context.close();
 }
 
@@ -513,32 +564,35 @@ for (const width of [320, 360, 414]) {
   await context.close();
 }
 
-// Messages loaded as a record (stand-in at the preview's viewEndpoint): move and resize its window
-// after it has loaded, with the pointer travelling over the app's iframe the whole way.
+// Record 74 (the real Messages code) inside the desktop inside a signed-in appshell: the session
+// reaches the record, its inbox loads with the token, and it is moved/resized after loading.
 {
   const { context, p } = await page(1440);
-  await p.goto(`${base}/preview.html#/notes`, { waitUntil: "networkidle" });
-  const win = p.locator('[data-window-id="messages"]');
-  const frame = p.frameLocator('[data-window-id="messages"] iframe');
-  await frame.locator("text=Stand-in record").waitFor({ timeout: 5000 });
+  await p.goto(`${base}/shell-host.html?session`, { waitUntil: "networkidle" });
+  const d = p.frameLocator("#f");
+  const win = d.locator('[data-window-id="messages"]');
+  const rec = d.frameLocator('[data-window-id="messages"] iframe');
+  await rec.locator('.conv[data-id="101"]').waitFor({ timeout: 8000 });
   await p.waitForTimeout(200);
   const rect = () => win.evaluate((w) => { const r = w.getBoundingClientRect(); return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height), z: +getComputedStyle(w).zIndex }; });
-  const frameSize = () => frame.locator("body").evaluate(() => ({ w: innerWidth, h: innerHeight }));
-  const badge = await p.locator('[data-dock-item="messages"] [data-badge]').textContent();
+  const frameSize = () => rec.locator("body").evaluate(() => ({ w: innerWidth, h: innerHeight }));
+  const badge = await d.locator('[data-dock-item="messages"] [data-badge]').textContent();
+  const threads = await rec.locator(".conv").count();
+  const avatar = await d.locator('[data-menu="apple"] [data-avatar]').textContent();
   const r0 = await rect();
   const f0 = await frameSize();
 
-  // Click inside the app (in the iframe) brings its window to the front.
-  await p.locator('[data-window-id="notes"]').click({ position: { x: 400, y: 300 } });
+  // Click the part of Messages that Notes doesn't cover: its window comes to the front.
+  await d.locator('[data-window-id="notes"]').click({ position: { x: 400, y: 300 } });
   const zBack = (await rect()).z;
-  // Notes covers most of Messages: click the part of the app that shows (right of Notes).
   await p.mouse.click(r0.x + r0.w - 60, r0.y + 300);
   await p.waitForTimeout(150);
   const zFront = (await rect()).z;
-  await frame.locator(".chat").first().click(); // now in front: open a conversation in the app
+  // Open a conversation through the app's own function (at this width an open thread covers the list).
+  await rec.locator("body").evaluate(() => window.openById(101));
+  await p.waitForTimeout(150);
 
-  // Drag by the title bar, sweeping across the iframe area on the way.
-  const t = await p.locator('[data-window-id="messages"] [data-window-drag-handle]').boundingBox();
+  const t = await d.locator('[data-window-id="messages"] [data-window-drag-handle]').boundingBox();
   await p.mouse.move(t.x + t.width / 2, t.y + t.height / 2);
   await p.mouse.down();
   await p.mouse.move(t.x + t.width / 2 - 60, t.y + 200, { steps: 8 });
@@ -547,20 +601,18 @@ for (const width of [320, 360, 414]) {
   await p.waitForTimeout(100);
   const r1 = await rect();
 
-  // Resize from the bottom-right corner, then from the left edge — pointer over the iframe.
-  const seBox = await p.locator('[data-window-id="messages"] [data-window-resize-handle="se"]').boundingBox();
+  const seBox = await d.locator('[data-window-id="messages"] [data-window-resize-handle="se"]').boundingBox();
   const se = { x: seBox.x + seBox.width / 2, y: seBox.y + seBox.height / 2 };
   await p.mouse.move(se.x, se.y);
   await p.mouse.down();
-  await p.mouse.move(se.x - 100, se.y - 80, { steps: 6 }); // inward, over the app
+  await p.mouse.move(se.x - 100, se.y - 80, { steps: 6 });
   await p.mouse.move(se.x + 140, se.y + 60, { steps: 8 });
   await p.mouse.up();
   await p.waitForTimeout(150);
   const r2 = await rect();
   const f2 = await frameSize();
-  const shownSize = await frame.locator("#size").textContent();
 
-  const wBox = await p.locator('[data-window-id="messages"] [data-window-resize-handle="w"]').boundingBox();
+  const wBox = await d.locator('[data-window-id="messages"] [data-window-resize-handle="w"]').boundingBox();
   const we = { x: wBox.x + wBox.width / 2, y: wBox.y + wBox.height / 2 };
   await p.mouse.move(we.x, we.y);
   await p.mouse.down();
@@ -568,10 +620,9 @@ for (const width of [320, 360, 414]) {
   await p.mouse.up();
   await p.waitForTimeout(150);
   const r3 = await rect();
-  await p.screenshot({ path: join(OUT, "messages-record-moved-resized.png") });
+  await p.screenshot({ path: join(OUT, "messages-record74-moved-resized.png") });
 
-  // Double-click the title bar: fills the space between menu bar and Dock; again: back.
-  const t2 = await p.locator('[data-window-id="messages"] [data-window-drag-handle]').boundingBox();
+  const t2 = await d.locator('[data-window-id="messages"] [data-window-drag-handle]').boundingBox();
   await p.mouse.dblclick(t2.x + t2.width / 2, t2.y + t2.height / 2);
   await p.waitForTimeout(250);
   const rFill = await rect();
@@ -579,24 +630,61 @@ for (const width of [320, 360, 414]) {
   await p.mouse.dblclick(rFill.x + rFill.w / 2, rFill.y + 19);
   await p.waitForTimeout(250);
   const rBack = await rect();
+  const kept = await rec.locator("body").evaluate(() => window.state && window.state.activeId);
 
-  // The app kept its own state through all of it (the chat opened above is still open).
-  const kept = await frame.locator("#title").textContent();
-  // Layout survives a reload.
-  await p.reload({ waitUntil: "networkidle" });
+  // Reply from the app: goes to messages/send with the session token.
+  await rec.locator("#input").fill("10:30 works, see you then!");
+  await rec.locator("#send").click();
   await p.waitForTimeout(300);
-  const rReload = await rect();
 
-  results.checks.push([`Messages loads as a record (stand-in) in its window; unread → Dock badge ${badge}`, badge === "4" || badge === "3"]);
+  // "Open invoice" in a payment message: not hosted here, so it goes up to the appshell.
+  await rec.locator("body").evaluate(() => window.openById(103));
+  await p.waitForTimeout(150);
+  await rec.locator('[data-mact="open-invoice"]').click();
+  await p.waitForTimeout(150);
+  const opened = (await p.evaluate(() => window.received)).filter((m) => m.gin === "apps:open");
+
+  results.checks.push([
+    `inside the appshell: Messages (record 74) gets the session — inbox loaded with its token (${threads} threads), Dock badge ${badge}, avatar ${avatar.trim()}`,
+    threads === 4 && badge === "4" && api.inboxAuth.includes(`Bearer ${TEST_TOKEN}`) && avatar.trim() === "SA",
+  ]);
   results.checks.push([`clicking inside the app's iframe brings its window to the front (z ${zBack} → ${zFront})`, zFront > zBack]);
   results.checks.push([`drag by title bar moves it (${r0.x},${r0.y} → ${r1.x},${r1.y}), size unchanged`, r1.x === r0.x - 200 && r1.y === r0.y + 90 && r1.w === r0.w && r1.h === r0.h]);
   results.checks.push([
-    `corner resize (${r1.w}×${r1.h} → ${r2.w}×${r2.h}) reaches the app (${f0.w}×${f0.h} → ${f2.w}×${f2.h}, app shows ${shownSize})`,
-    r2.w === r1.w + 140 && r2.h === r1.h + 60 && r2.x === r1.x && f2.w - f0.w === 140 && f2.h - f0.h === 60 && shownSize === `${f2.w}×${f2.h}`,
+    `corner resize (${r1.w}×${r1.h} → ${r2.w}×${r2.h}) reaches the app (${f0.w}×${f0.h} → ${f2.w}×${f2.h})`,
+    r2.w === r1.w + 140 && r2.h === r1.h + 60 && r2.x === r1.x && f2.w - f0.w === 140 && f2.h - f0.h === 60,
   ]);
   results.checks.push([`left-edge resize keeps the right edge (${r2.x}+${r2.w} → ${r3.x}+${r3.w})`, r3.x === r2.x + 120 && r3.w === r2.w - 120 && r3.x + r3.w === r2.x + r2.w]);
   results.checks.push([`title double-click fills (${rFill.w}×${rFill.h}, app ${fFill.w}×${fFill.h}) and restores`, rFill.w === 1440 && fFill.w === rFill.w - 2 && rBack.x === r3.x && rBack.w === r3.w && rBack.h === r3.h]);
-  results.checks.push([`the app keeps its state while moved/resized ("${kept}"), layout survives reload`, kept === "Sam" && rReload.x === rBack.x && rReload.w === rBack.w && rReload.h === rBack.h]);
+  results.checks.push([`the app keeps its open conversation through move/resize (activeId ${kept})`, kept === 101]);
+  results.checks.push([`a reply goes to messages/send with the session (${JSON.stringify(api.sends[0]?.args ?? null)})`, api.sends.length === 1 && api.sends[0].args.thread_id === 101]);
+  results.checks.push([`"Open invoice" (record 100, not hosted here) is passed up to the appshell`, opened.length === 1 && opened[0].view_id === 100 && opened[0].context?.invoice === "INV-1042"]);
+  await context.close();
+}
+
+// Standalone (no appshell): record 74 loads via viewer_iframe → get_pages fallback and shows its
+// signed-out state; no token, so no inbox request is made.
+{
+  const { context, p } = await page(1440);
+  const before = api.inboxAuth.length;
+  await p.goto(`${base}/index.html#/notes`, { waitUntil: "networkidle" });
+  const rec = p.frameLocator('[data-window-id="messages"] iframe');
+  await rec.locator("#listState").waitFor({ timeout: 8000 });
+  await p.waitForTimeout(2200); // record 74 tries the cookie after 1.8 s when no shell answers
+  const text = (await rec.locator("#listState").textContent()).trim();
+  results.checks.push([`standalone: record 74 loads (viewer_iframe blank → get_pages s01) and says "${text}"`, /sign in/i.test(text) && api.inboxAuth.length === before]);
+  await context.close();
+}
+
+// The claude.ai preview as built: appshell stand-in → desktop → record 74 on the bundled sample inbox.
+{
+  const { context, p } = await page(1440);
+  await p.goto(`${base}/preview-host.html`, { waitUntil: "networkidle" });
+  const rec = p.frameLocator("#desktop").frameLocator('[data-window-id="messages"] iframe');
+  await rec.locator('.conv[data-id="101"]').waitFor({ timeout: 8000 });
+  await p.waitForTimeout(300);
+  await p.screenshot({ path: join(OUT, "preview-host.png") });
+  results.checks.push(["preview build: appshell stand-in → desktop → record 74 shows the sample inbox", (await rec.locator(".conv").count()) === 4]);
   await context.close();
 }
 

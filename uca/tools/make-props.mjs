@@ -157,6 +157,9 @@ const STRINGS = {
   "notes.delete": "Delete Note",
 };
 
+// Apps that are their own records in the 1ovr1 database (record id = view_id).
+const RECORDS = { messages: 74 };
+
 // ---------------------------------------------------------------- props
 export async function makeTestProps({ theme, assetBase }) {
   const { APPS } = await importTs('export { APPS } from "@/lib/app-config";');
@@ -189,7 +192,7 @@ export async function makeTestProps({ theme, assetBase }) {
       alwaysShowsOpenIndicator: a.id === "finder",
       mobile: { supported: a.mobile.supported },
       // Set when the app is built as its own record; the shell then loads it like an appshell tab.
-      view_id: null,
+      view_id: RECORDS[a.id] ?? null,
     };
   });
   // Phone bar: the apps the original supports on phones, in Dock order.
@@ -217,7 +220,10 @@ export async function makeTestProps({ theme, assetBase }) {
     features: { portedApps: ["notes"] },
     apps,
     responsive: { mobileFallbackAppId: "notes" },
-    config: { viewEndpoint: "https://api.1ovr1.com/api:9yDRTI1I/viewer" },
+    config: {
+      viewEndpoint: "https://api.1ovr1.com/api:9yDRTI1I/viewer",
+      pagesEndpoint: "https://api.1ovr1.com/api:o-B1LTj7/get_pages",
+    },
     phone: {
       barAppIds,
       barHeight: 52,

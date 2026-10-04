@@ -2,8 +2,8 @@
 //   dist/phonemac.html        — the record file (devs01/s01): placeholder `var componentProps = {};`
 //   dist/split/*              — the four UCA source fields + props.json
 //   dist/local/index.html     — the same file with the TEST props injected, plus assets/ (local preview)
-//   dist/local/preview.html   — the artifact preview's props: Messages from the stand-in record,
-//                               logo bundled (records/viewer_iframe, assets/brand/)
+//   dist/local/preview-host.html + desktop.html — the artifact preview: an appshell stand-in hosting
+//                               the desktop, which hosts record 74 (snapshot) on a sample inbox
 //   dist/local/records.html   — test variant: every app on the phone bar, Messages/Photos hosted as
 //                               records from the test server's mock viewer endpoint
 import { build } from "esbuild";
@@ -276,12 +276,21 @@ export async function buildAll({ assetBase = "assets/" } = {}) {
   // Artifact preview: the publish skeleton supplies doctype/head/body, so ship the inner parts only.
   mkdirSync(join(DIST, "artifact"), { recursive: true });
   const fragment = `<title>${props.meta.previewTitle}</title>\n<style>\n${css}\n</style>\n${body.trim()}\n<script>\n${script}\n</script>\n`;
+  // Preview: an appshell stand-in (the artifact's page) hosting the desktop (desktop.html), which
+  // hosts record 74 (real code, snapshot) reading a sample inbox — the production nesting, offline.
   const preview = previewVariant(props);
-  writeFileSync(join(DIST, "artifact/phonemac-preview.html"), injectProps(fragment, preview));
-  writeFileSync(join(DIST, "local/preview.html"), injectProps(page, preview));
-  // The stand-in Messages record, at the path the preview's viewEndpoint resolves to.
-  mkdirSync(join(DIST, "local/records"), { recursive: true });
-  cpSync(join(UCA_DIR, "props/fixtures/records/messages.html"), join(DIST, "local/records/viewer_iframe"));
+  const desktopHtml = injectProps(page, preview);
+  const record74 = withViewerProps(read(join(UCA_DIR, "props/fixtures/records/74.s01.html")), { config: { gin_base: "records/api" } });
+  const inbox = read(join(UCA_DIR, "props/fixtures/inbox.json"));
+  const hostFragment = read(join(UCA_DIR, "tools/preview-host.html"));
+  for (const dir of ["local", "artifact"]) {
+    mkdirSync(join(DIST, dir, "records/api/messages"), { recursive: true });
+    writeFileSync(join(DIST, dir, "desktop.html"), desktopHtml);
+    writeFileSync(join(DIST, dir, "records/viewer_iframe"), record74);
+    writeFileSync(join(DIST, dir, "records/api/messages/inbox"), inbox);
+  }
+  writeFileSync(join(DIST, "artifact/phonemac-preview.html"), hostFragment);
+  writeFileSync(join(DIST, "local/preview-host.html"), `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body>${hostFragment}</body></html>`);
   cpSync(join(UCA_DIR, "assets/brand"), join(DIST, "local/assets/brand"), { recursive: true });
   cpSync(join(UCA_DIR, "assets/wallpapers"), join(DIST, "local/assets/wallpapers"), { recursive: true });
   for (const a of LOCAL_ASSETS) {
@@ -292,16 +301,21 @@ export async function buildAll({ assetBase = "assets/" } = {}) {
 }
 
 // Preview (claude.ai artifact) variant. The artifact host only allows same-origin images and requests,
-// so remote assets are bundled with the preview, and Messages is hosted as a record from a
-// same-origin stand-in at records/viewer_iframe (the shell fetches `${viewEndpoint}_iframe?view=`
-// exactly as it will from the database). The record file keeps the real URLs and view_ids.
+// so the boot logo is bundled and records come from same-origin copies at records/viewer_iframe
+// (the shell still fetches `${viewEndpoint}_iframe?view=<id>`, as from the database). The record
+// file keeps the real URLs.
 function previewVariant(props) {
   return {
     ...props,
     config: { ...props.config, viewEndpoint: "records/viewer" },
     assets: { ...props.assets, bootLogo: "assets/brand/1ovr1-logo.jpg" },
-    apps: props.apps.map((a) => (a.id === "messages" ? { ...a, view_id: "messages-standin" } : a)),
   };
+}
+
+// What viewer_iframe does server-side: the record's props, injected ahead of its own scripts.
+function withViewerProps(recordHtml, props) {
+  const tag = `<script>var componentProps = ${JSON.stringify(props).replace(/</g, "\\u003c")};</script>`;
+  return recordHtml.replace(/<head>/i, (h) => `${h}\n${tag}`);
 }
 
 function recordsVariant(props) {

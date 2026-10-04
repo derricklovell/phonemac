@@ -62,14 +62,31 @@ Restart, Log Out, and powering on after Shut Down all show `assets.bootLogo` on 
 
 The test logo is a 1080px square on #262626 with its own padding. At 200px tall its mark is about 80px, which was the Apple icon's size.
 
+## Hosted records and the appshell session
+
+Messages is record 74 (`apps[].view_id`).
+
+**Loading:** the shell fetches `${config.viewEndpoint}_iframe?view=74` with credentials, as the appshell does. If that comes back blank (no dev slot, or no session cookie), it falls back to the record's `s01` from `${config.pagesEndpoint}/74`.
+
+**Session pass-through:** inside the appshell this page is itself a tab, so hosted records talk to this page, not the appshell. This page stands in for the appshell towards them:
+
+- The session the appshell restored to this page (`app:restore`: user, `auth_token`) is restored to each record. It's kept in memory only.
+- `auth:user` sign-in/out is passed down to the records. On sign-in this page asks the appshell for a fresh `app:restore`.
+- `app:event` from a record goes to the other records and up to the appshell. The appshell's own `app:event` and `shell:active` messages are passed down.
+- `shell:active:get` is answered with the view id of the hosted app in front.
+- `apps:open {view_id, context}` opens a record hosted here (and delivers `view:context`). Any other view id is passed up to the appshell.
+
+**Standalone (no appshell):** there's no session. Record 74 shows "Sign in to see your messages."
+
 ## Previewing on claude.ai
 
-The artifact host only allows same-origin images and network requests (`img-src 'self' data: blob:`). So the preview build (`dist/local/preview.html`, and the artifact) does two things the record file doesn't:
+The artifact host only allows same-origin images and requests (`img-src 'self'`). So the preview is the production nesting, run offline:
 
-- It bundles the boot logo as `assets/brand/1ovr1-logo.jpg`.
-- It hosts Messages from a stand-in record, `props/fixtures/records/messages.html`, served at `records/viewer_iframe`. The shell still fetches it as `${viewEndpoint}_iframe?view=<id>`, the same request the database will get.
+- `tools/preview-host.html` is a stand-in for the appshell. It's the artifact's page, and it hosts `desktop.html` (this page with preview props) and restores a sample session. Its token is a placeholder.
+- The desktop hosts record 74's real code, from the snapshot at `props/fixtures/records/74.s01.html` (refresh it with `node tools/fetch-record.mjs 74`), served at `records/viewer_iframe`. Its props point `gin_base` at `records/api`, where `props/fixtures/inbox.json` (sample data in the `/messages/inbox` shape) is served.
+- Replies and state changes can't be saved in the preview, because it's static.
 
-The record file (`dist/phonemac.html` plus its props) keeps the real URLs, and `view_id` stays null until the real ids are set.
+Tests run the same nesting against a mock of `api.1ovr1.com`. The mock checks that the inbox and send requests carry the session's Bearer token.
 
 ## Window move / resize with hosted apps
 

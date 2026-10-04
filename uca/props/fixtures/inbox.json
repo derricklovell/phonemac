@@ -1,0 +1,170 @@
+{
+ "_note": "SAMPLE DATA in the shape of /messages/inbox (record 74). Not a real merchant's inbox.",
+ "me": {
+  "username": "sample-merchant",
+  "display_name": "Sample Studio"
+ },
+ "business": {
+  "name": "Sample Studio"
+ },
+ "sources": [
+  "dm",
+  "contact",
+  "activity"
+ ],
+ "note": "",
+ "threads": [
+  {
+   "id": 101,
+   "kind": "dm",
+   "name": "Ava Thompson",
+   "sub": "@avat",
+   "initials": "AT",
+   "tint": "plum",
+   "time": 1790933340000,
+   "unread": 2,
+   "pinned": true,
+   "muted": false,
+   "known": true,
+   "group": false,
+   "can_reply": true,
+   "reply_via": "dm",
+   "meta": {},
+   "messages": [
+    {
+     "id": 1,
+     "out": false,
+     "text": "Hi! Do you have anything open Saturday morning?",
+     "ts": 1790931660000,
+     "delivered": true,
+     "read": false
+    },
+    {
+     "id": 2,
+     "out": true,
+     "text": "I have 10:30 or 11:15 — which works?",
+     "ts": 1790931960000,
+     "delivered": true,
+     "read": true
+    },
+    {
+     "id": 3,
+     "out": false,
+     "text": "10:30 please 🙌",
+     "ts": 1790933220000,
+     "delivered": true,
+     "read": false
+    },
+    {
+     "id": 4,
+     "out": false,
+     "text": "Also can I add a gel removal?",
+     "ts": 1790933340000,
+     "delivered": true,
+     "read": false
+    }
+   ]
+  },
+  {
+   "id": 102,
+   "kind": "contact",
+   "name": "Website form",
+   "sub": "jordan@example.com",
+   "initials": "WF",
+   "tint": "green",
+   "time": 1790923260000,
+   "unread": 1,
+   "pinned": false,
+   "muted": false,
+   "known": false,
+   "group": false,
+   "can_reply": true,
+   "reply_via": "email",
+   "meta": {
+    "email": "jordan@example.com",
+    "phone": "555-0142"
+   },
+   "messages": [
+    {
+     "id": 5,
+     "out": false,
+     "text": "Do you take walk-ins on weekdays?",
+     "ts": 1790923260000,
+     "delivered": true,
+     "read": false,
+     "extra": {
+      "phone": "555-0142",
+      "page": "/contact"
+     }
+    }
+   ]
+  },
+  {
+   "id": 103,
+   "kind": "activity",
+   "name": "Orders, invoices and payments",
+   "sub": "",
+   "initials": "$",
+   "tint": "warm",
+   "time": 1790847660000,
+   "unread": 1,
+   "pinned": false,
+   "muted": false,
+   "known": true,
+   "group": false,
+   "can_reply": false,
+   "reply_via": "",
+   "meta": {},
+   "messages": [
+    {
+     "id": 6,
+     "out": false,
+     "text": "Invoice INV-1042 paid — $85.00",
+     "ts": 1790847660000,
+     "delivered": true,
+     "read": false,
+     "ref": {
+      "open": "invoice",
+      "client_ref": "INV-1042",
+      "id": 1042
+     }
+    }
+   ]
+  },
+  {
+   "id": 104,
+   "kind": "dm",
+   "name": "Maya Chen",
+   "sub": "@mayac",
+   "initials": "MC",
+   "tint": "blue",
+   "time": 1790761260000,
+   "unread": 0,
+   "pinned": false,
+   "muted": false,
+   "known": true,
+   "group": false,
+   "can_reply": true,
+   "reply_via": "dm",
+   "meta": {},
+   "messages": [
+    {
+     "id": 7,
+     "out": false,
+     "text": "Thank you, they look amazing!",
+     "ts": 1790757660000,
+     "delivered": true,
+     "read": false
+    },
+    {
+     "id": 8,
+     "out": true,
+     "text": "So glad you love them 💅",
+     "ts": 1790761260000,
+     "delivered": true,
+     "read": true
+    }
+   ]
+  }
+ ]
+}

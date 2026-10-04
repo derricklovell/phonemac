@@ -11,7 +11,7 @@ import { watchIdentity } from "./avatar.js";
 import { settings, applyAppearance, watchSystemAppearance } from "./settings-store.js";
 import { createNotesApp } from "./apps/notes.js";
 import { createPendingApp } from "./apps/pending.js";
-import { createRecordApp } from "./apps/record.js";
+import { createRecordApp, setFrontApp } from "./apps/record.js";
 import { detectMobileClientFromWindow } from "../../lib/device-detection";
 
 const LUT = {};
@@ -106,11 +106,14 @@ function boot() {
 
   // Multi-window apps launched with nothing open get a fresh window.
   on("app:launch-empty", (appId) => wm.openWindow(appId));
+  // A hosted record asked to open another app hosted here.
+  on("app:open", ({ appId }) => dock.activate(appId));
   on("dock:trash", () => wm.openWindow(need("desktop.trashAppId")));
   on("route:set", setRoute);
   on("app:badge", ({ appId, count }) => dock.setBadge(appId, count));
   on("wm:change", () => {
     const appId = wm.focusedAppId();
+    setFrontApp(appId ? wm.getApp(appId) : null);
     if (appId && !location.hash.startsWith(`#/${appId}`)) setRoute(appId);
   });
   emit("wm:change");
@@ -118,6 +121,8 @@ function boot() {
 
 function bootPhone(root, route) {
   on("route:set", setRoute);
+  on("phone:active", (appId) => setFrontApp(wm.getApp(appId)));
+  on("app:open", ({ appId }) => need("phone.barAppIds").includes(appId) && phone.activate(appId));
   phone.mount(root, { factoryFor, route, fallbackAppId: need("responsive.mobileFallbackAppId") });
 }
 

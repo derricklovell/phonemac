@@ -65,8 +65,9 @@ export function pictureFailed(url) {
 }
 
 export function watchIdentity() {
-  on("shell:context", (msg) => setShellUser(msg.user));
+  on("shell:context", (msg) => msg.user && setShellUser(msg.user));
   on("shell:auth", (msg) => setShellUser(msg.authed === false ? null : msg.user));
+  on("shell:session", (sess) => setShellUser(sess.authed ? sess.user : null));
   on("profile:avatar", (url) => {
     pictureOverride = url;
     failed.delete(url);
