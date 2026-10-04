@@ -1,8 +1,10 @@
 # Where this code comes from
 
-This template is an unmodified copy of an open-source repository, rehosted
-on 21st so it can be found and downloaded in one place. The work is not
-ours and the licence below is the one it shipped with.
+This project is a plain-HTML/JS port (1ovr1 UCA 3.0 appshell) of an open-source Next.js
+macOS-desktop site. It reuses that project's design, styles, icons, wallpapers and a few
+helper modules (see `src/lib/`, `src/styles/original/`, `assets/static/`, `props/data/`).
+The original work is not ours; it is used under the MIT licence it shipped with (LICENSE.md).
+The unmodified original is in this repository's git history (commit b62bfe8).
 
 - Repository: https://github.com/alanagoyal/alanagoyal
 - Author: alanagoyal

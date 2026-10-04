@@ -1,412 +1,119 @@
-# [alanagoyal.com](https://alanagoyal.com)
+# phonemac — macOS desktop appshell (1ovr1 UCA 3.0)
 
-i'm obsessed with re-creating apple products. this is a macos-inspired personal website featuring a full desktop environment with multiple apps.
+A macOS-style desktop for the 1ovr1 appshell. It's one plain HTML/JS file, with no React and no framework. Everything it shows comes from `componentProps`: the record's props, injected by the server. Apps are either ported into the file (Notes) or loaded as their own records from the 1ovr1 database (Messages = record 74).
 
-## features
-
-### desktop environment
-
-a macos sierra 10.12 themed desktop with:
-- **window management**: draggable, resizable windows with minimize, maximize, and close
-- **dock**: app launcher with hover tooltips
-- **menu bar**: functional apple menu, file menu, app menu, status menus (wifi, bluetooth, control center), and notification center with live widgets (calendar, messages, weather, photos)
-- **system states**: lock screen, sleep mode, restart, and shutdown overlays
-
-### apps
-
-**notes** - apple notes clone for my personal website content
-- public notes viewable by everyone, private notes per browser session
-- github flavored markdown with interactive task lists
-- image paste/upload support
-- swipe gestures on mobile
-
-**messages** - imessage clone with ai-powered conversations
-- chat with ai contacts that have unique personalities (powered by gpt)
-- message reactions and sound effects
-- typing indicators and read/unread states
-- group chats and one-on-one conversations
-- pinned conversations and swipe gestures
-- @mentions and contact management
-- command menu (⌘K) with keyboard shortcuts
-- focus mode integration (mutes notifications)
-
-**iterm** - terminal emulator
-- real file system navigation
-- github integration (browse your repos)
-- basic shell commands (ls, cd, cat, pwd, clear, etc.)
-
-**textedit** - plain text editor
-- opens existing text files in their own windows
-- direct opens without a file use the same Finder picker flow
-- launching from Finder focuses an open TextEdit document window first, otherwise opens a smaller Finder window at Documents
-
-**preview** - image and pdf viewer
-- opens images and pdfs in their own windows
-- direct opens without a file use the same Finder picker flow
-- launching from Finder focuses an open Preview document window first, otherwise opens a smaller Finder window at Desktop
-- document-app launch behavior is documented in `docs/document-apps.md`
-
-**finder** - file browser
-- sidebar navigation (recents, applications, desktop, documents, downloads, projects)
-- browse local files and github repositories
-- multiple Finder windows on desktop
-- launch apps from applications folder
-
-**calendar** - apple calendar clone
-- day, week, month, and year views with smooth navigation
-- sample events: exercise, focus time, meetings, dinners
-- date night saturdays cycling through sf restaurants
-- create, edit, and delete your own events
-- drag-to-create events in day/week views
-- holidays automatically displayed
-- data persisted in localstorage
-
-**photos** - apple photos clone
-- photo library with grid view and full-screen viewer
-- collections: flowers, food, friends
-- favorites (per-browser, stored in localstorage)
-- set a library photo as the persistent desktop and lock-screen wallpaper
-- time filters (today, this week, this month, this year, all)
-- keyboard navigation (arrow keys, escape to close)
-- upload via ios shortcut with ai auto-categorization
-
-**games** - an Apple Games-inspired library with six playable games
-- library layout with sorting, play history, and app-style game artwork
-- snake, 2048, minesweeper, memory match, and breakout run entirely on-device
-- local computer play with easy, medium, and hard opponents
-- anonymous visitor matchmaking with temporary display names, reconnect, and expiry handling
-- live waiting-player badge in the dock
-- desktop integration with the dock, finder, and window system
-
-**settings** - system preferences
-- wi-fi and bluetooth panels
-- appearance (light/dark/system theme)
-- wallpaper picker with theme wallpapers and photos library support
-- menu bar appearance and clock format options
-- airdrop and focus mode toggles
-- about this mac
-
-**weather** - weather forecast app
-- opens from notification center weather widget or `/weather`
-- current conditions with hourly forecast
-- non-dock app (appears in dock only while open)
-- shared weather scene renderer and palettes documented in `docs/weather-scenes.md`
-
-### mobile
-
-mobile support is intentionally app-specific. supported apps render as
-touch-optimized, full-screen experiences; every unsupported app route redirects
-to `/notes` on mobile. Unsupported apps are desktop-only components and do not
-retain separate mobile presenters.
-
-| app | in Dock by default | mobile support | mobile route behavior |
-|-----|--------------------|----------------|-----------------------|
-| Finder | yes | no | redirects to `/notes` |
-| Notes | yes | yes | opens Notes |
-| Messages | yes | yes | opens Messages |
-| Photos | yes | yes | opens Photos |
-| Music | yes | yes | opens Music |
-| Calendar | yes | yes | opens Calendar |
-| Weather | no | no | redirects to `/notes` |
-| iTerm | yes | no | redirects to `/notes` |
-| Games | yes | no | redirects to `/notes` |
-| Settings | yes | no | redirects to `/notes` |
-| TextEdit | no | no | redirects to `/notes` |
-| Preview | no | no | redirects to `/notes` |
-
-supported mobile apps include:
-- swipe gestures for navigation
-- touch-optimized controls
-- app-specific full-screen layouts
-
-## how it works
-
-### architecture
-
-the app uses next.js app router with a route group for the desktop environment. on desktop screens, all apps render in windows on a shared desktop. on mobile, apps display fullscreen with navigation.
-
-**notes** use a session-based architecture:
-- **public notes**: managed by the site owner, visible to everyone
-- **private notes**: each browser session gets a unique id (stored in localstorage) linking to notes you create
-
-**messages** are client-side only:
-- conversations stored in localstorage
-- ai responses generated via braintrust proxy (openai-compatible)
-- no server-side message storage
-
-**photos** use supabase storage:
-- images stored in supabase storage bucket
-- metadata (filename, timestamp, collections) in database
-- embedded camera and exposure metadata is read from each image on demand in the desktop Info panel and mobile swipe-up details; GPS remains unused
-- favorites are per-browser (stored in localstorage)
-- upload via api with ai auto-categorization (openai gpt-4o-mini)
-
-**games** uses a browser-local identity and supabase-backed chess matches:
-- chess rules and computer play use `chess.js`; the computer search runs in a web worker
-- the server validates online moves and uses optimistic versions to reject conflicting updates
-- synchronized match state is persisted as FEN, PGN, and move history; heartbeats distinguish reconnects from abandonment
-
-the app is built with:
-- **next.js** with app router
-- **typescript** for type safety
-- **supabase** for notes database
-- **braintrust** for ai chat responses (openai-compatible proxy)
-- **react-markdown** with github flavored markdown
-- **tailwind css** for styling
-
-### backend
-
-the app uses [supabase](https://supabase.com) for the postgresql database with row-level security policies to control access to public and private notes.
-
-**database schema**:
-
-the `notes` table stores all notes with these fields:
-- `id` (uuid): unique identifier
-- `title` (text): note title
-- `content` (text): markdown content
-- `session_id` (uuid): links notes to browser sessions
-- `public` (boolean): controls visibility
-- `slug` (text): url-friendly identifier
-- `category` (text): optional categorization
-- `emoji` (text): note icon
-- `created_at` (timestamp): when the note was created
-
-### caching
-
-public notes are cached for 24 hours using next.js isr. private notes are always real-time.
-
-**to manually revalidate public notes**:
-
-set `REVALIDATE_TOKEN` in environment variables, then:
-
-```bash
-# revalidate sidebar (when adding/removing public notes)
-curl -X POST "https://yourdomain.com/notes/revalidate" \
-  -H "Content-Type: application/json" \
-  -H "x-revalidate-token: your-token" \
-  -d '{"layout": true}'
-
-# revalidate specific note (when updating content)
-curl -X POST "https://yourdomain.com/notes/revalidate" \
-  -H "Content-Type: application/json" \
-  -H "x-revalidate-token: your-token" \
-  -d '{"slug": "note-slug"}'
-```
-
-or redeploy on vercel to refresh all pages.
-
-`REVALIDATE_TOKEN` must stay server-side only. do not expose it via `NEXT_PUBLIC_*` variables.
-
-### ios shortcut for photos
-
-upload photos directly from your iphone using the share sheet:
-
-1. open the **shortcuts** app on ios
-2. create a new shortcut with these actions:
-   - **receive** images from share sheet
-   - **get details of image** → date taken
-   - **resize image** to max 2048px (fit)
-   - **convert image** to jpeg (quality 0.8)
-   - **encode** with base64
-   - **format date** → iso 8601
-   - **get contents of url**:
-     - url: `https://yourdomain.com/api/photos/upload`
-     - method: POST
-     - headers: `x-api-key: <your-PHOTOS_UPLOAD_API_KEY>`
-     - body: json `{ "image": [base64], "timestamp": [formatted date] }`
-3. name it "add to website"
-4. enable "show in share sheet" for images
-
-when you share a photo, the shortcut uploads it to supabase storage and ai automatically categorizes it into collections (flowers, food, friends).
-
-## clone the repo
-
-`git clone https://github.com/alanagoyal/alanagoyal`
-
-## set up the database
-
-this project uses [supabase](https://supabase.com) as a backend. to set up the database:
-
-1. create a [new project](https://database.new) and enter your project details
-2. wait for the database to launch
-3. navigate to the sql editor in the dashboard
-4. paste the sql from the [migration file](https://github.com/alanagoyal/alanagoyal/blob/main/supabase/migrations/20240710180237_initial.sql) into the sql editor and press run
-
-alternatively, use the supabase cli to apply the complete migration history. this is required for online chess because the games migrations create the private match table and its server-only matchmaking function:
-```bash
-supabase db push
-```
-
-grab the project url and anon key from the api settings and put them in a new `.env.local` file in the root directory:
+## Setup
 
 ```
-# supabase (required for notes and photos)
-NEXT_PUBLIC_SUPABASE_URL="<your-supabase-url>"
-NEXT_PUBLIC_SUPABASE_ANON_KEY="<your-anon-key>"
-SUPABASE_SERVICE_ROLE_KEY="<your-service-role-key>"
-
-# braintrust (required for messages ai)
-BRAINTRUST_API_KEY="<your-braintrust-api-key>"
-
-# photos upload (required for ios shortcut)
-PHOTOS_UPLOAD_API_KEY="<generate-random-key>"
-OPENAI_API_KEY="<your-openai-api-key>"
-
-# site config (optional)
-NEXT_PUBLIC_SITE_URL="https://yourdomain.com"
-REVALIDATE_TOKEN="<your-revalidate-token>"
+npm install              # build/test tools only; the page itself has no dependencies
+npm run build            # dist/phonemac.html (the record file), dist/split/*, dist/local/ (test props), dist/artifact/ (claude.ai preview)
+npm test                 # headless checks + pixel diff against reference/
+npm run check            # build + test
+node tools/live.mjs      # read-only check against the real API, using a session token in $auth_token (or --env NAME)
+node tools/fetch-record.mjs 74   # refresh a record snapshot in props/fixtures/records/
 ```
 
-**notes:**
-- `GITHUB_TOKEN` is optional but helps avoid rate limits when using iterm/finder github integration
-- `SUPABASE_SERVICE_ROLE_KEY` is needed server-side for photo uploads and online chess; never expose it with a `NEXT_PUBLIC_` prefix
-- online chess keeps completed and expired matches for seven days, then prunes them during subsequent matchmaking
-- `OPENAI_API_KEY` is used for ai photo categorization
+The tests use Playwright's Chromium. Cloud sessions have it preinstalled at `/opt/pw-browsers`.
 
-## install dependencies
+## Repository layout
 
-`npm install`
+| path | what |
+|---|---|
+| `src/` | the page: `head.html`, `body.html`, `styles/`, and the JS modules bundled into one script (`main.js` is the entry point; `apps/` holds hosted and ported apps) |
+| `src/lib/`, `src/styles/original/`, `assets/static/`, `props/data/` | pieces reused from the original Next.js site (see ATTRIBUTION.md) |
+| `props/fixtures/` | test data: sample notes, a sample inbox, and record snapshots |
+| `tools/` | build (`build.mjs`), test props (`make-props.mjs`), tests (`test.mjs`), live check, preview host |
+| `reference/` | screenshots of the original site that the pixel diffs compare against |
 
-## run the app
+## Layouts
 
-run the application in the command line and it will be available at http://localhost:3000.
+- **Desktop**: menu bar, windows and Dock. When the Dock is wider than the window, it scrolls sideways. In that mode magnification is off and edges fade.
+- **Phone**: chosen by device signals, not window width. One full-screen stage, plus the appshell-style bottom bar:
+  - The bar is centred while the icons fit, and scrolls sideways (with edge fades) once they don't.
+  - Apps you switch away from stay warm: hidden, slept and woken, not rebuilt. Past `phone.warmLimit`, the least recently used app is torn down.
+  - The grab handle above the bar hides or shows it: tap it, swipe it, or press Enter.
 
-`npm run dev`
+## Where an app comes from
 
-## run the messages eval
+For each entry in `apps[]`, in order:
 
-with `BRAINTRUST_API_KEY` configured in `.env.local`, run the Messages group-chat behavior eval:
+1. **`view_id` set**: the app is its own record. It is loaded from `` `${config.viewEndpoint}_iframe?view=<view_id>` ``, which is the same URL the appshell uses for a tab. It runs in a sandboxed `srcdoc` iframe with the appshell's sandbox flags.
+2. **Ported in this file**: listed in `features.portedApps`. Currently only `notes`.
+3. **Otherwise**: a labelled placeholder.
 
-`npm run eval:chat`
+## gin: messages answered for record apps
 
-the eval exercises response routing, waiting for the human, conversation wrap-up, schema validity, repetition, and texting brevity against the same prompt, tools, and model used by the production chat route.
+| from the record | shell does |
+|---|---|
+| `app:ready` | replies `app:restore {view_id, state, ts, authed, user, appearance, scheme}`, then `route:set` if a route was saved |
+| `app:state {state}` | saves it to localStorage (`storage.appStatePrefix` + view_id) |
+| `route:changed {route}` | saves it to sessionStorage (`storage.appRoutePrefix` + view_id) |
+| `messages:unread {n}` | shows a badge on the app's phone-bar icon and Dock icon |
 
-## deploy
+The shell sends `shell:sleep` when an app is hidden and `shell:wake` when it is shown again.
 
-deploy using [vercel](https://vercel.com)
+## Light / dark / system
 
-## markdown syntax for notes
+The Apple menu has a Theme switch (Light, Dark, System). Settings stores the choice as `settings.appearance`, with the default coming from `settings.defaults`.
 
-notes support github flavored markdown (gfm) with interactive features. here's what you can use:
+- `setAppearance()` in `src/settings-store.js` is the only way to change it.
+- Built-in apps follow the `dark` class on `<html>`. Nothing keys off `prefers-color-scheme`, so a manual choice always wins.
+- Colours swap in one frame, like the original's `disableTransitionOnChange`.
+- System mode follows the OS live. Other open tabs follow too.
 
-### headings
+Record apps get `appearance` (`light|dark|system`) and `scheme` (`light|dark`) in `app:restore`. They also get `{gin:'shell:appearance', appearance, scheme}` on every change. Inside the record's frame, `prefers-color-scheme` reports the OS, not this setting, so records should follow the message.
 
-```markdown
-# heading 1
-## heading 2
-### heading 3
-```
+## Apple menu avatar
 
-### text formatting
+The Apple menu button shows the user's avatar, using the appshell's bar-avatar logic.
 
-```markdown
-**bold text**
-*italic text*
-~~strikethrough~~
-`inline code`
-```
+- **Who:** the user the host shell reports (`app:context.user`, or `auth:user` when signed in). Otherwise `componentProps.user`, which takes `{displayName, username, avatarUrl}`.
+- **Picture:** `profile_picture_url`, else `avatar_url` / `avatarUrl`, else `avatar`. The picture fills the circle.
+- **No picture, or it fails to load:** the first two letters of the username, uppercased. With no username, the display name's initials, else "?".
+- **Signed in through the shell:** a light ring and a green dot.
+- **Live updates:** `{gin:'profile:avatar', url}` from the host shell or a hosted record swaps the picture. Only http(s), root-relative and `data:image/` URLs are accepted.
+- **Signing out:** `auth:user` with `authed:false` reverts to `componentProps.user`.
 
-### lists
+## Loading screen
 
-**unordered lists**:
-```markdown
-- item one
-- item two
-  - nested item
-  - another nested item
-```
+Restart, Log Out, and powering on after Shut Down all show `assets.bootLogo` on `desktop.boot.background`. The image is `desktop.boot.logoHeight` px tall, with `desktop.boot.logoGap` px between it and the progress bar.
 
-**ordered lists**:
-```markdown
-1. first item
-2. second item
-3. third item
-```
+The test logo is a 1080px square on #262626 with its own padding. At 200px tall its mark is about 80px, which was the Apple icon's size.
 
-### task lists (interactive)
+## Hosted records and the appshell session
 
-task lists are interactive - click checkboxes to toggle completion:
+Messages is record 74 (`apps[].view_id`).
 
-```markdown
-- [ ] task to do
-- [x] completed task
-- [ ] another task
-```
+**Loading:** the shell fetches `${config.viewEndpoint}_iframe?view=74` with credentials, as the appshell does. If that comes back blank (no dev slot, or no session cookie), it falls back to the record's `s01` from `${config.pagesEndpoint}/74`.
 
-the app automatically updates the markdown when you click checkboxes, so your progress is saved.
+**Session pass-through:** inside the appshell this page is itself a tab, so hosted records talk to this page, not the appshell. This page stands in for the appshell towards them:
 
-### tables
+- The session the appshell restored to this page (`app:restore`: user, `auth_token`) is restored to each record. It's kept in memory only.
+- `auth:user` sign-in/out is passed down to the records. On sign-in this page asks the appshell for a fresh `app:restore`.
+- `app:event` from a record goes to the other records and up to the appshell. The appshell's own `app:event` and `shell:active` messages are passed down.
+- `shell:active:get` is answered with the view id of the hosted app in front.
+- `apps:open {view_id, context}` opens a record hosted here (and delivers `view:context`). Any other view id is passed up to the appshell.
 
-create tables using standard markdown table syntax. tables render with a styled dark theme:
+**Standalone (no appshell):** there's no session. Record 74 shows "Sign in to see your messages."
 
-```markdown
-| book | author | year read |
-|------|--------|-----------|
-| the great gatsby | f. scott fitzgerald | 2023 |
-| 1984 | george orwell | 2024 |
-```
+## Previewing on claude.ai
 
-this renders as:
+The artifact host only allows same-origin images and requests (`img-src 'self'`). So the preview is the production nesting, run offline:
 
-| book | author | year read |
-|------|--------|-----------|
-| the great gatsby | f. scott fitzgerald | 2023 |
-| 1984 | george orwell | 2024 |
+- `tools/preview-host.html` is a stand-in for the appshell. It's the artifact's page, and it hosts `desktop.html` (this page with preview props) and restores a sample session. Its token is a placeholder.
+- The desktop hosts record 74's real code, from the snapshot at `props/fixtures/records/74.s01.html` (refresh it with `node tools/fetch-record.mjs 74`), served at `records/viewer_iframe`. Its props point `gin_base` at `records/api`, where `props/fixtures/inbox.json` (sample data in the `/messages/inbox` shape) is served.
+- Replies and state changes can't be saved in the preview, because it's static.
 
-**table features**:
-- white borders on dark background
-- properly padded cells
-- header row styling
-- responsive layout
-- supports links in cells
+Tests run the same nesting against a mock of `api.1ovr1.com`. The mock checks that the inbox and send requests carry the session's Bearer token.
 
-### links
+## Window move / resize with hosted apps
 
-```markdown
-[link text](https://example.com)
-```
+While a window is dragged or resized, iframes stop taking pointer events, so the pointer can cross a hosted app without the drag being lost. Moves are applied once per frame, and the release position is applied too, so the window lands exactly where the pointer let go.
 
-all links automatically open in new tabs for better navigation.
+Clicking inside a hosted app's iframe brings its window to the front.
 
-### code blocks
+## Props used by the phone shell
 
-**inline code**: use backticks for `inline code`
+`phone.{barAppIds, barHeight, handleHeight, itemSize, iconSize, gap, paddingX, dotSize, warmLimit, swipeThreshold, tapSlop}`, `storage.phoneState`, and the strings `phone.*` and `record.*`. The test values are in `tools/make-props.mjs`.
 
-**code blocks**: use triple backticks for multi-line code
-````markdown
-```javascript
-function hello() {
-  console.log("hello world");
-}
-```
-````
-
-### blockquotes
-
-```markdown
-> this is a blockquote
-> it can span multiple lines
-```
-
-### images
-
-paste images directly into notes by copying any image (screenshot, file, etc.) and pressing `ctrl+v` (or `cmd+v` on mac). images are automatically uploaded to supabase storage and inserted as markdown.
-
-you can also manually add images:
-```markdown
-![alt text](image-url.jpg)
-```
-
-**supported formats**: jpeg, png, gif, webp (including animated gifs)
-**file size limit**: 5mb
-**images are automatically resized** to fit the note width while maintaining aspect ratio
-
-### horizontal rules
-
-```markdown
----
-```
-
-## license
-
-licensed under the [mit license](https://github.com/alanagoyal/alanagoyal/blob/main/LICENSE.md).
+`dist/local/records.html` is a test variant with every app on the bar, and with Messages and Photos hosted as records from the test server's mock viewer endpoint.

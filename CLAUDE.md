@@ -1,44 +1,41 @@
-# AGENTS.md
+# phonemac — macOS desktop appshell (1ovr1 UCA 3.0)
 
-macos desktop environment on the web. next.js, react, tailwind, supabase.
+A macOS-style desktop that runs as a tab inside the 1ovr1 appshell (Record 50). It's one plain HTML/JS file, with no React and no framework. Read `README.md` for the architecture and the gin: message protocol.
 
-this file captures the patterns and conventions that matter most when working in this codebase. it should grow as new patterns emerge and stay trimmed as old ones become obvious.
+## Commands
 
-## how to work in this repo
+- `npm install`, then `npm run check`: build + all headless checks. Run it after every change. It must end with every check PASS and `Console errors: none`.
+- `npm run build` writes `dist/phonemac.html`, the record file. Its props placeholder is `var componentProps = {};`.
+- `node tools/live.mjs` runs a read-only check against the real API, with a session token from `$auth_token`. Writes are stopped locally.
 
-1. read `docs/design-system.md` before touching any UI — it defines colors, tokens, sidebar patterns, and has a checklist for new apps
-2. run `npm run check` after making changes — it runs lint, Node tests, typecheck, and the production build
+## Rules (UCA 3.0)
 
-## key files
+- **componentProps is the only source of truth.** Nothing user-specific or hardcoded in the page: strings, URLs, ids, sizes, colours and icons all come from props. Test values live in `tools/make-props.mjs` and `props/`.
+- **Zero-fallback.** No `var(--x, fallback)`, no default values for props. A missing prop fails visibly via `need()` / `MissingProp`, and empty props render a specific error.
+- **Init order:** `applyCSSProps()` → `buildLUT()` → `boot()`.
+- **One file.** CSS and JS are inlined by `tools/build.mjs`. Colours are CSS variables; the build fails on literals or fallbacks.
+- **No secrets in the page, props, repo or preview, ever.** Session tokens travel only by postMessage, held in memory (see `src/shell.js` `getSession`). Tokens for local checks come from environment variables, never from chat or files.
+- Expose `window.qcEmbed`. Never declare a `QC_EMBED` global.
+- No React. Plain ES modules bundled by esbuild into an IIFE.
 
-| path | purpose |
-|------|---------|
-| `lib/app-config.ts` | app registry (all apps defined here) |
-| `lib/window-context.tsx` | window state machine (open/close/focus/minimize/drag/resize) |
-| `lib/sidebar-persistence.ts` | view state persistence + `clearAppState()` |
-| `lib/desktop/z-index.ts` | z-index layers: windows 1-50, dock 60, menu bar 70, fullscreen 80, overlays 90-100 |
-| `components/desktop/` | desktop shell (dock, menu bar, window, notification center) |
-| `components/apps/` | all app implementations |
+## How things fit
 
-## living docs
+- `src/main.js` is the entry point: it picks the desktop or phone shell by device signals (never window width), registers the apps, and handles hash routing.
+- `src/wm.js` is the window manager. `src/dock.js`, `src/menubar.js` and `src/phone.js` are the shells; `src/overlays.js` handles boot, lock, sleep and so on.
+- Apps come from `apps[]` in props:
+  - `view_id` set: a record loaded like an appshell tab (`src/apps/record.js`). It's fetched from `viewer_iframe`, with `get_pages` s01 as the fallback.
+  - Otherwise, a ported app (`src/apps/notes.js`), or a placeholder (`src/apps/pending.js`).
+- Inside the appshell this page is a tab. It passes the appshell's session down to the records it hosts, and passes requests it can't serve up to the appshell.
+- `src/settings-store.js` `setAppearance()` is the only way to change light/dark/system.
 
-read before building, update when you ship:
+## Testing
 
-| file | update when |
-|------|-------------|
-| `AGENTS.md` | new patterns or conventions emerge |
-| `docs/design-system.md` | new UI components or design tokens added |
-| `docs/document-apps.md` | TextEdit/Preview launch behavior or empty-state UX changes |
-| `docs/weather-scenes.md` | weather scene architecture, shared renderer behavior, or effect tuning changes |
-| `README.md` | new apps added or architecture changes |
+- `tools/test.mjs` mocks `api.1ovr1.com`. Records come from snapshots in `props/fixtures/records/`; the inbox is sample data.
+- Pixel diffs against `reference/` (the original site) target ≤ 0.5%. Known gaps are the unported apps, and Messages, which is now the real record 74 rather than the original's Messages app.
+- The claude.ai preview only allows same-origin requests. `dist/artifact/` bundles an appshell stand-in, the desktop, record snapshots and sample data. Republish it with the Artifact tool, passing `dist/artifact/phonemac-preview.html` plus those files.
 
-## conventions
+## 1ovr1 database
 
-- **state persistence**: sessionStorage for per-tab view/runtime state and the complete desktop window layout; localStorage for durable user content, preferences, and anonymous identity. window close clears app view state via `clearAppState()` automatically
-- **window management**: `useWindowManager()` for operations, `useWindowFocus()` for focus state
-- **desktop vs mobile**: use `isMobileView` / `isDesktop` prop, never raw viewport queries
-- **hover states**: gate hover-only styles with Tailwind's `can-hover:` variant so touch devices never get sticky hover treatments
-- **menu system**: menus are mutually exclusive via `openMenu` state in `menu-bar.tsx`. panel-style menus follow the `status-menus.tsx` pattern. use `useClickOutside()` for dismissal
-- **app discoverability + availability**: define Dock, Finder, and mobile support policy in `lib/app-config.ts` (`showOnDockByDefault`, `showInFinderApplications`, and required `mobile.supported`). unsupported mobile apps use Notes as both their shell fallback and direct-route redirect, are hidden from Finder Applications on mobile, guard root plus catch-all routes with `redirectIfUnsupportedOnMobile()`, and do not retain mobile-only presenters or prop branches. avoid hardcoded app-id allow/deny lists in app components
-- **finder + document apps**: Finder is multi-window on desktop. keep per-window Finder browsing state inside the Finder window/app pair, and keep TextEdit/Preview launch roots aligned with `components/desktop/desktop.tsx`, route files, and `docs/document-apps.md`
-- **weather scenes**: weather visuals are shared between the weather app and notification center. use `components/apps/weather/weather-scene-effects.tsx` for scene rendering and `lib/weather.ts` for palettes/effect selection instead of duplicating scene markup
+- Use the `gin-ide` skill. Read records with `get_pages`. Write with `save_code` only when the user asks, after a backup, and read the record back afterwards.
+- Never touch Record 50 (the appshell) or Record 101 (the template) as part of app work.
+- Ask before reading production data. Never print private message contents.
