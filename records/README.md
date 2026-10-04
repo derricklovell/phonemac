@@ -45,34 +45,55 @@ Do this only when asked, after a backup, and read the record back afterwards.
 
 ## Teacher (`records/teacher/`)
 
-The course builder for E Learn: the Teachable-style home for a teacher. It's step 1 of making record 57's Teacher mode a full authoring tool. Its layout:
-- **Your courses** (sidebar): drafts, published and archived, each with its lesson and learner counts, plus search and **New course**.
-- **Curriculum**:
-  - sections and lessons: add, rename in place and delete (deleting asks in the page, not with `window.confirm`, which the appshell's sandbox blocks);
-  - reorder by dragging the ⋮⋮ grip, or focus the grip and use ↑ ↓;
-  - a **Free preview** toggle per lesson;
-  - **Edit content**, which hands the lesson to the lesson editor.
-- **Details**: title, subtitle, description, level, course URL, cover image link and tags, with Save and Discard. The danger zone archives or deletes the course (deleting needs the title typed).
-- **Publish / Unpublish / Restore as draft** in the header. An empty course can't be published.
+The E Learn teacher app, Teachable-style. It is to replace record 57's Teacher mode. Everything runs on functions the elearn Supabase project already has (`config.supabase_url`, with its publishable key, which is public by design). The store checks every write (`lms.author_guard` / `lms.assert_author`: owner, admin or instructor of the merchant). Writes run one at a time, and the header shows *Saving… / All changes saved / Last change not saved*. Confirmations happen in the page, because the appshell's sandbox blocks `window.confirm`.
 
-**Data, all from functions that already exist** in the elearn Supabase project (`config.supabase_url`, with its publishable key, which is public by design):
-- `lms_catalog` (per status) and `lms_course_outline` read the courses, scoped to `_viewer.merchant_id`. Only the courses this teacher may author are listed: owner, admin or instructor of the merchant, or the course's creator. This is the same rule Teacher mode uses.
-- `lms_author` writes: `upsert_course`, `publish_course`, `delete_course`, `upsert_module`, `delete_module`, `upsert_lesson`, `delete_lesson`. `lms.author_guard` checks every write on the server. Writes run one at a time, and the header shows *Saving… / All changes saved / Last change not saved*. A reorder writes the new `position` of each item that moved.
+**Courses (sidebar) and Curriculum.** Drafts, published and archived courses, with search and New course.
+- Sections and lessons: add, rename in place, reorder (drag the ⋮⋮ grip, or focus it and press ↑ ↓), Free preview, delete.
+- Publish / Unpublish / Restore as draft are in the header.
+- Functions used: `lms_catalog`, `lms_course_outline`, and `lms_author` (`upsert_course` / `_module` / `_lesson`, `delete_*`, `publish_course`).
 
-Requests carry the app token from `app:restore`. It's refreshed through `config.session_exchange` (xano-session) with the session token, as in Teacher mode. The open course and tab are kept with `app:state`.
+**Details.** Title, subtitle, description, level, course URL, cover link and tags. Archive, and delete with the course title typed to confirm.
 
-**Gaps found in the backend** (not worked around):
-- `upsert_lesson` never changes a lesson's `module_id` on update, so a lesson can't be moved to another section. Reordering happens within a section. A one-line change to `lms_author_v2` would allow it.
-- `lms_course_outline` doesn't return a lesson's `allow_comments`, `gates_next` or `min_complete_percent`, so those settings belong in the lesson editor (step 2).
+**Lesson editor** (Edit content). Loaded with `lms_lesson_player` (plus `get_assessment` for its quizzes). Save writes only the parts that changed.
+- **Content:**
+  - blocks the Classroom reader shows: paragraph, heading, pull quote, figure, worked example;
+  - paragraphs are rich text limited to the reader's two inline forms, bold and term links (stored as the reader's own `<b>` markup);
+  - Return starts a new paragraph; blocks can be gated, duplicated, reordered and deleted;
+  - a live learner preview sits beside the blocks;
+  - course materials (terms, figures as SVG, worked examples with steps, notes) are saved straight away with `lms_material_upsert`;
+  - saved with `lms_blocks_replace`.
+- **Video & media:**
+  - upload: the video service creates the video, `lms_bunny_sign_upload` signs it, the file goes to Bunny's tus endpoint in chunks, and `lms_video_upsert` records it;
+  - or attach a library video by its ID;
+  - thumbnail, captions (.vtt) and length;
+  - a media link for audio.
+- **Segments & checkpoints:** time or paragraph ranges, done-at %, free preview, and a checkpoint quiz per segment (pass mark, attempts, retry, reveal answers, must pass to continue). Saved with `upsert_assessment` + `replace_questions`, then `lms_segments_replace`, which keeps segment ids and so keeps learner progress. Removed checkpoints are deleted.
+- **Questions** (quiz lessons): title, quiz or exam, pass mark, shuffle, reveal answers. Question types are one answer, true/false, several answers, short answer (exact match) and number, each with points. The Classroom currently shows learners one-answer questions only, so the other types are flagged.
+- **Settings:** title, type, length, complete at %, free preview, lock the next lesson, comments, segment list.
+- Problems (a question without a correct answer, a bad range…) are listed above the editor and block saving.
 
-**Edit content** posts `view:swap` to `config.lesson_editor` (record 57 `s02`, today's lesson editor) with `context: {course_id, course_slug, lesson_id}`. Today's `s02` doesn't read that context yet: it opens on its own pickers. Step 2 replaces it with a lesson editor that opens the lesson it's handed.
+**Pricing & access.** Price and currency (`lms_course_price` / `_set`); who can enroll: open, invite only or access code (`lms_course_access_set`); channel (`lms_channels`, `lms_course_channel_set`); learning-experience switches (`lms_flags_set`).
 
-**Local preview (Teacher on its own):** `npm run build` writes `dist/records/teacher-local.html` (also `dist/local/teacher.html`) and `dist/records/teacher-preview.html` for the claude.ai artifact. `preview-harness.js` stands in for the shell and for the store's RPCs, answering from `mock-courses.json` the way the real functions behave:
-- the authoring guard;
-- unique course URLs;
-- cascading deletes;
-- sections fixed on lesson update.
+**Students.** Class list (`lms_course_roster`) with progress, lessons done and certificate. Add a student by member number (`lms_grant_enrollment`). Pause or restore access (`lms_enrollment_freeze`).
 
-What you build in the preview is kept in that browser. **Reset sample data** (bottom left) starts over. Nothing is sent anywhere. The harness is never part of the record.
+**Insights.** A funnel (enrolled → started → halfway → completed) and per-lesson views, likes and comments (`lms_lesson_stats`). Choose a lesson to see inside it: reached, finished, average done and checkpoint passes per segment (`lms_segment_analytics`).
 
-**Not in the database:** nothing here has been written to record 57 or to Supabase. To ship it, replace record 57's Teacher mode slot with `teacher.html` and merge `props.json` into the record's props. Do this only when asked, after a backup, and read the record back afterwards.
+**Comments.** Every lesson's threads, filtered by lesson and by "waiting for you". Reply as the instructor and pin (`lms_comments`).
+
+**Certificates.** Turn course certificates on or off (`lms_flags_set`) and see the ones issued (from the class list).
+
+**What the backend can't do yet** is listed in [`teacher/BACKEND.md`](teacher/BACKEND.md), with proposed changes (none applied):
+- a video service, so upload can be switched on (drafted there);
+- moving lessons between sections;
+- names and pauses in the class list;
+- reading the certificate setting;
+- removing learners' comments;
+- authoring learning paths;
+- coupons;
+- per-lesson completion;
+- adding a student by email;
+- minting.
+
+**Local preview:** `npm run build` writes `dist/records/teacher-local.html` (also `dist/local/teacher.html`) and `dist/records/teacher-preview.html` for the claude.ai artifact. `preview-harness.js` stands in for the shell, for every store function above (answering from `mock-courses.json` the way the real ones behave), and for the video service and host. Upload is switched on in the preview only (`config.video_create_url` is `""` in `props.json` until the service exists). What you do in the preview is kept in that browser. **Reset sample data** (bottom left) starts over. Nothing is sent anywhere. The harness is never part of the record.
+
+**Not in the database:** nothing here has been written to record 57 or to Supabase. To ship it, replace record 57's Teacher mode slot (`s02`) with `teacher.html` and merge `props.json` into the record's props. Do this only when asked, after a backup, and read the record back afterwards.

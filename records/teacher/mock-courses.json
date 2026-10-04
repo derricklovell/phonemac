@@ -1,5 +1,5 @@
 {
- "_about": "Sample data for the Teacher preview only (never sent anywhere). Shapes follow the elearn tables lms.courses / lms.modules / lms.lessons. learner_count stands in for lms.enrollments.",
+ "_about": "Sample data for the Teacher preview only (never sent anywhere). Shapes follow the elearn tables (lms.courses, modules, lessons, lesson_block, material, video_segment + segment_quiz, assessments, questions, lesson_video, enrollments, comments, channels). Enrollments are generated from each course's sample_learners by the preview harness; lesson_stats and segment_stats stand in for watch events and segment progress.",
  "me": {
   "profile_id": 7001,
   "display_name": "Jordan Ellis",
@@ -29,8 +29,18 @@
    "status": "published",
    "merchant_id": 41,
    "created_by": 7001,
-   "learner_count": 128,
-   "updated_at": "2026-09-28T15:12:00Z"
+   "updated_at": "2026-09-28T15:12:00Z",
+   "gating_enabled": true,
+   "allow_skip_ahead": false,
+   "show_discussion": true,
+   "show_transcript": true,
+   "autoplay_next": true,
+   "issue_certificate": true,
+   "price_cents": 4900,
+   "currency": "USD",
+   "access": "open",
+   "channel_id": 1,
+   "sample_learners": 128
   },
   {
    "id": 302,
@@ -48,8 +58,18 @@
    "status": "draft",
    "merchant_id": 41,
    "created_by": 7001,
-   "learner_count": 0,
-   "updated_at": "2026-10-02T10:40:00Z"
+   "updated_at": "2026-10-02T10:40:00Z",
+   "gating_enabled": true,
+   "allow_skip_ahead": false,
+   "show_discussion": true,
+   "show_transcript": true,
+   "autoplay_next": true,
+   "issue_certificate": true,
+   "price_cents": 0,
+   "currency": "USD",
+   "access": "invite",
+   "channel_id": 1,
+   "sample_learners": 0
   },
   {
    "id": 303,
@@ -64,8 +84,18 @@
    "status": "draft",
    "merchant_id": 41,
    "created_by": 7001,
-   "learner_count": 0,
-   "updated_at": "2026-10-03T18:05:00Z"
+   "updated_at": "2026-10-03T18:05:00Z",
+   "gating_enabled": true,
+   "allow_skip_ahead": false,
+   "show_discussion": true,
+   "show_transcript": true,
+   "autoplay_next": true,
+   "issue_certificate": true,
+   "price_cents": 2500,
+   "currency": "USD",
+   "access": "credential",
+   "channel_id": 2,
+   "sample_learners": 0
   },
   {
    "id": 304,
@@ -82,8 +112,18 @@
    "status": "archived",
    "merchant_id": 41,
    "created_by": 7001,
-   "learner_count": 42,
-   "updated_at": "2025-12-20T09:00:00Z"
+   "updated_at": "2025-12-20T09:00:00Z",
+   "gating_enabled": true,
+   "allow_skip_ahead": false,
+   "show_discussion": true,
+   "show_transcript": true,
+   "autoplay_next": true,
+   "issue_certificate": true,
+   "price_cents": 1500,
+   "currency": "USD",
+   "access": "open",
+   "channel_id": 1,
+   "sample_learners": 42
   }
  ],
  "modules": [
@@ -138,7 +178,12 @@
    "title": "Welcome and what you'll need",
    "kind": "video",
    "duration_seconds": 240,
-   "is_preview": true
+   "is_preview": true,
+   "media_url": null,
+   "allow_comments": true,
+   "gates_next": true,
+   "show_segments": true,
+   "min_complete_percent": 90
   },
   {
    "id": 102,
@@ -147,7 +192,12 @@
    "title": "Setting up your palette",
    "kind": "video",
    "duration_seconds": 420,
-   "is_preview": false
+   "is_preview": false,
+   "media_url": null,
+   "allow_comments": true,
+   "gates_next": true,
+   "show_segments": true,
+   "min_complete_percent": 90
   },
   {
    "id": 103,
@@ -156,7 +206,12 @@
    "title": "Paper, brushes and water",
    "kind": "article",
    "duration_seconds": 300,
-   "is_preview": false
+   "is_preview": false,
+   "media_url": null,
+   "allow_comments": true,
+   "gates_next": true,
+   "show_segments": true,
+   "min_complete_percent": 90
   },
   {
    "id": 104,
@@ -165,7 +220,12 @@
    "title": "Flat and graded washes",
    "kind": "video",
    "duration_seconds": 780,
-   "is_preview": false
+   "is_preview": false,
+   "media_url": null,
+   "allow_comments": true,
+   "gates_next": true,
+   "show_segments": true,
+   "min_complete_percent": 90
   },
   {
    "id": 105,
@@ -174,7 +234,12 @@
    "title": "Wet-on-wet",
    "kind": "video",
    "duration_seconds": 660,
-   "is_preview": false
+   "is_preview": false,
+   "media_url": null,
+   "allow_comments": true,
+   "gates_next": true,
+   "show_segments": true,
+   "min_complete_percent": 90
   },
   {
    "id": 106,
@@ -183,7 +248,12 @@
    "title": "Lifting and correcting",
    "kind": "video",
    "duration_seconds": 540,
-   "is_preview": false
+   "is_preview": false,
+   "media_url": null,
+   "allow_comments": true,
+   "gates_next": true,
+   "show_segments": true,
+   "min_complete_percent": 90
   },
   {
    "id": 107,
@@ -192,7 +262,12 @@
    "title": "Technique check",
    "kind": "quiz",
    "duration_seconds": 0,
-   "is_preview": false
+   "is_preview": false,
+   "media_url": null,
+   "allow_comments": true,
+   "gates_next": true,
+   "show_segments": true,
+   "min_complete_percent": 90
   },
   {
    "id": 108,
@@ -201,7 +276,12 @@
    "title": "Sketching the composition",
    "kind": "video",
    "duration_seconds": 600,
-   "is_preview": false
+   "is_preview": false,
+   "media_url": null,
+   "allow_comments": true,
+   "gates_next": true,
+   "show_segments": true,
+   "min_complete_percent": 90
   },
   {
    "id": 109,
@@ -210,7 +290,12 @@
    "title": "Layering the sky",
    "kind": "video",
    "duration_seconds": 900,
-   "is_preview": false
+   "is_preview": false,
+   "media_url": null,
+   "allow_comments": true,
+   "gates_next": true,
+   "show_segments": true,
+   "min_complete_percent": 90
   },
   {
    "id": 110,
@@ -219,7 +304,12 @@
    "title": "Final details and signing",
    "kind": "video",
    "duration_seconds": 720,
-   "is_preview": false
+   "is_preview": false,
+   "media_url": null,
+   "allow_comments": true,
+   "gates_next": true,
+   "show_segments": true,
+   "min_complete_percent": 90
   },
   {
    "id": 111,
@@ -228,7 +318,12 @@
    "title": "Share your work",
    "kind": "article",
    "duration_seconds": 180,
-   "is_preview": false
+   "is_preview": false,
+   "media_url": null,
+   "allow_comments": true,
+   "gates_next": true,
+   "show_segments": true,
+   "min_complete_percent": 90
   },
   {
    "id": 201,
@@ -237,7 +332,12 @@
    "title": "Warm and cool primaries",
    "kind": "video",
    "duration_seconds": 600,
-   "is_preview": true
+   "is_preview": true,
+   "media_url": null,
+   "allow_comments": true,
+   "gates_next": true,
+   "show_segments": true,
+   "min_complete_percent": 90
   },
   {
    "id": 202,
@@ -246,7 +346,12 @@
    "title": "Studio talk: why limited palettes work",
    "kind": "audio",
    "duration_seconds": 900,
-   "is_preview": false
+   "is_preview": false,
+   "media_url": null,
+   "allow_comments": true,
+   "gates_next": true,
+   "show_segments": true,
+   "min_complete_percent": 90
   },
   {
    "id": 203,
@@ -255,7 +360,12 @@
    "title": "Transparent and opaque pigments",
    "kind": "article",
    "duration_seconds": 420,
-   "is_preview": false
+   "is_preview": false,
+   "media_url": null,
+   "allow_comments": true,
+   "gates_next": true,
+   "show_segments": true,
+   "min_complete_percent": 90
   },
   {
    "id": 401,
@@ -264,7 +374,642 @@
    "title": "Snowy village in five steps",
    "kind": "video",
    "duration_seconds": 1500,
-   "is_preview": false
+   "is_preview": false,
+   "media_url": null,
+   "allow_comments": true,
+   "gates_next": true,
+   "show_segments": true,
+   "min_complete_percent": 90
+  }
+ ],
+ "channels": [
+  {
+   "id": 1,
+   "merchant_id": 41,
+   "slug": "harbor-lane-studio",
+   "name": "Harbor Lane Studio",
+   "handle": "harborlane",
+   "description": "Watercolor and color classes from the studio."
+  },
+  {
+   "id": 2,
+   "merchant_id": 41,
+   "slug": "plein-air-club",
+   "name": "Plein Air Club",
+   "handle": "pleinair",
+   "description": "Painting outdoors, together."
+  }
+ ],
+ "materials": [
+  {
+   "course_id": 301,
+   "slug": "cold-press",
+   "kind": "term",
+   "title": "Cold-press paper",
+   "subtitle": null,
+   "body": "Paper pressed through cold rollers, leaving a slightly bumpy surface (the tooth) that holds pigment and water. The most forgiving surface to learn on.",
+   "data": {},
+   "anchor_seconds": null,
+   "anchor_para": null,
+   "related_slugs": [
+    "paper-weight"
+   ],
+   "is_published": true
+  },
+  {
+   "course_id": 301,
+   "slug": "paper-weight",
+   "kind": "term",
+   "title": "Paper weight",
+   "subtitle": null,
+   "body": "How heavy a ream of the paper is, in pounds or grams per square metre. 140 lb (300 gsm) paper takes washes without buckling much.",
+   "data": {},
+   "anchor_seconds": null,
+   "anchor_para": null,
+   "related_slugs": [],
+   "is_published": true
+  },
+  {
+   "course_id": 301,
+   "slug": "paper-surfaces",
+   "kind": "figure",
+   "title": "Three paper surfaces",
+   "subtitle": "Hot-press, cold-press and rough, side by side",
+   "body": "Rougher paper catches more pigment in its texture.",
+   "data": {
+    "svg": "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 90'><rect x='5' y='10' width='90' height='70' rx='6' fill='#f4efe6' stroke='#c9bfae'/><text x='50' y='88' font-size='9' text-anchor='middle' fill='#6e6253'>hot-press</text><rect x='105' y='10' width='90' height='70' rx='6' fill='#efe7da' stroke='#c9bfae'/><path d='M110 30 q8 -6 16 0 t16 0 t16 0 t16 0 t16 0 M110 50 q8 -6 16 0 t16 0 t16 0 t16 0 t16 0' stroke='#d8ccb8' fill='none'/><text x='150' y='88' font-size='9' text-anchor='middle' fill='#6e6253'>cold-press</text><rect x='205' y='10' width='90' height='70' rx='6' fill='#e9dfcf' stroke='#c9bfae'/><path d='M210 25 q6 -10 12 0 t12 0 t12 0 t12 0 t12 0 t12 0 t12 0 M210 45 q6 -10 12 0 t12 0 t12 0 t12 0 t12 0 t12 0 t12 0 M210 65 q6 -10 12 0 t12 0 t12 0 t12 0 t12 0 t12 0 t12 0' stroke='#cdbfa8' fill='none'/><text x='250' y='88' font-size='9' text-anchor='middle' fill='#6e6253'>rough</text></svg>"
+   },
+   "anchor_seconds": null,
+   "anchor_para": null,
+   "related_slugs": [],
+   "is_published": true
+  },
+  {
+   "course_id": 301,
+   "slug": "stretch-paper",
+   "kind": "example",
+   "title": "Stretching a sheet before painting",
+   "subtitle": null,
+   "body": "Stretched paper dries flat, even after heavy washes.",
+   "data": {
+    "steps": [
+     "Soak the sheet in clean water for five minutes.",
+     "Lay it flat on a board and smooth out any bubbles.",
+     "Tape all four edges with gummed tape.",
+     "Let it dry flat overnight before you paint."
+    ]
+   },
+   "anchor_seconds": null,
+   "anchor_para": null,
+   "related_slugs": [],
+   "is_published": true
+  }
+ ],
+ "blocks": [
+  {
+   "lesson_id": 103,
+   "kind": "heading",
+   "body": "Start with good paper",
+   "material_slug": null,
+   "is_gated": false
+  },
+  {
+   "lesson_id": 103,
+   "kind": "paragraph",
+   "body": "Paper matters more than brushes or paint. Student-grade paints on good paper look better than artist-grade paints on cheap paper, because the paper decides how the water moves.",
+   "material_slug": null,
+   "is_gated": false
+  },
+  {
+   "lesson_id": 103,
+   "kind": "paragraph",
+   "body": "For this course, use <b class='a-term' data-push='term' data-id='cold-press'>cold-press paper</b> at <b>140 lb</b> or heavier. It's forgiving, takes washes evenly, and doesn't need stretching for small pieces.",
+   "material_slug": null,
+   "is_gated": true
+  },
+  {
+   "lesson_id": 103,
+   "kind": "figure",
+   "body": "",
+   "material_slug": "paper-surfaces",
+   "is_gated": true
+  },
+  {
+   "lesson_id": 103,
+   "kind": "pull",
+   "body": "Let the water do some of the work.",
+   "material_slug": null,
+   "is_gated": true
+  },
+  {
+   "lesson_id": 103,
+   "kind": "heading",
+   "body": "Brushes and water",
+   "material_slug": null,
+   "is_gated": true
+  },
+  {
+   "lesson_id": 103,
+   "kind": "paragraph",
+   "body": "Three brushes are enough: a large round, a small round and a flat. Keep two water jars, one to rinse and one clean, so your colors stay bright.",
+   "material_slug": null,
+   "is_gated": true
+  },
+  {
+   "lesson_id": 103,
+   "kind": "example",
+   "body": "",
+   "material_slug": "stretch-paper",
+   "is_gated": true
+  },
+  {
+   "lesson_id": 103,
+   "kind": "paragraph",
+   "body": "Before the next lesson, tape a sheet to a board and paint one even stroke of clear water across it. Watch how long it takes to dry.",
+   "material_slug": null,
+   "is_gated": true
+  },
+  {
+   "lesson_id": 101,
+   "kind": "paragraph",
+   "body": "Welcome! In this short video we look at everything you'll need for the course, and what you can skip.",
+   "material_slug": null,
+   "is_gated": false
+  },
+  {
+   "lesson_id": 104,
+   "kind": "paragraph",
+   "body": "Notes for this lesson: mix more paint than you think you need. A wash that runs dry halfway leaves a hard edge.",
+   "material_slug": null,
+   "is_gated": false
+  }
+ ],
+ "videos": [
+  {
+   "id": 1,
+   "lesson_id": 101,
+   "bunny_library_id": 900001,
+   "bunny_video_guid": "5d2c1f9a-7b3e-4c1d-9a8f-2e6b7c4d1a01",
+   "duration_seconds": 240,
+   "thumbnail_url": null,
+   "captions_url": null,
+   "position": 0,
+   "meta": {}
+  },
+  {
+   "id": 2,
+   "lesson_id": 104,
+   "bunny_library_id": 900001,
+   "bunny_video_guid": "8a4e2b7c-1d9f-4e3a-b6c2-7f5d9e1a2b04",
+   "duration_seconds": 780,
+   "thumbnail_url": null,
+   "captions_url": null,
+   "position": 0,
+   "meta": {}
+  }
+ ],
+ "assessments": [
+  {
+   "id": 501,
+   "course_id": 301,
+   "lesson_id": 104,
+   "title": "Checkpoint · Graded wash",
+   "kind": "quiz",
+   "pass_pct": 100,
+   "config": {}
+  },
+  {
+   "id": 502,
+   "course_id": 301,
+   "lesson_id": 107,
+   "title": "Technique check",
+   "kind": "quiz",
+   "pass_pct": 70,
+   "config": {
+    "shuffle_options": true,
+    "reveal_answer": true
+   }
+  },
+  {
+   "id": 503,
+   "course_id": 301,
+   "lesson_id": 103,
+   "title": "Checkpoint · Paper",
+   "kind": "quiz",
+   "pass_pct": 100,
+   "config": {}
+  }
+ ],
+ "questions": [
+  {
+   "id": 601,
+   "assessment_id": 501,
+   "position": 1,
+   "kind": "single",
+   "prompt": {
+    "text": "In a graded wash, where does the color start strongest?"
+   },
+   "options": [
+    "At the top",
+    "In the middle",
+    "At the bottom"
+   ],
+   "answer": "At the top",
+   "points": 1
+  },
+  {
+   "id": 602,
+   "assessment_id": 501,
+   "position": 2,
+   "kind": "single",
+   "prompt": {
+    "text": "What do you add to the brush for each new stroke?"
+   },
+   "options": [
+    "More pigment",
+    "More water",
+    "Nothing"
+   ],
+   "answer": "More water",
+   "points": 1
+  },
+  {
+   "id": 611,
+   "assessment_id": 502,
+   "position": 1,
+   "kind": "single",
+   "prompt": {
+    "text": "Which paper surface is most forgiving for beginners?"
+   },
+   "options": [
+    "Hot-press",
+    "Cold-press",
+    "Rough"
+   ],
+   "answer": "Cold-press",
+   "points": 1
+  },
+  {
+   "id": 612,
+   "assessment_id": 502,
+   "position": 2,
+   "kind": "single",
+   "prompt": {
+    "text": "A wash that runs dry halfway leaves a hard edge."
+   },
+   "options": [
+    "True",
+    "False"
+   ],
+   "answer": "True",
+   "points": 1
+  },
+  {
+   "id": 613,
+   "assessment_id": 502,
+   "position": 3,
+   "kind": "multi",
+   "prompt": {
+    "text": "Which of these help lift paint off the paper?"
+   },
+   "options": [
+    "A clean damp brush",
+    "A paper towel",
+    "More pigment",
+    "Hair dryer"
+   ],
+   "answer": [
+    "A clean damp brush",
+    "A paper towel"
+   ],
+   "points": 2
+  },
+  {
+   "id": 614,
+   "assessment_id": 502,
+   "position": 4,
+   "kind": "single",
+   "prompt": {
+    "text": "Wet-on-wet means painting…"
+   },
+   "options": [
+    "onto dry paper",
+    "onto paper that's still wet",
+    "with a dry brush"
+   ],
+   "answer": "onto paper that's still wet",
+   "points": 1
+  },
+  {
+   "id": 621,
+   "assessment_id": 503,
+   "position": 1,
+   "kind": "single",
+   "prompt": {
+    "text": "What weight of paper does this course use?"
+   },
+   "options": [
+    "90 lb",
+    "140 lb or heavier",
+    "Any weight"
+   ],
+   "answer": "140 lb or heavier",
+   "points": 1
+  }
+ ],
+ "segments": [
+  {
+   "id": 701,
+   "lesson_id": 104,
+   "segment_index": 1,
+   "unit": "time",
+   "start_seconds": 0,
+   "end_seconds": 240,
+   "start_para": null,
+   "end_para": null,
+   "title": "The flat wash",
+   "min_watch_percent": 90,
+   "is_preview": true,
+   "quiz": null
+  },
+  {
+   "id": 702,
+   "lesson_id": 104,
+   "segment_index": 2,
+   "unit": "time",
+   "start_seconds": 240,
+   "end_seconds": 540,
+   "start_para": null,
+   "end_para": null,
+   "title": "Graded wash",
+   "min_watch_percent": 90,
+   "is_preview": false,
+   "quiz": {
+    "assessment_id": 501,
+    "pass_threshold": 100,
+    "max_attempts": 3,
+    "blocks_progress": true,
+    "retry_allowed": true,
+    "reveal_answer": false
+   }
+  },
+  {
+   "id": 703,
+   "lesson_id": 104,
+   "segment_index": 3,
+   "unit": "time",
+   "start_seconds": 540,
+   "end_seconds": 780,
+   "start_para": null,
+   "end_para": null,
+   "title": "Practice sheet",
+   "min_watch_percent": 80,
+   "is_preview": false,
+   "quiz": null
+  },
+  {
+   "id": 711,
+   "lesson_id": 103,
+   "segment_index": 1,
+   "unit": "paragraph",
+   "start_seconds": null,
+   "end_seconds": null,
+   "start_para": 1,
+   "end_para": 2,
+   "title": "Paper",
+   "min_watch_percent": 90,
+   "is_preview": true,
+   "quiz": {
+    "assessment_id": 503,
+    "pass_threshold": 100,
+    "max_attempts": null,
+    "blocks_progress": true,
+    "retry_allowed": true,
+    "reveal_answer": true
+   }
+  },
+  {
+   "id": 712,
+   "lesson_id": 103,
+   "segment_index": 2,
+   "unit": "paragraph",
+   "start_seconds": null,
+   "end_seconds": null,
+   "start_para": 3,
+   "end_para": 5,
+   "title": "Brushes and water",
+   "min_watch_percent": 90,
+   "is_preview": false,
+   "quiz": null
+  }
+ ],
+ "segment_stats": {
+  "701": {
+   "reached": 121,
+   "completed": 114,
+   "avg_percent": 93.5,
+   "quiz_attempts": 0,
+   "quiz_passed": 0
+  },
+  "702": {
+   "reached": 112,
+   "completed": 88,
+   "avg_percent": 81.2,
+   "quiz_attempts": 143,
+   "quiz_passed": 88
+  },
+  "703": {
+   "reached": 86,
+   "completed": 71,
+   "avg_percent": 77.9,
+   "quiz_attempts": 0,
+   "quiz_passed": 0
+  },
+  "711": {
+   "reached": 118,
+   "completed": 109,
+   "avg_percent": 95.0,
+   "quiz_attempts": 131,
+   "quiz_passed": 109
+  },
+  "712": {
+   "reached": 104,
+   "completed": 97,
+   "avg_percent": 90.1,
+   "quiz_attempts": 0,
+   "quiz_passed": 0
+  }
+ },
+ "lesson_stats": {
+  "101": {
+   "views": 126,
+   "likes": 64,
+   "dislikes": 1
+  },
+  "102": {
+   "views": 119,
+   "likes": 41,
+   "dislikes": 2
+  },
+  "103": {
+   "views": 0,
+   "likes": 38,
+   "dislikes": 0
+  },
+  "104": {
+   "views": 112,
+   "likes": 57,
+   "dislikes": 3
+  },
+  "105": {
+   "views": 98,
+   "likes": 44,
+   "dislikes": 1
+  },
+  "106": {
+   "views": 87,
+   "likes": 29,
+   "dislikes": 4
+  },
+  "107": {
+   "views": 0,
+   "likes": 12,
+   "dislikes": 2
+  },
+  "108": {
+   "views": 71,
+   "likes": 33,
+   "dislikes": 0
+  },
+  "109": {
+   "views": 64,
+   "likes": 39,
+   "dislikes": 1
+  },
+  "110": {
+   "views": 52,
+   "likes": 30,
+   "dislikes": 0
+  },
+  "111": {
+   "views": 0,
+   "likes": 18,
+   "dislikes": 0
+  },
+  "201": {
+   "views": 0,
+   "likes": 0,
+   "dislikes": 0
+  },
+  "401": {
+   "views": 40,
+   "likes": 22,
+   "dislikes": 0
+  }
+ },
+ "profiles": [
+  {
+   "xano_user_id": 20114,
+   "display_name": "Maya Okonkwo"
+  },
+  {
+   "xano_user_id": 20187,
+   "display_name": "Tom Becker"
+  },
+  {
+   "xano_user_id": 20233,
+   "display_name": "Inés Duarte"
+  },
+  {
+   "xano_user_id": 20391,
+   "display_name": "Sam Whitfield"
+  },
+  {
+   "xano_user_id": 20402,
+   "display_name": "Priya Nair"
+  },
+  {
+   "xano_user_id": 7001,
+   "display_name": "Jordan Ellis"
+  }
+ ],
+ "comments": [
+  {
+   "id": 801,
+   "lesson_id": 101,
+   "xano_user_id": 20114,
+   "body": "Is a travel palette with 12 half pans enough for this course, or should I buy tubes?",
+   "created_at": "2026-09-29T14:12:00Z",
+   "parent_id": null,
+   "is_instructor": false,
+   "pinned_at": null,
+   "likes": 6
+  },
+  {
+   "id": 802,
+   "lesson_id": 101,
+   "xano_user_id": 7001,
+   "body": "Twelve half pans is plenty. Tubes are nice later for big washes, but not needed here.",
+   "created_at": "2026-09-29T16:40:00Z",
+   "parent_id": 801,
+   "is_instructor": true,
+   "pinned_at": null,
+   "likes": 9
+  },
+  {
+   "id": 803,
+   "lesson_id": 104,
+   "xano_user_id": 20187,
+   "body": "My graded wash keeps getting stripes. I'm working fast — what am I doing wrong?",
+   "created_at": "2026-10-02T09:05:00Z",
+   "parent_id": null,
+   "is_instructor": false,
+   "pinned_at": null,
+   "likes": 4
+  },
+  {
+   "id": 804,
+   "lesson_id": 104,
+   "xano_user_id": 20233,
+   "body": "Same here! Tilting the board helped me a bit.",
+   "created_at": "2026-10-02T11:30:00Z",
+   "parent_id": 803,
+   "is_instructor": false,
+   "pinned_at": null,
+   "likes": 2
+  },
+  {
+   "id": 805,
+   "lesson_id": 104,
+   "xano_user_id": 7001,
+   "body": "Tip for everyone: tilt your board about 15° and keep a bead of paint along the bottom edge of each stroke. The next stroke picks it up and the stripes disappear.",
+   "created_at": "2026-09-20T10:00:00Z",
+   "parent_id": null,
+   "is_instructor": true,
+   "pinned_at": "2026-09-20T10:01:00Z",
+   "likes": 31
+  },
+  {
+   "id": 806,
+   "lesson_id": 105,
+   "xano_user_id": 20391,
+   "body": "How wet should the paper be for wet-on-wet? Mine either blooms everywhere or nothing spreads.",
+   "created_at": "2026-10-03T19:22:00Z",
+   "parent_id": null,
+   "is_instructor": false,
+   "pinned_at": null,
+   "likes": 3
+  },
+  {
+   "id": 807,
+   "lesson_id": 109,
+   "xano_user_id": 20402,
+   "body": "Loved this one. Could you do a follow-up on sunset skies?",
+   "created_at": "2026-10-01T08:47:00Z",
+   "parent_id": null,
+   "is_instructor": false,
+   "pinned_at": null,
+   "likes": 11
   }
  ]
 }

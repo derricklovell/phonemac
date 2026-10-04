@@ -5,7 +5,8 @@
   "session_exchange": "/functions/v1/xano-session",
   "merchant_scoped_rpc": [
    "lms_catalog",
-   "lms_course_outline"
+   "lms_course_outline",
+   "lms_lesson_player"
   ],
   "catalog_statuses": [
    "published",
@@ -19,10 +20,12 @@
   ],
   "slug_tries": 5,
   "builders_key": "lms_builders_for",
-  "lesson_editor": {
-   "view_id": 57,
-   "slot_code": "s02"
-  }
+  "video_create_url": "",
+  "tus_endpoint": "https://video.bunnycdn.com/tusupload",
+  "upload_chunk_bytes": 5242880,
+  "sign_seconds": 3600,
+  "thumbnail_file": "thumbnail.jpg",
+  "video_accept": "video/*"
  },
  "statuses": [
   {
@@ -98,6 +101,26 @@
   {
    "id": "details",
    "label": "Details"
+  },
+  {
+   "id": "pricing",
+   "label": "Pricing & access"
+  },
+  {
+   "id": "students",
+   "label": "Students"
+  },
+  {
+   "id": "insights",
+   "label": "Insights"
+  },
+  {
+   "id": "comments",
+   "label": "Comments"
+  },
+  {
+   "id": "certificates",
+   "label": "Certificates"
   }
  ],
  "layout": {
@@ -116,7 +139,16 @@
   "audio": "M9 18V5l12-2v13 M6 15a3 3 0 1 0 0 6 3 3 0 0 0 0-6z M18 13a3 3 0 1 0 0 6 3 3 0 0 0 0-6z",
   "article": "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8",
   "quiz": "M9 11l3 3L22 4 M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11",
-  "interactive": "M12 2l3 7h7l-5.5 4.5 2 7.5L12 16.5 5.5 21l2-7.5L2 9h7z"
+  "interactive": "M12 2l3 7h7l-5.5 4.5 2 7.5L12 16.5 5.5 21l2-7.5L2 9h7z",
+  "text": "M4 6h16 M4 12h16 M4 18h10",
+  "heading": "M6 4v16 M18 4v16 M6 12h12",
+  "quote": "M3 21c3 0 7-1 7-8V5H3v8h4 M14 21c3 0 7-1 7-8V5h-7v8h4",
+  "image": "M3 3h18v18H3z M8.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z M21 15l-5-5L5 21",
+  "list": "M8 6h13 M8 12h13 M8 18h13 M3 6h.01 M3 12h.01 M3 18h.01",
+  "copy": "M9 9h13v13H9z M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1",
+  "x": "M18 6 6 18 M6 6l12 12",
+  "check": "M20 6 9 17l-5-5",
+  "upload": "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4 M17 8l-5-5-5 5 M12 3v12"
  },
  "strings": {
   "title": "Teacher",
@@ -183,7 +215,6 @@
   "freePreview": "Free preview",
   "previewHint": "Free preview lessons can be watched before enrolling.",
   "editContent": "Edit content",
-  "openingEditor": "Opening “{title}” in the lesson editor…",
   "deleteLesson": "Delete lesson",
   "deleteLessonTitle": "Delete “{title}”?",
   "deleteLessonBody": "Its content, checkpoints and every learner's progress in it are deleted ({learners} in this course). This can't be undone.",
@@ -229,7 +260,301 @@
   "errSignedOut": "you're not signed in — sign in to edit",
   "errNoRole": "you need to be an owner, admin or instructor of this business to do that",
   "errSlugTaken": "that course URL is already taken",
-  "errNotFound": "that course wasn't found"
+  "errNotFound": "that course wasn't found",
+  "backToCourse": "Course",
+  "revert": "Revert",
+  "reverted": "Back to the saved lesson",
+  "saveLesson": "Save lesson",
+  "lessonSaved": "Lesson saved",
+  "fixFirst": "Fix {n} things before saving — they're listed at the top.",
+  "problemsOne": "1 thing to fix before saving",
+  "problemsMany": "{n} things to fix before saving",
+  "andMore": "and {n} more",
+  "discardTitle": "Discard your changes?",
+  "discardBody": "This lesson has changes you haven't saved.",
+  "discardConfirm": "Discard changes",
+  "contentHint": "What learners read, top to bottom. Bold and term links are the inline styles the Classroom shows.",
+  "showPreview": "Show preview",
+  "hidePreview": "Hide preview",
+  "studentPreview": "Learner preview",
+  "noBlocks": "No content yet. Add a paragraph, heading, pull quote, figure or worked example below.",
+  "addBlock": "Add",
+  "formatting": "Formatting",
+  "bold": "Bold",
+  "linkTerm": "Link a term",
+  "termShort": "Term",
+  "linkTermTitle": "Link a term",
+  "termWord": "Term",
+  "noTerms": "There are no terms yet. Add one, then link it.",
+  "headingPlaceholder": "Heading",
+  "paragraphPlaceholder": "Write a paragraph…",
+  "pullPlaceholder": "A line worth pulling out…",
+  "captionPlaceholder": "Caption (optional — the figure's own caption is used otherwise)",
+  "labelPlaceholder": "Label (optional — the example's title is used otherwise)",
+  "pickMaterial": "Choose from course materials…",
+  "noMaterialsKind": "None yet — add one",
+  "newMaterial": "New",
+  "gated": "Gated",
+  "ungated": "Open",
+  "gatedHint": "Gated blocks stay hidden until the segment before them is complete.",
+  "duplicate": "Duplicate",
+  "deleteBlock": "Delete block",
+  "reorderBlock": "Reorder block {n} ({kind}): drag, or use the arrow keys",
+  "materials": "Course materials",
+  "materialsHint": "Terms, figures, worked examples and notes, shared by every lesson in this course. Saved as soon as you add or edit them.",
+  "noMaterials": "No materials yet.",
+  "edit": "Edit",
+  "deleteMaterial": "Delete {title}",
+  "deleteMaterialTitle": "Delete “{title}”?",
+  "deleteMaterialBody": "It's removed from the course. This can't be undone.",
+  "deleteMaterialUsed": "{n} block(s) in this lesson use it and will show nothing until you pick another. This can't be undone.",
+  "newMaterialTitle": "New {kind}",
+  "editMaterialTitle": "Edit {kind}",
+  "materialSaved": "Saved “{title}”",
+  "captionWord": "Caption",
+  "definition": "Definition",
+  "noteWord": "Note",
+  "svgLabel": "Drawing (SVG)",
+  "svgHint": "Paste SVG markup. Scripts and outside links are removed when it's shown.",
+  "stepsLabel": "Steps",
+  "stepsHint": "One step per line.",
+  "figureWord": "Figure",
+  "workedExample": "Worked example",
+  "segmentStarts": "Segment {n}: {title}",
+  "afterCheckpoint": "opens after the checkpoint",
+  "minRead": "{n} min read",
+  "previewEmpty": "Nothing to read yet.",
+  "videoTitle": "Lesson video",
+  "videoHint": "Learners watch this video. Segments and checkpoints run on its timeline.",
+  "videoMeta": "Video {guid} · {length}",
+  "thumbnailUrl": "Thumbnail image",
+  "captionsUrl": "Captions file",
+  "captionsHint": "A WebVTT (.vtt) link.",
+  "videoLength": "Length",
+  "clockHint": "Minutes:seconds, e.g. 12:30.",
+  "uploadVideo": "Upload a video",
+  "replaceVideo": "Upload a new video",
+  "dropHint": "Drop a file here, or choose one.",
+  "chooseFile": "Choose file",
+  "uploadUnavailable": "Uploading isn't switched on yet: the video service that creates the upload isn't deployed. You can attach a video that's already in the library by its ID.",
+  "uploading": "Uploading {name}",
+  "upStep_create": "Preparing…",
+  "upStep_sign": "Getting permission…",
+  "upStep_send": "{pct}% sent",
+  "upStep_save": "Adding it to the lesson…",
+  "uploaded": "Video uploaded. It may take a few minutes to process.",
+  "uploadFailed": "Upload failed ({reason}).",
+  "errSign": "the upload wasn't signed",
+  "errUploadUrl": "the video host didn't return an upload address",
+  "errUploadStalled": "the video host stopped accepting the file",
+  "videoIdPlaceholder": "Video ID from the library (e.g. 3f1c…)",
+  "attachVideo": "Attach",
+  "videoIdInvalid": "That isn't a video ID. It looks like 3f1c2a9e-…, 36 characters.",
+  "videoAttached": "Video attached",
+  "audioTitle": "Audio",
+  "audioHint": "A link to the audio file learners play.",
+  "mediaLinkTitle": "Media link",
+  "mediaLinkHint": "Optional: a direct link to a media file, used when the lesson has no library video.",
+  "mediaUrl": "Link",
+  "segmentsHintTime": "Split the lesson's timeline into parts learners finish in order (lesson length {length}). Add a checkpoint quiz to any part.",
+  "segmentsHintPara": "Split the article into parts by paragraph (it has {n}). Learners finish them in order; add a checkpoint quiz to any part.",
+  "noSegments": "No segments: the whole lesson is one part.",
+  "addSegment": "Add segment",
+  "segmentN": "Segment {n}",
+  "segmentTitle": "Segment {n} title",
+  "segmentTitlePlaceholder": "Segment title",
+  "reorderSegment": "Reorder segment {n}: drag, or use the arrow keys",
+  "deleteSegment": "Delete segment {n}",
+  "from": "From",
+  "to": "to",
+  "fromPara": "From ¶",
+  "toPara": "to ¶",
+  "segFrom": "Segment {n} start",
+  "segTo": "Segment {n} end",
+  "minWatch": "Done at",
+  "segPreview": "Free preview",
+  "addCheckpoint": "Add checkpoint",
+  "checkpoint": "Checkpoint quiz",
+  "removeCheckpoint": "Remove checkpoint",
+  "checkpointTitle": "Checkpoint · {title}",
+  "passAt": "Pass at",
+  "maxAttempts": "Attempts",
+  "unlimited": "Unlimited",
+  "retryAllowed": "Learners can try again",
+  "revealAnswers": "Show the right answers after an attempt",
+  "blocksProgress": "Must pass to continue",
+  "blocksProgressHint": "The next segment stays locked until the learner passes.",
+  "addQuestion": "Add",
+  "questionN": "Question {n}",
+  "promptPlaceholder": "Ask a question…",
+  "questionType": "Question type",
+  "deleteQuestion": "Delete question {n}",
+  "reorderQuestion": "Reorder question {n}: drag, or use the arrow keys",
+  "markCorrect": "Mark option {n} correct",
+  "optionN": "Option {n}",
+  "removeOption": "Remove option {n}",
+  "addOption": "Add option",
+  "acceptedAnswer": "Answer",
+  "correctNumber": "Correct number",
+  "textExact": "Graded as an exact match, including capitals.",
+  "points": "Points",
+  "notInClassroom": "The Classroom can't show this type to learners yet",
+  "quizSettings": "Quiz settings",
+  "quizTitle": "Title",
+  "quizKind": "Type",
+  "passMark": "Pass mark (%)",
+  "passMarkHint": "The share of points needed to pass.",
+  "shuffle": "Shuffle answer order",
+  "shuffleHint": "Each learner sees the options in their own order.",
+  "revealHint": "After submitting, learners see which answers were right.",
+  "questionsTitle": "Questions ({n} · {points} points)",
+  "quizWord": "Quiz",
+  "lessonTypeHint": "Changing it changes what the lesson shows and how segments are measured.",
+  "durationMinutes": "Length (minutes)",
+  "completeAt": "Complete at (%)",
+  "completeAtHint": "How much a learner must watch or read for the lesson to count as done.",
+  "lessonAccess": "Access and discussion",
+  "gatesNext": "Lock the next lesson until this one is done",
+  "gatesNextHint": "Applies when the course unlocks lessons in order.",
+  "allowComments": "Allow comments",
+  "allowCommentsHint": "Learners can discuss this lesson.",
+  "showSegments": "Show the segment list",
+  "showSegmentsHint": "Learners see the lesson's parts and where they are.",
+  "pNoTitle": "The lesson needs a title.",
+  "pCompleteAt": "“Complete at” must be between 1 and 100.",
+  "pNoMaterial": "Block {n} needs a figure or example chosen.",
+  "pTimeRange": "{at}: its end must come after its start.",
+  "pParaRange": "{at}: paragraphs must run from 1 to {n}, with the end after the start.",
+  "pWatch": "{at}: “Done at” must be between 1 and 100.",
+  "pPassMark": "{at}: the pass mark must be between 1 and 100.",
+  "pAttempts": "{at}: attempts must be 1 or more, or left empty.",
+  "pNoQuestions": "{at}: the checkpoint has no questions.",
+  "pExamEmpty": "The quiz has no questions yet.",
+  "pNoPrompt": "{at} has no question text.",
+  "pFewOptions": "{at} needs at least two options.",
+  "pEmptyOption": "{at} has an empty option.",
+  "pDupOption": "{at} has two identical options.",
+  "pNoAnswer": "{at} has no correct answer marked.",
+  "pNoNumber": "{at} needs a correct number.",
+  "pPoints": "{at} needs more than 0 points.",
+  "retry": "Try again",
+  "loadFailedShort": "Couldn't load this.",
+  "priceTitle": "Price",
+  "priceHint": "What a learner pays to enroll.",
+  "free": "Free",
+  "paid": "Paid",
+  "amount": "Amount",
+  "currency": "Currency",
+  "priceRequired": "Enter a price above zero, or choose Free.",
+  "accessTitle": "Who can enroll",
+  "credential": "Access code",
+  "credentialHint": "Learners type this code to enroll.",
+  "credentialKeep": "Leave empty to keep the current code, or type a new one.",
+  "credentialRequired": "Enter the access code learners will use.",
+  "channelTitle": "Channel",
+  "channelHint": "The channel the course appears under.",
+  "noChannel": "Choose a channel…",
+  "noChannels": "This business has no channels yet.",
+  "experienceTitle": "Learning experience",
+  "flagsPartial": "Add a lesson to see and change the rest of these settings: the store reports them with a lesson.",
+  "settingsSaved": "Settings saved",
+  "couponsGap": "Coupons and discount codes aren't available yet: the store has no place for them.",
+  "statEnrolled": "Enrolled",
+  "statActive": "Active",
+  "statCompleted": "Completed",
+  "statAvgProgress": "Average progress",
+  "searchMembers": "Search by member number",
+  "filterStatus": "Filter by status",
+  "allStatuses": "All statuses",
+  "addStudent": "Add student",
+  "addStudentTitle": "Add a student",
+  "addStudentBody": "Enrolls the member in “{course}” for free. They'll find it in their Classroom.",
+  "memberId": "Member number",
+  "memberIdPlaceholder": "e.g. 18342",
+  "studentAdded": "{who} enrolled",
+  "memberN": "Member #{id}",
+  "colMember": "Learner",
+  "colStatus": "Status",
+  "colProgress": "Progress",
+  "colLessons": "Lessons",
+  "colEnrolled": "Enrolled",
+  "colCertificate": "Certificate",
+  "colActions": "Actions",
+  "ofTotal": "{n} / {total}",
+  "none": "—",
+  "paused": "Paused",
+  "manage": "Manage",
+  "manageAccess": "Manage {who}'s access",
+  "pauseAccess": "Pause access",
+  "restoreAccess": "Restore access",
+  "pauseTitle": "Pause {who}'s access?",
+  "pauseBody": "They keep their progress but can't open the course until you restore it.",
+  "pauseReason": "Reason (optional, for your team)",
+  "accessPaused": "{who}'s access paused",
+  "accessRestored": "{who}'s access restored",
+  "noStudents": "No one is enrolled yet.",
+  "noStudentsMatch": "No learners match.",
+  "rosterGap": "Learners show as member numbers, and paused access isn't shown until you change it here: the store's class list doesn't include names or pauses yet.",
+  "funnelTitle": "How far learners get",
+  "funnelHint": "Everyone enrolled (not counting dropped), by how much of the course they've finished.",
+  "fEnrolled": "Enrolled",
+  "fStarted": "Started",
+  "fHalfway": "Halfway",
+  "fCompleted": "Completed",
+  "lessonsTitle": "Lessons",
+  "lessonsHint": "Views count learners who pressed play. Choose a lesson to see where learners stop inside it.",
+  "colLesson": "Lesson",
+  "colViews": "Views",
+  "colLikes": "Likes",
+  "colComments": "Comments",
+  "likesDislikes": "{up} / {down}",
+  "noLessonsYet": "No lessons yet.",
+  "segmentsOf": "Inside “{title}”",
+  "noSegmentsData": "This lesson has no segments to measure.",
+  "colSegment": "Segment",
+  "colReached": "Reached",
+  "colFinished": "Finished",
+  "colAvgWatched": "Avg. done",
+  "colCheckpoint": "Checkpoint",
+  "passedOf": "{passed} passed · {attempts} tries",
+  "insightsGap": "Per-lesson completion counts and revenue aren't reported by the store yet.",
+  "statThreads": "Threads",
+  "statUnanswered": "Waiting for you",
+  "statPinned": "Pinned",
+  "filterLesson": "Filter by lesson",
+  "allLessons": "All lessons",
+  "filterThreads": "Show",
+  "instructor": "Instructor",
+  "pinned": "Pinned",
+  "likesOne": "1 like",
+  "likesMany": "{n} likes",
+  "reply": "Reply",
+  "pin": "Pin",
+  "unpin": "Unpin",
+  "replyPlaceholder": "Write a reply as the instructor…",
+  "send": "Send",
+  "replySent": "Reply posted",
+  "you": "You",
+  "noThreads": "No comments yet.",
+  "noThreadsMatch": "No threads match.",
+  "commentsGap": "You can't remove a learner's comment from here yet: the store only lets people delete their own.",
+  "certTitle": "Course certificate",
+  "certHint": "Learners get a certificate with a serial number when they complete the course.",
+  "certOn": "On",
+  "certOff": "Off",
+  "certUnknown": "Not reported",
+  "turnOn": "Turn on",
+  "turnOff": "Turn off",
+  "certUnknownNote": "The store doesn't report this setting yet, so it shows here once you set it. New courses start with it on.",
+  "certTurnedOn": "Certificates turned on",
+  "certTurnedOff": "Certificates turned off",
+  "issuedTitle": "Issued ({n})",
+  "colSerial": "Serial",
+  "colCompleted": "Completed",
+  "noCertificates": "No certificates issued yet.",
+  "pathsTitle": "Learning paths",
+  "pathsBody": "Paths bundle several courses into one certificate. The store can show and issue them, but it can't create or edit them yet, so they're set up by the platform for now.",
+  "statDropped": "Dropped"
  },
  "theme": {
   "defaultScheme": "light",
@@ -264,7 +589,10 @@
    "tile-text": "#ffffff",
    "scrim": "rgba(0,0,0,.28)",
    "shadow-sm": "0 1px 2px rgba(0,0,0,.06)",
-   "shadow-lg": "0 12px 32px rgba(0,0,0,.18)"
+   "shadow-lg": "0 12px 32px rgba(0,0,0,.18)",
+   "paper": "#fffdf8",
+   "paper-text": "#26221c",
+   "reading-font": "Charter, \"Iowan Old Style\", Georgia, serif"
   },
   "dark": {
    "font": "-apple-system, BlinkMacSystemFont, \"SF Pro Text\", \"Segoe UI\", Inter, system-ui, sans-serif",
@@ -297,7 +625,10 @@
    "tile-text": "#ffffff",
    "scrim": "rgba(0,0,0,.5)",
    "shadow-sm": "0 1px 2px rgba(0,0,0,.4)",
-   "shadow-lg": "0 12px 32px rgba(0,0,0,.55)"
+   "shadow-lg": "0 12px 32px rgba(0,0,0,.55)",
+   "paper": "#232120",
+   "paper-text": "#ece6dc",
+   "reading-font": "Charter, \"Iowan Old Style\", Georgia, serif"
   },
   "tiles": [
    "#5b7cfa",
@@ -309,5 +640,283 @@
    "#fd7e14",
    "#15aabf"
   ]
- }
+ },
+ "formats": {
+  "locale": "en-US"
+ },
+ "lesson_tabs": [
+  {
+   "id": "content",
+   "label": "Content",
+   "kinds": [
+    "article",
+    "video",
+    "audio",
+    "interactive"
+   ]
+  },
+  {
+   "id": "media",
+   "label": "Video & media",
+   "kinds": [
+    "video",
+    "audio"
+   ]
+  },
+  {
+   "id": "segments",
+   "label": "Segments & checkpoints",
+   "kinds": [
+    "article",
+    "video",
+    "audio",
+    "interactive"
+   ]
+  },
+  {
+   "id": "questions",
+   "label": "Questions",
+   "kinds": [
+    "quiz"
+   ]
+  },
+  {
+   "id": "settings",
+   "label": "Settings",
+   "kinds": [
+    "article",
+    "video",
+    "audio",
+    "interactive",
+    "quiz"
+   ]
+  }
+ ],
+ "block_kinds": [
+  {
+   "id": "paragraph",
+   "label": "Paragraph",
+   "icon": "text"
+  },
+  {
+   "id": "heading",
+   "label": "Heading",
+   "icon": "heading"
+  },
+  {
+   "id": "pull",
+   "label": "Pull quote",
+   "icon": "quote"
+  },
+  {
+   "id": "figure",
+   "label": "Figure",
+   "icon": "image"
+  },
+  {
+   "id": "example",
+   "label": "Worked example",
+   "icon": "list"
+  }
+ ],
+ "material_kinds": [
+  {
+   "id": "term",
+   "label": "Term"
+  },
+  {
+   "id": "figure",
+   "label": "Figure"
+  },
+  {
+   "id": "example",
+   "label": "Example"
+  },
+  {
+   "id": "note",
+   "label": "Note"
+  }
+ ],
+ "question_kinds": {
+  "single": {
+   "label": "One answer",
+   "student_ready": true
+  },
+  "multi": {
+   "label": "Several answers",
+   "student_ready": false
+  },
+  "text": {
+   "label": "Short answer",
+   "student_ready": false
+  },
+  "numeric": {
+   "label": "Number",
+   "student_ready": false
+  }
+ },
+ "question_types": [
+  {
+   "id": "single",
+   "kind": "single",
+   "label": "Multiple choice",
+   "options": [
+    "",
+    "",
+    ""
+   ],
+   "answer": -1
+  },
+  {
+   "id": "truefalse",
+   "kind": "single",
+   "label": "True / false",
+   "options": [
+    "True",
+    "False"
+   ],
+   "answer": -1
+  },
+  {
+   "id": "multi",
+   "kind": "multi",
+   "label": "Several answers",
+   "options": [
+    "",
+    "",
+    ""
+   ],
+   "answer": []
+  },
+  {
+   "id": "text",
+   "kind": "text",
+   "label": "Short answer",
+   "options": [],
+   "answer": ""
+  },
+  {
+   "id": "numeric",
+   "kind": "numeric",
+   "label": "Number",
+   "options": [],
+   "answer": ""
+  }
+ ],
+ "exam_kinds": [
+  {
+   "id": "quiz",
+   "label": "Quiz"
+  },
+  {
+   "id": "exam",
+   "label": "Exam"
+  }
+ ],
+ "defaults": {
+  "exam": {
+   "kind": "quiz",
+   "pass_pct": 70,
+   "shuffle_options": true,
+   "reveal_answer": true
+  },
+  "checkpoint": {
+   "pass_threshold": 100,
+   "max_attempts": "",
+   "retry_allowed": true,
+   "reveal_answer": false,
+   "blocks_progress": true
+  },
+  "segment": {
+   "min_watch_percent": 90
+  },
+  "points": 1
+ },
+ "currencies": [
+  "USD",
+  "EUR",
+  "GBP",
+  "CAD",
+  "AUD"
+ ],
+ "access": [
+  {
+   "id": "open",
+   "label": "Open",
+   "hint": "Anyone who can see the course can enroll (and pay, if it has a price)."
+  },
+  {
+   "id": "invite",
+   "label": "Invite only",
+   "hint": "Only learners you add from Students can take the course."
+  },
+  {
+   "id": "credential",
+   "label": "Access code",
+   "hint": "Learners enter a code you share with them to enroll."
+  }
+ ],
+ "course_flags": [
+  {
+   "id": "gating_enabled",
+   "label": "Lessons unlock in order",
+   "hint": "A learner finishes each lesson before the next one opens.",
+   "unset": true
+  },
+  {
+   "id": "allow_skip_ahead",
+   "label": "Let learners skip ahead",
+   "hint": "Every segment and lesson stays open, even when order is on.",
+   "unset": false
+  },
+  {
+   "id": "show_discussion",
+   "label": "Show the discussion",
+   "hint": "Comments appear under each lesson that allows them.",
+   "unset": true
+  },
+  {
+   "id": "show_transcript",
+   "label": "Show transcripts",
+   "hint": "Learners can read along with a video's transcript.",
+   "unset": true
+  },
+  {
+   "id": "autoplay_next",
+   "label": "Play the next lesson automatically",
+   "hint": "When a video ends, the next lesson starts.",
+   "unset": true
+  }
+ ],
+ "enrollment_statuses": [
+  {
+   "id": "active",
+   "label": "Active",
+   "tone": "ok"
+  },
+  {
+   "id": "completed",
+   "label": "Completed",
+   "tone": "ok"
+  },
+  {
+   "id": "dropped",
+   "label": "Dropped",
+   "tone": ""
+  }
+ ],
+ "comment_filters": [
+  {
+   "id": "all",
+   "label": "All threads"
+  },
+  {
+   "id": "unanswered",
+   "label": "Waiting for you"
+  },
+  {
+   "id": "pinned",
+   "label": "Pinned"
+  }
+ ]
 }

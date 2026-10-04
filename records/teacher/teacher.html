@@ -174,6 +174,134 @@
   #toast[data-on] { opacity: 1; }
   #fatal { margin: 24px; white-space: pre-wrap; font: 13px/1.5 ui-monospace, monospace; color: var(--bad); }
 
+  /* shared pieces for the lesson editor and the course tabs */
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; box-shadow: var(--shadow-sm); }
+  .card + .card { margin-top: 14px; }
+  .card h3 { margin: 0 0 4px; font-size: 14px; }
+  .card > .muted { margin: 0 0 12px; font-size: 12.5px; }
+  .stack { display: flex; flex-direction: column; gap: 12px; }
+  .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .num { font-variant-numeric: tabular-nums; }
+  .check { display: flex; align-items: flex-start; gap: 9px; cursor: pointer; padding: 6px 0; }
+  .check input { margin: 2px 0 0; width: 16px; height: 16px; accent-color: var(--accent); flex-shrink: 0; }
+  .check b { display: block; font-weight: 600; }
+  .check span.muted { display: block; font-size: 12px; }
+  .seg-ctl { display: inline-flex; padding: 2px; border-radius: 8px; background: var(--input); flex-wrap: wrap; }
+  .seg-ctl label { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; }
+  .seg-ctl input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg-ctl label:has(input:checked) { background: var(--card); color: var(--text); box-shadow: var(--shadow-sm); }
+  .seg-ctl label:has(input:focus-visible) { outline: 2px solid var(--accent); }
+  .problems { margin: 0 0 12px; padding: 10px 12px; border-radius: 10px; background: var(--warn-bg); color: var(--warn); font-size: 12.5px; }
+  .problems ul { margin: 4px 0 0; padding-left: 18px; }
+  .note { padding: 10px 12px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line-soft); color: var(--muted); font-size: 12.5px; }
+  .tbl-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+  table.tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .tbl th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  .tbl td { padding: 8px 10px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+  .tbl tr:last-child td { border-bottom: 0; }
+  .tbl td.r, .tbl th.r { text-align: right; }
+  .tbl tr[data-pick] { cursor: pointer; }
+  .tbl tr[data-pick]:hover td { background: var(--hover); }
+  .tbl tr[aria-selected="true"] td { background: var(--hover); }
+  .bar-cell { display: flex; align-items: center; gap: 8px; min-width: 120px; }
+  .meter { flex: 1; height: 6px; border-radius: 3px; background: var(--chip); overflow: hidden; min-width: 50px; }
+  .meter > i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+  .meter.ok > i { background: var(--ok); }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .stat { padding: 10px 12px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line-soft); }
+  .stat b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+  .stat span { color: var(--muted); font-size: 12px; }
+  .funnel { display: flex; flex-direction: column; gap: 6px; }
+  .funnel .fr { display: grid; grid-template-columns: 120px 1fr 60px; gap: 10px; align-items: center; font-size: 12.5px; }
+  .funnel .fb { height: 18px; border-radius: 5px; background: var(--chip); overflow: hidden; }
+  .funnel .fb > i { display: block; height: 100%; background: var(--accent); }
+  .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .toolbar .search { margin: 0; flex: 1; min-width: 160px; }
+  .menu-sel { all: unset; box-sizing: border-box; height: 26px; padding: 0 24px 0 9px; border-radius: 7px; border: 1px solid var(--line); background: var(--card) var(--chevron) no-repeat right 8px center / 10px 6px; font-size: 12px; font-weight: 550; cursor: pointer; }
+  .menu-sel:focus-visible { outline: 2px solid var(--accent); }
+
+  /* lesson editor */
+  .led { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 38%); gap: 18px; align-items: start; }
+  .led.single { grid-template-columns: minmax(0, 1fr); max-width: var(--content-max); margin: 0 auto; }
+  .blk { background: var(--card); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 8px; }
+  .blk[aria-current="true"] { border-color: var(--accent); }
+  .blk-h { display: flex; align-items: center; gap: 6px; padding: 4px 6px; border-bottom: 1px solid var(--line-soft); }
+  .blk-b { padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 6px; }
+  .blk:focus-within { border-color: var(--accent); }
+  .rte { min-height: 44px; line-height: 1.6; outline: none; white-space: pre-wrap; overflow-wrap: anywhere; cursor: text; }
+  .rte.pull { font-style: italic; font-size: 14px; border-left: 3px solid var(--line); padding-left: 10px; }
+  .rte:empty::before { content: attr(data-placeholder); color: var(--muted); }
+  .rte .term { color: var(--accent); border-bottom: 1px dotted var(--accent); font-weight: 600; }
+  .field.grow { flex: 1; }
+  .tbl td.nw { white-space: nowrap; }
+  .blk textarea { all: unset; box-sizing: border-box; display: block; width: 100%; min-height: 64px; white-space: pre-wrap; line-height: 1.55; field-sizing: content; }
+  .blk textarea.pull { font-style: italic; font-size: 14px; border-left: 3px solid var(--line); padding-left: 10px; }
+  .blk input.hd { all: unset; box-sizing: border-box; width: 100%; font-size: 17px; font-weight: 700; }
+  .fmt { display: inline-flex; gap: 2px; }
+  .fmt button { all: unset; min-width: 26px; height: 24px; padding: 0 6px; border-radius: 5px; text-align: center; font-size: 12px; font-weight: 700; color: var(--muted); cursor: pointer; }
+  .fmt button:hover { background: var(--hover); color: var(--text); }
+  .fmt button:focus-visible { outline: 2px solid var(--accent); }
+  .add-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 10px; border-radius: 10px; border: 1.5px dashed var(--line); }
+  .add-bar .muted { font-size: 12px; margin-right: 4px; }
+  .mats { margin-top: 16px; }
+  .mat { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line-soft); }
+  .mat:first-of-type { border-top: 0; }
+  .mat .chip { min-width: 58px; justify-content: center; }
+  .pv { position: sticky; top: 0; background: var(--paper); color: var(--paper-text); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px 28px; font: 15px/1.65 var(--reading-font); max-height: calc(100vh - 160px); overflow-y: auto; }
+  .pv-k { font: 600 11px/1.3 var(--font); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 10px; }
+  .pv h1 { font-size: 24px; line-height: 1.25; margin: 0 0 4px; }
+  .pv .pv-meta { font: 12px var(--font); color: var(--muted); margin-bottom: 16px; }
+  .pv h2 { font-size: 18px; margin: 20px 0 8px; }
+  .pv p { margin: 0 0 12px; }
+  .pv p.pull { font-style: italic; font-size: 17px; border-left: 3px solid var(--accent); padding-left: 14px; }
+  .pv .term { color: var(--accent); border-bottom: 1px dotted var(--accent); font-weight: 600; }
+  .pv figure { margin: 12px 0; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
+  .pv figure img { display: block; max-width: 100%; margin: 0 auto 6px; }
+  .pv figcaption { font: 12px var(--font); color: var(--muted); }
+  .pv .ex { display: flex; align-items: center; gap: 8px; margin: 10px 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; font: 13px var(--font); }
+  .pv .gate { font: 11px var(--font); color: var(--warn); border-top: 1px dashed var(--warn); margin: 12px 0 8px; padding-top: 4px; }
+  .pv [data-pv][aria-current="true"] { background: var(--hover); border-radius: 4px; }
+  .pv-empty { color: var(--muted); font: 13px var(--font); }
+  .q { border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin-bottom: 8px; background: var(--card); }
+  .q-h { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .q-h .q-n { font-weight: 700; color: var(--muted); font-size: 12px; min-width: 22px; }
+  .q-h .grow .field { width: 100%; }
+  .opt { display: flex; align-items: center; gap: 6px; margin: 4px 0 4px 28px; }
+  .opt .field { flex: 1; height: 28px; }
+  .opt .mark { all: unset; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 12px; border: 1.5px solid var(--line); color: transparent; cursor: pointer; flex-shrink: 0; }
+  .opt .mark.multi { border-radius: 6px; }
+  .opt .mark[aria-checked="true"] { background: var(--ok); border-color: var(--ok); color: var(--accent-text); }
+  .opt .mark:focus-visible { outline: 2px solid var(--accent); }
+  .opt .mark svg.i { width: 13px; height: 13px; }
+  .q-foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 8px 0 0 28px; font-size: 12px; color: var(--muted); }
+  .q-foot .field { height: 26px; width: 64px; }
+  .seg { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; background: var(--card); }
+  .seg-h { display: flex; align-items: center; gap: 8px; }
+  .seg-h .field { flex: 1; }
+  .seg-r { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin: 8px 0 0 30px; font-size: 12px; color: var(--muted); }
+  .seg-r .field { width: 76px; height: 28px; }
+  .seg-q { margin: 10px 0 0 30px; padding-top: 10px; border-top: 1px dashed var(--line); }
+  .video-card { display: grid; grid-template-columns: 200px 1fr; gap: 14px; align-items: start; }
+  .thumb { width: 200px; aspect-ratio: 16 / 9; border-radius: 10px; background: var(--chip); overflow: hidden; display: flex; align-items: center; justify-content: center; color: var(--muted); max-width: 100%; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .drop { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 22px; border-radius: 12px; border: 1.5px dashed var(--line); text-align: center; color: var(--muted); }
+  .drop[data-over] { border-color: var(--accent); background: var(--hover); }
+  .progress { width: 100%; height: 8px; border-radius: 4px; background: var(--chip); overflow: hidden; }
+  .progress > i { display: block; height: 100%; background: var(--accent); transition: width .2s; }
+  .thread { padding: 12px 0; border-top: 1px solid var(--line-soft); }
+  .thread:first-child { border-top: 0; }
+  .c-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+  .c-h b { color: var(--text); font-size: 13px; }
+  .c-body { margin: 4px 0 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .replies { margin-left: 18px; padding-left: 12px; border-left: 2px solid var(--line-soft); }
+  .reply-box { display: flex; gap: 8px; align-items: flex-start; margin-top: 6px; }
+  .reply-box textarea { flex: 1; min-height: 56px; }
+  .tabs-x { overflow-x: auto; scrollbar-width: none; }
+  .tabs-x::-webkit-scrollbar { display: none; }
+  .tab { white-space: nowrap; }
+
+  .only-phone { display: none; }
+  #app[data-size="phone"] .only-phone { display: inline-flex; }
   #head [data-act="back"] { display: none; }
   #app[data-size="phone"] #head [data-act="back"] { display: inline-flex; }
   #app[data-size="phone"] #head { padding: 10px 12px 8px; gap: 6px 8px; flex-wrap: wrap; }
@@ -192,6 +320,13 @@
   #app[data-size="phone"] .add-les, #app[data-size="phone"] .add-btn, #app[data-size="phone"] .les-empty { margin-left: 8px; padding-left: 8px; }
   #app[data-size="phone"] .sec-sum { margin-left: 10px; width: calc(100% - 20px); }
   #app[data-size="phone"] .drow { flex-wrap: wrap; }
+  #app[data-size="phone"] .led { grid-template-columns: minmax(0, 1fr); }
+  #app[data-size="phone"] .led > .pv-col[data-hide] { display: none; }
+  #app[data-size="phone"] .pv { position: static; max-height: none; }
+  #app[data-size="phone"] .video-card { grid-template-columns: 1fr; }
+  #app[data-size="phone"] .funnel .fr { grid-template-columns: 90px 1fr 44px; }
+  #app[data-size="phone"] .opt, #app[data-size="phone"] .q-foot, #app[data-size="phone"] .seg-r, #app[data-size="phone"] .seg-q { margin-left: 0; }
+  @media (prefers-reduced-motion: reduce) { .progress > i, #toast { transition: none; } }
 </style>
 </head>
 <body>
@@ -204,7 +339,7 @@
   </aside>
   <main id="main">
     <header id="head"></header>
-    <nav id="tabs" role="tablist"></nav>
+    <nav id="tabs" class="tabs-x" role="tablist"></nav>
     <div id="pane" role="tabpanel"></div>
   </main>
 </div>
@@ -251,6 +386,9 @@ var componentProps = {};
     form: null, // the details form while it's being edited
     adding: null, addKind: null, // the section whose add-lesson form is open, and the kind picked
     saving: 0, saveError: null, queue: Promise.resolve(),
+    L: null, // the lesson open in the editor
+    T: {}, // the open course's other tabs (pricing, roster, insights, comments, certificates), loaded when first shown
+    displayName: null, pendingLesson: null, pendingLtab: null,
   };
 
   /* ── 1. CSS props: theme tokens for the scheme in force ─────────────────────────────────────── */
@@ -274,7 +412,27 @@ var componentProps = {};
     LUT.catalogStatuses = need("config.catalog_statuses");
     LUT.authorRoles = need("config.author_roles");
     LUT.slugTries = need("config.slug_tries");
-    LUT.editor = need("config.lesson_editor");
+    LUT.videoCreate = need("config.video_create_url"); // "" until the video service is deployed
+    LUT.tus = need("config.tus_endpoint");
+    LUT.chunkBytes = need("config.upload_chunk_bytes");
+    LUT.signSeconds = need("config.sign_seconds");
+    LUT.thumbFile = need("config.thumbnail_file");
+    LUT.videoAccept = need("config.video_accept");
+    LUT.locale = need("formats.locale");
+    LUT.lessonTabs = need("lesson_tabs");
+    LUT.blockKinds = need("block_kinds"); LUT.blockKind = {};
+    LUT.blockKinds.forEach(function (b) { LUT.blockKind[b.id] = b; });
+    LUT.materialKinds = need("material_kinds"); LUT.materialKind = {};
+    LUT.materialKinds.forEach(function (m) { LUT.materialKind[m.id] = m; });
+    LUT.qkind = need("question_kinds");
+    LUT.questionTypes = need("question_types");
+    LUT.examKinds = need("exam_kinds");
+    LUT.defaults = need("defaults");
+    LUT.currencies = need("currencies");
+    LUT.access = need("access");
+    LUT.courseFlags = need("course_flags");
+    LUT.enrollStatuses = need("enrollment_statuses");
+    LUT.commentFilters = need("comment_filters");
     LUT.statuses = need("statuses"); LUT.status = {};
     LUT.statuses.forEach(function (s) { LUT.status[s.id] = s; });
     LUT.kinds = need("kinds"); LUT.kind = {};
@@ -355,7 +513,7 @@ var componentProps = {};
     });
   }
   function post(msg) { try { window.parent.postMessage(msg, "*"); } catch (e) {} }
-  function remember() { post({ gin: "app:state", view_id: LUT.viewId, state: { open: S.openSlug, tab: S.tab } }); }
+  function remember() { post({ gin: "app:state", view_id: LUT.viewId, state: { open: S.openSlug, tab: S.tab, lesson: S.L ? S.L.id : null, ltab: S.L ? S.L.tab : null } }); }
 
   /* ── data ─────────────────────────────────────────────────────────────────────────────────── */
   function signedIn() { return S.profile != null && !!(S.tok.value || S.tok.session); }
@@ -410,6 +568,8 @@ var componentProps = {};
       if (!j || j.error) throw new Error(t("errNotFound"));
       S.course = adoptCourse(j); S.courseLoading = false; S.form = null;
       syncRow(); render();
+      if (S.pendingLesson && lessonById(S.pendingLesson)) openLesson(S.pendingLesson, S.pendingLtab);
+      S.pendingLesson = null;
     }).catch(function (e) {
       if (slug !== S.openSlug) return;
       S.courseLoading = false; S.courseError = e.message; renderMain();
@@ -488,6 +648,7 @@ var componentProps = {};
       pane.innerHTML = '<div class="empty">' + esc(S.courseError ? t("loadFailed", { reason: S.courseError }) : t("loading")) + "</div>";
       return;
     }
+    if (S.L) { renderLessonView(); return; }
     var row2 = rowOf(c), n = lessonCount(c);
     var action = c.status === "published" ? '<button class="btn" type="button" data-act="unpublish">' + esc(t("unpublish")) + "</button>"
       : c.status === "archived" ? '<button class="btn" type="button" data-act="restore">' + esc(t("restore")) + "</button>"
@@ -501,7 +662,8 @@ var componentProps = {};
     tabs.innerHTML = LUT.tabs.map(function (tb) {
       return '<button class="tab" type="button" role="tab" data-tab="' + esc(tb.id) + '" aria-selected="' + (tb.id === S.tab) + '">' + esc(tb.label) + "</button>";
     }).join("");
-    if (S.tab === "details") renderDetails(); else renderCurriculum();
+    var R = { curriculum: renderCurriculum, details: renderDetails, pricing: renderPricing, students: renderStudents, insights: renderInsights, comments: renderComments, certificates: renderCertificates };
+    (R[S.tab] || renderCurriculum)();
   }
   function renderSaving() {
     var el = $("#saving"); if (!el) return;
@@ -600,10 +762,13 @@ var componentProps = {};
     return new Promise(function (resolve) {
       var m = $("#modal"), prev = document.activeElement;
       var fields = (o.fields || []).map(function (f) {
+        var ph = f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : "";
         var input = f.type === "select"
           ? '<select class="field" name="' + f.name + '">' + f.options.map(function (op) { return '<option value="' + esc(op.id) + '"' + (op.id === f.value ? " selected" : "") + ">" + esc(op.label) + "</option>"; }).join("") + "</select>"
-          : '<input class="field" name="' + f.name + '" autocomplete="off" value="' + esc(f.value || "") + '"' + (f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : "") + ">";
-        return '<label class="lbl">' + esc(f.label) + input + "</label>";
+          : f.type === "textarea"
+          ? '<textarea class="field" name="' + f.name + '" rows="' + (f.rows || 3) + '"' + ph + ">" + esc(f.value || "") + "</textarea>"
+          : '<input class="field" name="' + f.name + '" autocomplete="off"' + (f.type === "number" ? ' inputmode="numeric"' : "") + ' value="' + esc(f.value || "") + '"' + ph + ">";
+        return '<label class="lbl">' + esc(f.label) + (f.hint ? '<span class="hint">' + esc(f.hint) + "</span>" : "") + input + "</label>";
       }).join("");
       m.innerHTML = '<form class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlg-t"><h3 id="dlg-t">' + esc(o.title) + "</h3>" + (o.body ? "<p>" + esc(o.body) + "</p>" : "") + fields +
         '<div class="dlg-actions"><button class="btn" type="button" data-x>' + esc(t("cancel")) + '</button><button class="btn ' + (o.danger ? "danger solid" : "primary") + '" type="submit" data-ok>' + esc(o.confirm) + "</button></div></form>";
@@ -619,7 +784,7 @@ var componentProps = {};
       m.querySelector("[data-x]").addEventListener("click", function () { close(null); });
       m.addEventListener("click", function (e) { if (e.target === m) close(null); }, { once: true });
       form.addEventListener("submit", function (e) { e.preventDefault(); if (valid()) close(values()); });
-      var first = form.querySelector("input, select") || ok;
+      var first = form.querySelector("input, select, textarea") || ok;
       first.focus();
     });
   }
@@ -630,7 +795,8 @@ var componentProps = {};
 
   /* ── actions ─────────────────────────────────────────────────────────────────────────────────── */
   function openCourse(slug) {
-    if (S.openSlug !== slug) { S.course = null; S.form = null; S.adding = null; }
+    if (S.L && S.openSlug !== slug) { guardLesson(function () { S.L = null; openCourse(slug); }); return; }
+    if (S.openSlug !== slug) { S.course = null; S.form = null; S.adding = null; S.T = {}; S.L = null; }
     S.openSlug = slug; S.pane = "course";
     if (!S.tab) S.tab = LUT.tabs[0].id;
     size(); render(); remember();
@@ -729,11 +895,7 @@ var componentProps = {};
     if (!m.lessons.length) { go(); return; }
     dialog({ title: t("deleteSectionTitle", { title: m.title }), body: t("deleteSectionBody", { lessons: plural("lessons", m.lessons.length) }), confirm: t("delete"), danger: true }).then(function (ok) { if (ok) go(); });
   }
-  function editLesson(id) {
-    var l = lessonById(id); if (!l) return;
-    post({ gin: "view:swap", view_id: LUT.editor.view_id, slot_code: LUT.editor.slot_code, context: { course_id: S.course.id, course_slug: S.course.slug, lesson_id: l.id } });
-    toast(t("openingEditor", { title: l.title }));
-  }
+  function editLesson(id) { openLesson(id); }
   // New order → positions 1..n; only what moved is written.
   function commitOrder(list) {
     var moved = list.filter(function (x, i) { return x.position !== i + 1; });
@@ -748,7 +910,21 @@ var componentProps = {};
     if (item.dataset.item === "section") return S.course.modules;
     var m = moduleOfLesson(item.dataset.id); return m ? m.lessons : null;
   }
+  // Blocks, segments and questions are reordered in the lesson draft (saved with the lesson).
+  function draftList(item) {
+    var k = item.dataset.item, d = S.L && S.L.draft; if (!d) return null;
+    if (k === "block") return d.blocks;
+    if (k === "segment") return d.segments;
+    if (k === "question") return getPath(d, item.parentElement.dataset.path);
+    return null;
+  }
   function reorder(item, ids) {
+    var dl = draftList(item);
+    if (dl) {
+      var nx = ids.map(function (id) { return byId(dl, id); }).filter(Boolean);
+      if (nx.length === dl.length) { dl.splice.apply(dl, [0, dl.length].concat(nx)); lessonChanged(true); }
+      return;
+    }
     var list = listFor(item); if (!list) return;
     var next = ids.map(function (id) { return byId(list, id); }).filter(Boolean);
     if (next.length !== list.length) return;
@@ -756,12 +932,11 @@ var componentProps = {};
     commitOrder(list);
   }
   function step(item, dir) {
-    var list = listFor(item); if (!list) return;
+    var dl = draftList(item), list = dl || listFor(item); if (!list) return;
     var i = list.indexOf(byId(list, item.dataset.id)), j = i + dir;
     if (i < 0 || j < 0 || j >= list.length) return;
     var x = list[i]; list[i] = list[j]; list[j] = x;
-    commitOrder(list);
-    renderCurriculum();
+    if (dl) lessonChanged(true); else { commitOrder(list); renderCurriculum(); }
     var g = document.querySelector('[data-item="' + item.dataset.item + '"][data-id="' + item.dataset.id + '"] [data-drag]');
     if (g) g.focus();
     toast(t("movedTo", { n: j + 1, total: list.length }));
@@ -814,6 +989,1083 @@ var componentProps = {};
     });
   }
 
+  /* ══ shared helpers for the lesson editor and the course tabs ═══════════════════════════════════ */
+  var KEY = 0;
+  function key(p) { return p + (++KEY); }
+  function clone(v) { return v == null ? v : JSON.parse(JSON.stringify(v)); }
+  function same(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
+  function isNum(v) { return typeof v === "number" && isFinite(v); }
+  function getPath(o, path) { return String(path).split(".").reduce(function (x, k) { return x == null ? undefined : x[k]; }, o); }
+  function setPath(o, path, v) { var ks = String(path).split("."), last = ks.pop(); ks.reduce(function (x, k) { return x[k]; }, o)[last] = v; }
+  function parentPath(path) { var ks = String(path).split("."); var i = Number(ks.pop()); return { list: ks.join("."), i: i }; }
+  function fmtDate(iso, time) {
+    if (!iso) return "";
+    try { return new Intl.DateTimeFormat(LUT.locale, time ? { dateStyle: "medium", timeStyle: "short" } : { dateStyle: "medium" }).format(new Date(iso)); } catch (e) { return String(iso).slice(0, 10); }
+  }
+  function clock(sec) { sec = Math.max(0, Math.round(Number(sec) || 0)); var m = Math.floor(sec / 60), s = sec % 60; return m + ":" + (s < 10 ? "0" : "") + s; }
+  function parseClock(v) {
+    var s = String(v).trim(); if (!s) return "";
+    if (/^\d+$/.test(s)) return Number(s);
+    var m = /^(\d+):([0-5]?\d)$/.exec(s); return m ? Number(m[1]) * 60 + Number(m[2]) : NaN;
+  }
+  function pct(n) { return Math.round(Number(n) || 0) + "%"; }
+  function mapLimit(items, n, fn) {
+    var out = new Array(items.length), next = 0;
+    function run() { if (next >= items.length) return Promise.resolve(); var k = next++; return Promise.resolve(fn(items[k], k)).then(function (v) { out[k] = v; return run(); }); }
+    var runners = [];
+    for (var j = 0; j < Math.min(n, items.length); j++) runners.push(run());
+    return Promise.all(runners).then(function () { return out; });
+  }
+  function allLessons(c) { var out = []; c.modules.forEach(function (m) { m.lessons.forEach(function (l) { out.push({ id: l.id, title: l.title, kind: l.kind, module: m.title }); }); }); return out; }
+  function lbl(label, hint, control, full) { return '<label class="lbl' + (full ? " full" : "") + '">' + esc(label) + (hint ? '<span class="hint">' + esc(hint) + "</span>" : "") + control + "</label>"; }
+  function bindAttrs(scope, bind, type, rerender) { return ' data-scope="' + scope + '" data-bind="' + esc(bind) + '"' + (type ? ' data-type="' + type + '"' : "") + (rerender ? ' data-rerender="1"' : ""); }
+  function check(scope, bind, on, title, hint) {
+    return '<label class="check"><input type="checkbox"' + bindAttrs(scope, bind, "bool") + (on ? " checked" : "") + "><span><b>" + esc(title) + "</b>" + (hint ? '<span class="muted">' + esc(hint) + "</span>" : "") + "</span></label>";
+  }
+  function radios(scope, bind, value, options, label) {
+    return '<div class="seg-ctl" role="radiogroup" aria-label="' + esc(label) + '">' + options.map(function (o) {
+      return '<label><input type="radio" name="' + esc(scope + "-" + bind) + '" value="' + esc(o.id) + '"' + bindAttrs(scope, bind, "radio", true) + (o.id === value ? " checked" : "") + ">" + esc(o.label) + "</label>";
+    }).join("") + "</div>";
+  }
+  function options(list, value, labelKey) {
+    return list.map(function (o) { return '<option value="' + esc(o.id) + '"' + (String(o.id) === String(value) ? " selected" : "") + ">" + esc(o[labelKey || "label"]) + "</option>"; }).join("");
+  }
+  function stats(items) { return '<div class="stats">' + items.map(function (s) { return '<div class="stat"><b>' + esc(s[0]) + "</b><span>" + esc(s[1]) + "</span></div>"; }).join("") + "</div>"; }
+  // The page's own inputs write straight into the model they're bound to (data-scope + data-bind).
+  function bindRoot(scope) { return scope === "L" ? (S.L && S.L.draft) : scope === "P" ? (S.T.pricing && S.T.pricing.form) : null; }
+  function bindInput(el, committed) {
+    var root = bindRoot(el.dataset.scope); if (!root) return;
+    var type = el.dataset.type || "text", path = el.dataset.bind, v;
+    if (type === "bool") v = el.checked;
+    else if (type === "radio") { if (!el.checked) return; v = el.value; }
+    else if (type === "int") v = el.value === "" ? "" : Math.round(Number(el.value));
+    else if (type === "num") v = el.value === "" ? "" : Number(el.value);
+    else if (type === "minutes") v = Math.max(0, Math.round(Number(el.value) || 0)) * 60;
+    else if (type === "money") v = el.value === "" ? 0 : Math.round(Number(el.value) * 100);
+    else if (type === "clock") { if (!committed) return; v = parseClock(el.value); }
+    else v = el.value;
+    setPath(root, path, v);
+    if (type === "qkind") normalizeQuestion(getPath(root, path.replace(/\.kind$/, "")));
+    if (el.dataset.scope === "L" && path === "lesson.kind") lessonKindChanged();
+    var rerender = committed && !!el.dataset.rerender;
+    if (el.dataset.scope === "L") lessonChanged(rerender); else pricingChanged(rerender);
+  }
+
+  /* ══ the lesson editor: content, video, segments and checkpoints, quiz, settings ═══════════════ */
+  function lessonDirty() { return !!(S.L && S.L.draft && !same(S.L.draft, S.L.saved)); }
+  // Leaving a lesson with unsaved changes asks first (in the page).
+  function guardLesson(go) {
+    if (!lessonDirty()) { go(); return; }
+    dialog({ title: t("discardTitle"), body: t("discardBody"), confirm: t("discardConfirm"), danger: true }).then(function (ok) { if (ok) go(); });
+  }
+  function lessonTabs(kind) { return LUT.lessonTabs.filter(function (tb) { return tb.kinds.indexOf(kind) > -1; }); }
+  function openLesson(id, tab) {
+    if (!lessonById(id)) return;
+    S.L = { id: Number(id), loading: true, error: null, saved: null, draft: null, tab: tab || null, sel: null, materials: [], upload: null, preview: false, module: "" };
+    S.adding = null;
+    renderMain(); remember();
+    loadLesson();
+  }
+  function closeLesson() { guardLesson(function () { S.L = null; renderMain(); remember(); }); }
+  function matBySlug(slug) { return S.L ? S.L.materials.filter(function (m) { return m.slug === slug; })[0] || null : null; }
+  function newExam(title) { var d = LUT.defaults.exam; return { id: null, title: title, kind: d.kind, pass_pct: d.pass_pct, shuffle_options: d.shuffle_options, reveal_answer: d.reveal_answer, config: {}, questions: [] }; }
+  function newCheckpoint() { return Object.assign(clone(LUT.defaults.checkpoint), { assessment_id: null, questions: [] }); }
+  function toQuestion(q) {
+    var opts = Array.isArray(q.options) ? q.options.map(String) : [], kind = LUT.qkind[q.kind] ? q.kind : "single", a = q.answer, ans;
+    if (kind === "single") ans = typeof a === "number" ? a : opts.indexOf(a);
+    else if (kind === "multi") ans = (Array.isArray(a) ? a : []).map(function (x) { return opts.indexOf(String(x)); }).filter(function (i) { return i > -1; }).sort();
+    else if (kind === "numeric") ans = a == null || a === "" ? "" : Number(a);
+    else ans = a == null ? "" : String(a);
+    return { id: key("q"), kind: kind, prompt: (q.prompt && q.prompt.text) || (typeof q.prompt === "string" ? q.prompt : ""), options: opts, answer: ans, points: Number(q.points) };
+  }
+  function questionOut(q, i) {
+    var choice = q.kind === "single" || q.kind === "multi", opts = choice ? q.options.map(function (o) { return String(o).trim(); }) : [], ans;
+    if (q.kind === "single") ans = opts[q.answer];
+    else if (q.kind === "multi") ans = q.answer.slice().sort(function (x, y) { return x - y; }).map(function (k) { return opts[k]; });
+    else if (q.kind === "numeric") ans = Number(q.answer);
+    else ans = String(q.answer).trim();
+    return { position: i + 1, kind: q.kind, prompt: { text: q.prompt.trim() }, options: opts, answer: ans, points: q.points };
+  }
+  function normalizeQuestion(q) {
+    if (!q) return;
+    var choice = q.kind === "single" || q.kind === "multi";
+    if (choice && q.options.length < 2) q.options = q.options.concat(["", ""]).slice(0, Math.max(2, q.options.length));
+    if (q.kind === "single") q.answer = isNum(q.answer) ? q.answer : -1;
+    else if (q.kind === "multi") q.answer = Array.isArray(q.answer) ? q.answer : (isNum(q.answer) && q.answer > -1 ? [q.answer] : []);
+    else if (q.kind === "numeric") q.answer = isNum(Number(q.answer)) && q.answer !== "" ? Number(q.answer) : "";
+    else q.answer = typeof q.answer === "string" ? q.answer : "";
+  }
+  function lessonModel(r, quizzes, exam) {
+    var l = r.lesson, v = r.video;
+    return {
+      lesson: { title: l.title || "", kind: l.kind, duration_seconds: Number(l.duration_seconds) || 0, media_url: l.media_url || "", is_preview: !!l.is_preview,
+        allow_comments: l.allow_comments !== false, gates_next: l.gates_next !== false, show_segments: l.show_segments !== false,
+        min_complete_percent: l.min_complete_percent == null ? "" : Number(l.min_complete_percent) },
+      blocks: (r.blocks || []).slice().sort(function (a, b) { return a.block_index - b.block_index; }).map(function (b) {
+        return { id: key("b"), kind: b.kind, body: b.body || "", material_slug: b.material_slug || "", is_gated: !!b.is_gated };
+      }),
+      segments: (r.segments || []).slice().sort(function (a, b) { return a.segment_index - b.segment_index; }).map(function (sg) {
+        var a = sg.assessment_id ? quizzes[sg.assessment_id] : null;
+        return { id: key("s"), sid: sg.id, title: sg.title || "", start_para: sg.start_para, end_para: sg.end_para, start_seconds: sg.start_seconds, end_seconds: sg.end_seconds,
+          min_watch_percent: Number(sg.min_watch_percent), is_preview: !!sg.is_preview,
+          quiz: sg.assessment_id ? { assessment_id: sg.assessment_id, pass_threshold: Number(sg.pass_threshold), max_attempts: sg.max_attempts == null ? "" : Number(sg.max_attempts),
+            retry_allowed: sg.retry_allowed !== false, reveal_answer: !!sg.reveal_answer, blocks_progress: sg.blocks_progress !== false,
+            questions: a ? (a.questions || []).map(toQuestion) : [] } : null };
+      }),
+      exam: l.kind === "quiz" ? (exam ? { id: exam.id, title: exam.title || "", kind: exam.kind, pass_pct: Number(exam.pass_pct),
+        shuffle_options: !(exam.config && exam.config.shuffle_options === false), reveal_answer: !(exam.config && exam.config.reveal_answer === false),
+        config: exam.config || {}, questions: (exam.questions || []).map(toQuestion) } : newExam(l.title || "")) : null,
+      video: v ? { id: v.id, bunny_library_id: v.bunny_library_id, bunny_video_guid: v.bunny_video_guid, duration_seconds: Number(v.duration_seconds) || 0,
+        thumbnail_url: v.thumbnail_url || "", captions_url: v.captions_url || "", position: Number(v.position) || 0, meta: v.meta || {} } : null,
+    };
+  }
+  function loadLesson() {
+    var L = S.L, id = L.id;
+    return rpc("lms_lesson_player", { p_user_id: S.profile, p_lesson_id: id }).then(function (r) {
+      if (!r || r.error || !r.lesson) throw new Error(t("errNotFound"));
+      var ids = (r.segments || []).map(function (sg) { return sg.assessment_id; }).filter(Boolean);
+      // A quiz lesson's questions live in its own assessment (the first one filed under the lesson).
+      var exam = r.lesson.kind === "quiz"
+        ? rpc("lms_assessment", { p_lesson_id: id, p_user_id: S.profile }).then(function (a) { return a && a.id && !a.error ? author("get_assessment", { id: a.id }) : null; })
+        : Promise.resolve(null);
+      return Promise.all([Promise.all(ids.map(function (aid) { return author("get_assessment", { id: aid }); })), exam]).then(function (res) {
+        if (S.L !== L) return;
+        var quizzes = {};
+        res[0].forEach(function (a) { if (a && a.id) quizzes[a.id] = a; });
+        L.saved = lessonModel(r, quizzes, res[1]);
+        L.draft = clone(L.saved);
+        L.materials = (r.materials || []).map(function (m) { return Object.assign({}, m); });
+        L.module = r.lesson.module_title || "";
+        L.loading = false; L.error = null;
+        if (!L.tab || !lessonTabs(L.draft.lesson.kind).some(function (tb) { return tb.id === L.tab; })) L.tab = lessonTabs(L.draft.lesson.kind)[0].id;
+        renderMain();
+      });
+    }).catch(function (e) { if (S.L !== L) return; L.loading = false; L.error = e.message; renderMain(); });
+  }
+  function paraCount(d) { return d.blocks.filter(function (b) { return b.kind === "paragraph" || b.kind === "pull"; }).length; }
+  function timeMode(d) { return d.lesson.kind !== "article"; }
+  function lessonKindChanged() {
+    var d = S.L.draft;
+    if (d.lesson.kind === "quiz" && !d.exam) d.exam = S.L.saved.exam ? clone(S.L.saved.exam) : newExam(d.lesson.title);
+    if (d.lesson.kind !== "quiz") d.exam = null;
+  }
+  function questionProblems(qs, where, out) {
+    qs.forEach(function (q, i) {
+      var at = where + " · " + t("questionN", { n: i + 1 });
+      if (!q.prompt.trim()) out.push(t("pNoPrompt", { at: at }));
+      if (q.kind === "single" || q.kind === "multi") {
+        var trimmed = q.options.map(function (o) { return String(o).trim(); });
+        if (trimmed.length < 2) out.push(t("pFewOptions", { at: at }));
+        if (trimmed.some(function (o) { return !o; })) out.push(t("pEmptyOption", { at: at }));
+        else if (trimmed.some(function (o, k) { return trimmed.indexOf(o) !== k; })) out.push(t("pDupOption", { at: at }));
+        if (q.kind === "single" ? !(q.answer >= 0 && q.answer < q.options.length) : !q.answer.length) out.push(t("pNoAnswer", { at: at }));
+      } else if (q.kind === "text") { if (!String(q.answer).trim()) out.push(t("pNoAnswer", { at: at })); }
+      else if (!isNum(q.answer)) out.push(t("pNoNumber", { at: at }));
+      if (!(q.points > 0)) out.push(t("pPoints", { at: at }));
+    });
+  }
+  function lessonProblems(d) {
+    var out = [], tm = timeMode(d), n = paraCount(d);
+    if (!d.lesson.title.trim()) out.push(t("pNoTitle"));
+    if (d.lesson.min_complete_percent !== "" && !(d.lesson.min_complete_percent >= 1 && d.lesson.min_complete_percent <= 100)) out.push(t("pCompleteAt"));
+    d.blocks.forEach(function (b, i) {
+      if ((b.kind === "figure" || b.kind === "example") && !matBySlug(b.material_slug)) out.push(t("pNoMaterial", { n: i + 1 }));
+    });
+    d.segments.forEach(function (s, i) {
+      var at = t("segmentN", { n: i + 1 });
+      if (tm) { if (!isNum(s.start_seconds) || !isNum(s.end_seconds) || s.start_seconds < 0 || s.end_seconds <= s.start_seconds) out.push(t("pTimeRange", { at: at })); }
+      else if (!isNum(s.start_para) || !isNum(s.end_para) || s.start_para < 1 || s.end_para < s.start_para || s.end_para > n) out.push(t("pParaRange", { at: at, n: n }));
+      if (!(s.min_watch_percent >= 1 && s.min_watch_percent <= 100)) out.push(t("pWatch", { at: at }));
+      if (s.quiz) {
+        if (!(s.quiz.pass_threshold >= 1 && s.quiz.pass_threshold <= 100)) out.push(t("pPassMark", { at: at }));
+        if (s.quiz.max_attempts !== "" && !(s.quiz.max_attempts >= 1)) out.push(t("pAttempts", { at: at }));
+        if (!s.quiz.questions.length) out.push(t("pNoQuestions", { at: at }));
+        questionProblems(s.quiz.questions, at, out);
+      }
+    });
+    if (d.exam) {
+      if (!d.exam.questions.length) out.push(t("pExamEmpty"));
+      if (!(d.exam.pass_pct >= 1 && d.exam.pass_pct <= 100)) out.push(t("pPassMark", { at: t("quizWord") }));
+      questionProblems(d.exam.questions, t("quizWord"), out);
+    }
+    return out;
+  }
+  function problemsHtml() {
+    var p = lessonProblems(S.L.draft); if (!p.length) return "";
+    var shown = p.slice(0, 6);
+    return '<div class="problems" role="status"><b>' + esc(plural("problems", p.length)) + "</b><ul>" + shown.map(function (x) { return "<li>" + esc(x) + "</li>"; }).join("") +
+      (p.length > shown.length ? "<li>" + esc(t("andMore", { n: p.length - shown.length })) + "</li>" : "") + "</ul></div>";
+  }
+  function problemsBox() { return '<div id="problems">' + problemsHtml() + "</div>"; }
+  function renderLessonView() {
+    var L = S.L, head = $("#head"), tabs = $("#tabs"), pane = $("#pane");
+    var l = lessonById(L.id) || { title: "" };
+    var back = '<button class="btn sm" type="button" data-act="lesson-close">' + icon("back") + esc(t("backToCourse")) + "</button>";
+    if (L.loading || !L.draft) {
+      head.innerHTML = back + '<h2 class="grow">' + esc(l.title) + "</h2>";
+      tabs.hidden = true; tabs.innerHTML = "";
+      pane.innerHTML = '<div class="empty">' + esc(L.error ? t("loadFailed", { reason: L.error }) : t("loading")) + "</div>";
+      return;
+    }
+    var d = L.draft, k = LUT.kind[d.lesson.kind] || { label: d.lesson.kind, icon: "article" }, dirty = lessonDirty();
+    head.innerHTML = back + '<div class="grow"><h2 id="lesson-h">' + esc(d.lesson.title || t("untitledLesson")) + '</h2><div class="hmeta"><span class="chip">' + icon(k.icon) + esc(k.label) + "</span><span>" +
+      esc([L.module, S.course.title].filter(Boolean).join(" · ")) + "</span></div></div>" +
+      '<span class="saving" id="saving" aria-live="polite"></span>' +
+      '<button class="btn" type="button" data-act="lesson-revert" id="lesson-revert"' + (dirty ? "" : " disabled") + ">" + esc(t("revert")) + "</button>" +
+      '<button class="btn primary" type="button" data-act="lesson-save" id="lesson-save"' + (dirty ? "" : " disabled") + ">" + esc(t("saveLesson")) + "</button>";
+    renderSaving();
+    tabs.hidden = false;
+    tabs.innerHTML = lessonTabs(d.lesson.kind).map(function (tb) {
+      return '<button class="tab" type="button" role="tab" data-ltab="' + esc(tb.id) + '" aria-selected="' + (tb.id === L.tab) + '">' + esc(tb.label) + "</button>";
+    }).join("");
+    if (!lessonTabs(d.lesson.kind).some(function (tb) { return tb.id === L.tab; })) L.tab = lessonTabs(d.lesson.kind)[0].id;
+    renderLessonPane();
+  }
+  function renderLessonPane() {
+    var R = { content: renderContent, media: renderMedia, segments: renderSegments, questions: renderQuestions, settings: renderLessonSettings };
+    (R[S.L.tab] || renderContent)();
+  }
+  function lessonChanged(rerender) {
+    var dirty = lessonDirty(), s = $("#lesson-save"), r = $("#lesson-revert"), h = $("#lesson-h");
+    if (s) s.disabled = !dirty;
+    if (r) r.disabled = !dirty;
+    if (h) h.textContent = S.L.draft.lesson.title || t("untitledLesson");
+    if (rerender) renderLessonView();
+    else { renderPreview(); var p = $("#problems"); if (p) p.innerHTML = problemsHtml(); }
+  }
+
+  /* content: the article body, as the reader renders it */
+  function blockCard(b, i) {
+    var bk = LUT.blockKind[b.kind] || { label: b.kind, icon: "text" }, P = "blocks." + i, body;
+    if (b.kind === "heading") body = '<input class="hd"' + bindAttrs("L", P + ".body") + ' value="' + esc(b.body) + '" placeholder="' + esc(t("headingPlaceholder")) + '" aria-label="' + esc(bk.label) + '">';
+    else if (b.kind === "figure" || b.kind === "example") {
+      var mats = S.L.materials.filter(function (m) { return m.kind === b.kind; });
+      body = '<div class="row"><select class="field grow"' + bindAttrs("L", P + ".material_slug", "", true) + ' aria-label="' + esc(t("pickMaterial")) + '"><option value="">' + esc(t(mats.length ? "pickMaterial" : "noMaterialsKind")) + "</option>" +
+        mats.map(function (m) { return '<option value="' + esc(m.slug) + '"' + (m.slug === b.material_slug ? " selected" : "") + ">" + esc(m.title) + "</option>"; }).join("") + "</select>" +
+        '<button class="btn sm" type="button" data-act="mat-new" data-mkind="' + esc(b.kind) + '" data-for="' + i + '">' + icon("plus") + esc(t("newMaterial")) + "</button></div>" +
+        '<input class="field"' + bindAttrs("L", P + ".body") + ' value="' + esc(b.body) + '" placeholder="' + esc(t(b.kind === "figure" ? "captionPlaceholder" : "labelPlaceholder")) + '" aria-label="' + esc(t(b.kind === "figure" ? "captionPlaceholder" : "labelPlaceholder")) + '">';
+    } else {
+      body = '<div class="fmt" role="toolbar" aria-label="' + esc(t("formatting")) + '"><button type="button" data-act="fmt-bold" data-i="' + i + '" title="' + esc(t("bold")) + '" aria-label="' + esc(t("bold")) + '">B</button>' +
+        '<button type="button" data-act="fmt-term" data-i="' + i + '" title="' + esc(t("linkTerm")) + '">' + esc(t("termShort")) + "</button></div>" +
+        '<div class="rte' + (b.kind === "pull" ? " pull" : "") + '" contenteditable="true" role="textbox" spellcheck="true" data-rte="' + i + '" aria-label="' + esc(bk.label + " " + (i + 1)) + '" data-placeholder="' + esc(t(b.kind === "pull" ? "pullPlaceholder" : "paragraphPlaceholder")) + '">' + richHtml(b.body) + "</div>";
+    }
+    return '<div class="blk" data-item="block" data-id="' + b.id + '" aria-current="' + (S.L.sel === b.id) + '">' +
+      '<div class="blk-h"><button class="grip" type="button" data-drag aria-label="' + esc(t("reorderBlock", { kind: bk.label, n: i + 1 })) + '">' + icon("grip") + "</button>" +
+      '<span class="chip">' + icon(bk.icon) + esc(bk.label) + '</span><span class="grow"></span>' +
+      '<button class="toggle" type="button" data-act="blk-gate" data-i="' + i + '" aria-pressed="' + b.is_gated + '" title="' + esc(t("gatedHint")) + '">' + esc(t(b.is_gated ? "gated" : "ungated")) + "</button>" +
+      '<button class="ib" type="button" data-act="blk-dup" data-i="' + i + '" aria-label="' + esc(t("duplicate")) + '">' + icon("copy") + "</button>" +
+      '<button class="ib danger" type="button" data-act="blk-del" data-i="' + i + '" aria-label="' + esc(t("deleteBlock")) + '">' + icon("trash") + "</button></div>" +
+      '<div class="blk-b">' + body + "</div></div>";
+  }
+  function materialsPanel() {
+    var mats = S.L.materials;
+    return '<div class="card mats"><div class="row"><h3 class="grow">' + esc(t("materials")) + "</h3>" + LUT.materialKinds.map(function (mk) {
+        return '<button class="btn sm" type="button" data-act="mat-new" data-mkind="' + esc(mk.id) + '">' + icon("plus") + esc(mk.label) + "</button>";
+      }).join("") + '</div><p class="muted">' + esc(t("materialsHint")) + "</p>" +
+      (mats.length ? mats.map(function (m) {
+        var mk = LUT.materialKind[m.kind] || { label: m.kind };
+        return '<div class="mat"><span class="chip">' + esc(mk.label) + '</span><span class="grow">' + esc(m.title) + ' <span class="muted">' + esc(m.slug) + "</span></span>" +
+          '<button class="btn sm" type="button" data-act="mat-edit" data-slug="' + esc(m.slug) + '">' + esc(t("edit")) + "</button>" +
+          '<button class="ib danger" type="button" data-act="mat-del" data-slug="' + esc(m.slug) + '" aria-label="' + esc(t("deleteMaterial", { title: m.title })) + '">' + icon("trash") + "</button></div>";
+      }).join("") : '<div class="muted">' + esc(t("noMaterials")) + "</div>") + "</div>";
+  }
+  function renderContent() {
+    var L = S.L, d = L.draft;
+    $("#pane").innerHTML = problemsBox() + '<div class="led"><div class="ed-col">' +
+      '<div class="row" style="margin-bottom:10px"><span class="muted grow">' + esc(t("contentHint")) + '</span><button class="btn sm only-phone" type="button" data-act="preview-toggle">' + esc(t(L.preview ? "hidePreview" : "showPreview")) + "</button></div>" +
+      (d.blocks.length ? "" : '<div class="note" style="margin-bottom:10px">' + esc(t("noBlocks")) + "</div>") +
+      '<div id="blocks" data-list="block">' + d.blocks.map(blockCard).join("") + "</div>" +
+      '<div class="add-bar"><span class="muted">' + esc(t("addBlock")) + "</span>" + LUT.blockKinds.map(function (bk) {
+        return '<button class="btn sm" type="button" data-act="add-block" data-bkind="' + esc(bk.id) + '">' + icon(bk.icon) + esc(bk.label) + "</button>";
+      }).join("") + "</div>" + materialsPanel() +
+      '</div><div class="pv-col"' + (L.preview ? "" : " data-hide") + '><div class="pv" id="pv" aria-label="' + esc(t("studentPreview")) + '"></div></div></div>';
+    renderPreview();
+  }
+  // The reader's two inline forms: bold, and a term link. Everything else is text.
+  function inlineHtml(src) {
+    src = String(src || "");
+    var out = "", last = 0, m, re = /<b(\s[^>]*)?>([\s\S]*?)<\/b>/gi;
+    while ((m = re.exec(src))) {
+      out += esc(src.slice(last, m.index));
+      var slug = /data-id\s*=\s*['"]([a-z0-9\-_]+)['"]/i.exec(m[1] || "");
+      out += /a-term/i.test(m[1] || "") && slug ? '<span class="term" title="' + esc(slug[1]) + '">' + esc(m[2]) + "</span>" : "<b>" + esc(m[2]) + "</b>";
+      last = m.index + m[0].length;
+    }
+    return out + esc(src.slice(last));
+  }
+  // Figures are the teacher's own SVG; shown here without scripts, handlers or outside links.
+  function safeSvg(svg) {
+    try {
+      var doc = new DOMParser().parseFromString(String(svg || ""), "image/svg+xml"), root = doc.documentElement;
+      if (!root || root.nodeName.toLowerCase() !== "svg") return "";
+      root.querySelectorAll("script, foreignObject, iframe").forEach(function (n) { n.remove(); });
+      [root].concat(Array.prototype.slice.call(root.querySelectorAll("*"))).forEach(function (n) {
+        Array.prototype.slice.call(n.attributes).forEach(function (a) {
+          var nm = a.name.toLowerCase();
+          if (nm.indexOf("on") === 0 || ((nm === "href" || nm === "xlink:href") && a.value.trim().charAt(0) !== "#")) n.removeAttribute(a.name);
+        });
+      });
+      root.setAttribute("role", "img");
+      return new XMLSerializer().serializeToString(root);
+    } catch (e) { return ""; }
+  }
+  function renderPreview() {
+    var el = $("#pv"); if (!el || !S.L || !S.L.draft) return;
+    var d = S.L.draft, para = 0, html = "", tm = timeMode(d);
+    d.blocks.forEach(function (b) {
+      var cur = ' data-pv="' + b.id + '" aria-current="' + (S.L.sel === b.id) + '"';
+      if (b.kind === "paragraph" || b.kind === "pull") {
+        para++;
+        var si = tm ? -1 : d.segments.findIndex(function (s) { return s.start_para === para; });
+        if (si > 0) html += '<div class="gate">' + esc(t("segmentStarts", { n: si + 1, title: d.segments[si].title })) + (d.segments[si - 1].quiz ? " · " + esc(t("afterCheckpoint")) : "") + "</div>";
+        html += "<p" + (b.kind === "pull" ? ' class="pull"' : "") + cur + ">" + inlineHtml(b.body) + "</p>";
+      } else if (b.kind === "heading") html += "<h2" + cur + ">" + inlineHtml(b.body) + "</h2>";
+      else if (b.kind === "figure") {
+        var f = matBySlug(b.material_slug) || {};
+        html += "<figure" + cur + ">" + safeSvg(f.data && f.data.svg) + "<figcaption>" + esc(f.subtitle || f.title || b.body || t("figureWord")) + "</figcaption></figure>";
+      } else if (b.kind === "example") {
+        var x = matBySlug(b.material_slug) || {};
+        html += '<div class="ex"' + cur + ">" + icon("list") + "<span><b>" + esc(t("workedExample")) + "</b> · " + esc(x.title || b.body || "") + "</span></div>";
+      }
+    });
+    el.innerHTML = '<div class="pv-k">' + esc(t("studentPreview")) + "</div><h1>" + esc(d.lesson.title) + '</h1><div class="pv-meta">' + esc(S.course.title) + " · " +
+      esc(t("minRead", { n: Math.max(1, Math.round(d.lesson.duration_seconds / 60)) })) + "</div>" + (html || '<p class="pv-empty">' + esc(t("previewEmpty")) + "</p>");
+  }
+  /* Paragraphs and pull quotes are edited as rich text that holds only what the reader shows: bold
+     and term links. What's stored is the reader's own markup: <b>…</b> and
+     <b class='a-term' data-push='term' data-id='slug'>…</b>; everything else is plain text. */
+  function richHtml(src) {
+    src = String(src || "");
+    var out = "", last = 0, m, re = /<b(\s[^>]*)?>([\s\S]*?)<\/b>/gi;
+    while ((m = re.exec(src))) {
+      out += esc(src.slice(last, m.index));
+      var slug = /data-id\s*=\s*['"]([a-z0-9\-_]+)['"]/i.exec(m[1] || "");
+      out += /a-term/i.test(m[1] || "") && slug ? '<span class="term" data-term="' + esc(slug[1]) + '">' + esc(m[2]) + "</span>" : "<b>" + esc(m[2]) + "</b>";
+      last = m.index + m[0].length;
+    }
+    return out + esc(src.slice(last));
+  }
+  function serializeRte(el) {
+    var out = "";
+    Array.prototype.forEach.call(el.childNodes, function (n) {
+      if (n.nodeType === 3) out += n.nodeValue;
+      else if (n.nodeType === 1) {
+        var text = n.textContent;
+        if (n.dataset && n.dataset.term) { if (text) out += "<b class='a-term' data-push='term' data-id='" + n.dataset.term + "'>" + text + "</b>"; }
+        else if (n.nodeName === "B" || n.nodeName === "STRONG") { if (text) out += "<b>" + text + "</b>"; }
+        else if (n.nodeName !== "BR") out += serializeRte(n);
+      }
+    });
+    return out.replace(/\u00a0/g, " ");
+  }
+  function rteChanged(el) {
+    var b = S.L && S.L.draft.blocks[Number(el.dataset.rte)]; if (!b) return;
+    b.body = serializeRte(el).replace(/\s+$/, function (w) { return w.indexOf("\n") > -1 ? "" : w; });
+    lessonChanged(false);
+  }
+  function rteOf(i) { return document.querySelector('#blocks .rte[data-rte="' + i + '"]'); }
+  function focusEnd(el) { if (!el) return; el.focus(); var r = document.createRange(); r.selectNodeContents(el); r.collapse(false); var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); }
+  function boldSelection(i) {
+    var el = rteOf(i); if (!el) return;
+    var sel = window.getSelection();
+    if (!sel.rangeCount || !el.contains(sel.anchorNode)) focusEnd(el);
+    document.execCommand("bold");
+    rteChanged(el);
+  }
+  // Return starts a new paragraph after this one (a block is one paragraph, as the reader shows it).
+  function splitBlock(i) {
+    var d = S.L.draft, cur = d.blocks[i], b = { id: key("b"), kind: "paragraph", body: "", material_slug: "", is_gated: cur.is_gated };
+    d.blocks.splice(i + 1, 0, b); S.L.sel = b.id; lessonChanged(true);
+    var el = rteOf(i + 1); if (el) { el.focus(); el.scrollIntoView({ block: "nearest" }); }
+  }
+  function linkTerm(i) {
+    var terms = S.L.materials.filter(function (m) { return m.kind === "term"; });
+    if (!terms.length) { toast(t("noTerms")); materialDialog("term", null, null); return; }
+    var el = rteOf(i), sel = window.getSelection();
+    var range = el && sel.rangeCount && el.contains(sel.anchorNode) ? sel.getRangeAt(0).cloneRange() : null;
+    dialog({ title: t("linkTermTitle"), confirm: t("linkTerm"), fields: [{ name: "slug", label: t("termWord"), type: "select", options: terms.map(function (m) { return { id: m.slug, label: m.title }; }), value: terms[0].slug }] }).then(function (v) {
+      if (!v) return;
+      var m = matBySlug(v.slug), box = rteOf(i); if (!m || !box) return;
+      var span = document.createElement("span");
+      span.className = "term"; span.dataset.term = m.slug;
+      span.textContent = (range && range.toString().trim()) || m.title;
+      if (range && box.contains(range.commonAncestorContainer)) { range.deleteContents(); range.insertNode(span); }
+      else { box.appendChild(document.createTextNode(box.textContent && !/\s$/.test(box.textContent) ? " " : "")); box.appendChild(span); }
+      span.after(document.createTextNode(" "));
+      rteChanged(box); focusEnd(box);
+    });
+  }
+  function materialDialog(kind, existing, forBlock) {
+    var mk = LUT.materialKind[kind] || { label: kind }, d = (existing && existing.data) || {};
+    var fields = [{ name: "title", label: t(kind === "term" ? "termWord" : "fTitle"), value: existing ? existing.title : "" }];
+    if (kind === "figure") fields.push({ name: "subtitle", label: t("captionWord"), value: existing ? existing.subtitle || "" : "" });
+    fields.push({ name: "body", label: t(kind === "term" ? "definition" : "noteWord"), type: "textarea", rows: 3, value: existing ? existing.body || "" : "" });
+    if (kind === "figure") fields.push({ name: "svg", label: t("svgLabel"), hint: t("svgHint"), type: "textarea", rows: 5, value: d.svg || "" });
+    if (kind === "example") fields.push({ name: "steps", label: t("stepsLabel"), hint: t("stepsHint"), type: "textarea", rows: 5, value: (d.steps || []).join("\n") });
+    dialog({ title: t(existing ? "editMaterialTitle" : "newMaterialTitle", { kind: mk.label }), confirm: t(existing ? "saveChanges" : "add"), fields: fields,
+      valid: function (v) { return !!v.title.trim(); } }).then(function (v) {
+      if (!v) return;
+      var slug = existing ? existing.slug : uniqueSlug(slugify(v.title) || kind);
+      var data = Object.assign({}, d);
+      if (kind === "figure") data.svg = v.svg.trim();
+      if (kind === "example") data.steps = v.steps.split("\n").map(function (x) { return x.trim(); }).filter(Boolean);
+      var row = { course_id: S.course.id, kind: kind, slug: slug, title: v.title.trim(), subtitle: kind === "figure" ? v.subtitle.trim() : (existing ? existing.subtitle : null), body: v.body.trim(), data: data,
+        anchor_seconds: existing ? existing.anchor_seconds : null, anchor_para: existing ? existing.anchor_para : null, related_slugs: existing ? existing.related_slugs || [] : [], is_published: true };
+      var L = S.L;
+      write(function () { return rpc("lms_material_upsert", { p_action: "material_upsert", p_payload: row }); }).then(function () {
+        if (S.L !== L) return;
+        var m = { slug: slug, kind: kind, title: row.title, subtitle: row.subtitle, body: row.body, data: data, anchor_seconds: row.anchor_seconds, anchor_para: row.anchor_para, related_slugs: row.related_slugs };
+        var at = L.materials.findIndex(function (x) { return x.slug === slug; });
+        if (at > -1) L.materials[at] = m; else L.materials.push(m);
+        if (forBlock != null && L.draft.blocks[forBlock]) L.draft.blocks[forBlock].material_slug = slug;
+        lessonChanged(true); toast(t("materialSaved", { title: row.title }));
+      }).catch(function () {});
+    });
+  }
+  function uniqueSlug(base) { var s = base, n = 2; while (matBySlug(s)) s = base + "-" + (n++); return s; }
+  function deleteMaterial(slug) {
+    var m = matBySlug(slug); if (!m) return;
+    var used = S.L.draft.blocks.filter(function (b) { return b.material_slug === slug; }).length;
+    dialog({ title: t("deleteMaterialTitle", { title: m.title }), body: t(used ? "deleteMaterialUsed" : "deleteMaterialBody", { n: used }), confirm: t("delete"), danger: true }).then(function (ok) {
+      if (!ok) return;
+      var L = S.L;
+      write(function () { return rpc("lms_material_upsert", { p_action: "material_delete", p_payload: { course_id: S.course.id, slug: slug } }); }).then(function () {
+        if (S.L !== L) return;
+        L.materials = L.materials.filter(function (x) { return x.slug !== slug; });
+        lessonChanged(true); toast(t("deleted", { title: m.title }));
+      }).catch(function () {});
+    });
+  }
+
+  /* video and media */
+  function renderMedia() {
+    var L = S.L, d = L.draft, v = d.video, kind = d.lesson.kind, html = problemsBox() + '<div class="led single">';
+    if (kind === "video") {
+      html += '<div class="card"><h3>' + esc(t("videoTitle")) + '</h3><p class="muted">' + esc(t("videoHint")) + "</p>";
+      if (v) html += '<div class="video-card"><div class="thumb">' + (v.thumbnail_url ? '<img alt="" src="' + esc(v.thumbnail_url) + '">' : icon("video")) + '</div><div class="stack">' +
+        '<div class="muted num">' + esc(t("videoMeta", { guid: v.bunny_video_guid, length: clock(v.duration_seconds) })) + "</div>" +
+        lbl(t("thumbnailUrl"), "", '<input class="field" type="url"' + bindAttrs("L", "video.thumbnail_url") + ' value="' + esc(v.thumbnail_url) + '" placeholder="https://…">') +
+        lbl(t("captionsUrl"), t("captionsHint"), '<input class="field" type="url"' + bindAttrs("L", "video.captions_url") + ' value="' + esc(v.captions_url) + '" placeholder="https://….vtt">') +
+        lbl(t("videoLength"), t("clockHint"), '<input class="field num"' + bindAttrs("L", "video.duration_seconds", "clock") + ' value="' + esc(clock(v.duration_seconds)) + '" inputmode="numeric">') +
+        "</div></div>";
+      html += uploadBox(v) + "</div>";
+    }
+    html += '<div class="card"><h3>' + esc(t(kind === "audio" ? "audioTitle" : "mediaLinkTitle")) + '</h3><p class="muted">' + esc(t(kind === "audio" ? "audioHint" : "mediaLinkHint")) + "</p>" +
+      lbl(t("mediaUrl"), "", '<input class="field" type="url"' + bindAttrs("L", "lesson.media_url") + ' value="' + esc(d.lesson.media_url) + '" placeholder="https://…">') + "</div></div>";
+    $("#pane").innerHTML = html;
+  }
+  function uploadBox(v) {
+    var up = S.L.upload;
+    if (up && !up.error) {
+      return '<div class="drop" style="margin-top:12px"><b>' + esc(t("uploading", { name: up.name })) + '</b><div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + up.pct + '"><i style="width:' + up.pct + '%"></i></div>' +
+        '<span class="num">' + esc(t("upStep_" + up.step, { pct: up.pct })) + "</span></div>";
+    }
+    var can = !!LUT.videoCreate;
+    return '<div class="drop" id="drop" style="margin-top:12px">' + icon("upload") + "<b>" + esc(t(v ? "replaceVideo" : "uploadVideo")) + "</b>" +
+      (can ? "<span>" + esc(t("dropHint")) + '</span><label class="btn sm primary">' + esc(t("chooseFile")) + '<input type="file" id="video-file" accept="' + esc(LUT.videoAccept) + '" hidden></label>'
+           : "<span>" + esc(t("uploadUnavailable")) + "</span>") +
+      (up && up.error ? '<span class="chip bad">' + esc(up.error) + "</span>" : "") + "</div>" +
+      '<form class="row" id="attach-form" style="margin-top:10px"><input class="field grow" name="guid" autocomplete="off" spellcheck="false" placeholder="' + esc(t("videoIdPlaceholder")) + '" aria-label="' + esc(t("videoIdPlaceholder")) + '"><button class="btn sm" type="submit">' + esc(t("attachVideo")) + "</button></form>";
+  }
+  function b64(s) { return btoa(unescape(encodeURIComponent(String(s)))); }
+  function mediaLength(file) {
+    return new Promise(function (resolve) {
+      try {
+        var url = URL.createObjectURL(file), el = document.createElement(String(file.type).indexOf("audio") === 0 ? "audio" : "video");
+        var done = function (v) { URL.revokeObjectURL(url); resolve(v); };
+        el.preload = "metadata";
+        el.onloadedmetadata = function () { done(isFinite(el.duration) ? Math.round(el.duration) : 0); };
+        el.onerror = function () { done(0); };
+        el.src = url;
+      } catch (e) { resolve(0); }
+    });
+  }
+  function adoptVideo(L, row, sig, guid, secs, filename) {
+    var v = { id: row && row.id, bunny_library_id: sig.library_id, bunny_video_guid: guid, duration_seconds: secs,
+      thumbnail_url: sig.cdn_hostname ? "https://" + sig.cdn_hostname + "/" + guid + "/" + LUT.thumbFile : "", captions_url: "", position: 0, meta: filename ? { filename: filename } : {} };
+    var old = L.saved.video;
+    L.saved.video = clone(v); L.draft.video = v;
+    if (!L.draft.lesson.duration_seconds && secs) L.draft.lesson.duration_seconds = secs; // saved with the lesson
+    // The lesson plays its first video by position: the one it replaced moves behind it.
+    if (old && old.bunny_video_guid !== guid) {
+      rpc("lms_video_upsert", { p_action: "video_upsert", p_payload: { lesson_id: L.id, bunny_library_id: old.bunny_library_id, bunny_video_guid: old.bunny_video_guid, duration_seconds: old.duration_seconds,
+        thumbnail_url: old.thumbnail_url || null, captions_url: old.captions_url || null, position: (old.position || 0) + 1, meta: old.meta || {} } }).catch(function () {});
+    }
+  }
+  // Upload: the video service creates the video, the store signs the upload, and the file goes to the
+  // video host in chunks (tus); then the lesson records it.
+  function uploadVideo(file) {
+    var L = S.L; if (!L || !file || L.upload && !L.upload.error) return;
+    if (!LUT.videoCreate) { toast(t("uploadUnavailable")); return; }
+    var lessonId = L.id, title = L.draft.lesson.title, up = L.upload = { name: file.name, pct: 0, step: "create" }, sig, guid, secs = 0;
+    var paint = function () { if (S.L === L && L.tab === "media") renderLessonPane(); };
+    paint();
+    mediaLength(file).then(function (s) { secs = s; return bearer(); }).then(function (tok) {
+      return fetch(LUT.videoCreate, { method: "POST", headers: { Authorization: "Bearer " + (tok || ""), "Content-Type": "application/json" }, body: JSON.stringify({ lesson_id: lessonId, title: title }) });
+    }).then(function (r) {
+      return r.json().catch(function () { return null; }).then(function (j) { if (!r.ok || !j || !j.guid) throw new Error((j && (j.error || j.message)) || ("HTTP " + r.status)); return j; });
+    }).then(function (j) {
+      guid = j.guid; up.step = "sign"; paint();
+      return rpc("lms_bunny_sign_upload", { p_video_guid: guid, p_expires_seconds: LUT.signSeconds });
+    }).then(function (s) {
+      if (!s || s.error) throw new Error((s && s.error) || t("errSign"));
+      sig = s; up.step = "send"; paint();
+      var auth = { AuthorizationSignature: s.signature, AuthorizationExpire: String(s.expires), VideoId: guid, LibraryId: String(s.library_id), "Tus-Resumable": "1.0.0" };
+      return fetch(LUT.tus, { method: "POST", headers: Object.assign({ "Upload-Length": String(file.size), "Upload-Metadata": "filetype " + b64(file.type || "video/mp4") + ",title " + b64(title) }, auth) })
+        .then(function (r) {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          var loc = r.headers.get("Location"); if (!loc) throw new Error(t("errUploadUrl"));
+          return new URL(loc, /^https?:/.test(LUT.tus) ? LUT.tus : location.href).href;
+        }).then(function (url) {
+          function chunk(offset) {
+            if (offset >= file.size) return Promise.resolve();
+            return fetch(url, { method: "PATCH", headers: Object.assign({ "Upload-Offset": String(offset), "Content-Type": "application/offset+octet-stream" }, auth), body: file.slice(offset, offset + LUT.chunkBytes) })
+              .then(function (r) {
+                if (!r.ok) throw new Error("HTTP " + r.status);
+                var next = Number(r.headers.get("Upload-Offset"));
+                if (!(next > offset)) throw new Error(t("errUploadStalled"));
+                up.pct = Math.min(100, Math.round(next / file.size * 100)); paint();
+                return chunk(next);
+              });
+          }
+          return chunk(0);
+        });
+    }).then(function () {
+      up.step = "save"; paint();
+      return rpc("lms_video_upsert", { p_action: "video_upsert", p_payload: { lesson_id: lessonId, bunny_library_id: sig.library_id, bunny_video_guid: guid, duration_seconds: secs,
+        thumbnail_url: sig.cdn_hostname ? "https://" + sig.cdn_hostname + "/" + guid + "/" + LUT.thumbFile : null, captions_url: null, position: 0, meta: { filename: file.name } } });
+    }).then(function (row) {
+      toast(t("uploaded"));
+      if (S.L !== L) return;
+      adoptVideo(L, row, sig, guid, secs, file.name);
+      L.upload = null; renderLessonView();
+    }).catch(function (e) { up.error = t("uploadFailed", { reason: e.message }); paint(); });
+  }
+  function attachVideo(guid) {
+    guid = String(guid || "").trim();
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(guid)) { toast(t("videoIdInvalid")); return; }
+    var L = S.L, sig;
+    write(function () {
+      return rpc("lms_bunny_sign_upload", { p_video_guid: guid, p_expires_seconds: LUT.signSeconds }).then(function (s) {
+        if (!s || s.error) throw new Error((s && s.error) || t("errSign"));
+        sig = s;
+        return rpc("lms_video_upsert", { p_action: "video_upsert", p_payload: { lesson_id: L.id, bunny_library_id: s.library_id, bunny_video_guid: guid, duration_seconds: 0,
+          thumbnail_url: s.cdn_hostname ? "https://" + s.cdn_hostname + "/" + guid + "/" + LUT.thumbFile : null, captions_url: null, position: 0, meta: {} } });
+      });
+    }).then(function (row) {
+      if (S.L !== L) return;
+      adoptVideo(L, row, sig, guid, 0, null);
+      renderLessonView(); toast(t("videoAttached"));
+    }).catch(function () {});
+  }
+
+  /* segments and checkpoints */
+  function questionCard(q, P, i) {
+    var meta = LUT.qkind[q.kind] || { label: q.kind, student_ready: false }, multi = q.kind === "multi", body;
+    if (q.kind === "single" || multi) {
+      body = q.options.map(function (o, oi) {
+        var on = multi ? q.answer.indexOf(oi) > -1 : q.answer === oi;
+        return '<div class="opt"><button type="button" class="mark' + (multi ? " multi" : "") + '" role="' + (multi ? "checkbox" : "radio") + '" aria-checked="' + on + '" data-act="q-mark" data-path="' + P + '" data-oi="' + oi + '" aria-label="' + esc(t("markCorrect", { n: oi + 1 })) + '">' + icon("check") + "</button>" +
+          '<input class="field"' + bindAttrs("L", P + ".options." + oi) + ' value="' + esc(o) + '" placeholder="' + esc(t("optionN", { n: oi + 1 })) + '" aria-label="' + esc(t("optionN", { n: oi + 1 })) + '">' +
+          '<button class="ib" type="button" data-act="opt-del" data-path="' + P + '" data-oi="' + oi + '" aria-label="' + esc(t("removeOption", { n: oi + 1 })) + '">' + icon("x") + "</button></div>";
+      }).join("") + '<div class="opt"><button class="add-btn" style="margin:0" type="button" data-act="opt-add" data-path="' + P + '">' + icon("plus") + esc(t("addOption")) + "</button></div>";
+    } else if (q.kind === "text") {
+      body = '<div class="opt"><span class="muted">' + esc(t("acceptedAnswer")) + '</span><input class="field"' + bindAttrs("L", P + ".answer") + ' value="' + esc(q.answer) + '" aria-label="' + esc(t("acceptedAnswer")) + '"></div>';
+    } else {
+      body = '<div class="opt"><span class="muted">' + esc(t("correctNumber")) + '</span><input class="field num" type="number" step="any"' + bindAttrs("L", P + ".answer", "num") + ' value="' + esc(q.answer) + '" aria-label="' + esc(t("correctNumber")) + '"></div>';
+    }
+    return '<div class="q" data-item="question" data-id="' + q.id + '"><div class="q-h"><button class="grip" type="button" data-drag aria-label="' + esc(t("reorderQuestion", { n: i + 1 })) + '">' + icon("grip") + "</button>" +
+      '<span class="q-n">' + (i + 1) + '</span><span class="grow"><input class="field"' + bindAttrs("L", P + ".prompt") + ' value="' + esc(q.prompt) + '" placeholder="' + esc(t("promptPlaceholder")) + '" aria-label="' + esc(t("questionN", { n: i + 1 })) + '"></span>' +
+      '<select class="menu-sel"' + bindAttrs("L", P + ".kind", "qkind", true) + ' aria-label="' + esc(t("questionType")) + '">' + Object.keys(LUT.qkind).map(function (k) {
+        return '<option value="' + k + '"' + (k === q.kind ? " selected" : "") + ">" + esc(LUT.qkind[k].label) + "</option>";
+      }).join("") + "</select>" +
+      '<button class="ib danger" type="button" data-act="q-del" data-path="' + P + '" aria-label="' + esc(t("deleteQuestion", { n: i + 1 })) + '">' + icon("trash") + "</button></div>" + body +
+      '<div class="q-foot"><span>' + esc(t("points")) + '</span><input class="field num" type="number" min="0.5" step="0.5"' + bindAttrs("L", P + ".points", "num") + ' value="' + esc(q.points) + '" aria-label="' + esc(t("points")) + '">' +
+      (q.kind === "text" ? "<span>" + esc(t("textExact")) + "</span>" : "") + (meta.student_ready ? "" : '<span class="chip warn">' + esc(t("notInClassroom")) + "</span>") + "</div></div>";
+  }
+  function questionList(qs, P) {
+    return '<div data-list="question" data-path="' + P + '">' + qs.map(function (q, i) { return questionCard(q, P + "." + i, i); }).join("") + "</div>" +
+      '<div class="add-bar"><span class="muted">' + esc(t("addQuestion")) + "</span>" + LUT.questionTypes.map(function (qt) {
+        return '<button class="btn sm" type="button" data-act="q-add" data-path="' + P + '" data-qtype="' + esc(qt.id) + '">' + icon("plus") + esc(qt.label) + "</button>";
+      }).join("") + "</div>";
+  }
+  function checkpointBox(q, P, i) {
+    return '<div class="seg-q"><div class="row" style="margin-bottom:6px"><b class="grow">' + esc(t("checkpoint")) + '</b><button class="btn sm danger" type="button" data-act="cp-del" data-i="' + i + '">' + esc(t("removeCheckpoint")) + "</button></div>" +
+      '<div class="seg-r" style="margin:0 0 4px">' +
+        "<span>" + esc(t("passAt")) + '</span><input class="field num" type="number" min="1" max="100"' + bindAttrs("L", P + ".pass_threshold", "int") + ' value="' + esc(q.pass_threshold) + '" aria-label="' + esc(t("passAt")) + '"><span>%</span>' +
+        "<span>" + esc(t("maxAttempts")) + '</span><input class="field num" type="number" min="1"' + bindAttrs("L", P + ".max_attempts", "int") + ' value="' + esc(q.max_attempts) + '" placeholder="' + esc(t("unlimited")) + '" aria-label="' + esc(t("maxAttempts")) + '"></div>' +
+      check("L", P + ".retry_allowed", q.retry_allowed, t("retryAllowed")) + check("L", P + ".reveal_answer", q.reveal_answer, t("revealAnswers")) +
+      check("L", P + ".blocks_progress", q.blocks_progress, t("blocksProgress"), t("blocksProgressHint")) +
+      questionList(q.questions, P + ".questions") + "</div>";
+  }
+  function segCard(s, i) {
+    var P = "segments." + i, tm = timeMode(S.L.draft), range;
+    if (tm) range = "<span>" + esc(t("from")) + '</span><input class="field num"' + bindAttrs("L", P + ".start_seconds", "clock") + ' value="' + (isNum(s.start_seconds) ? clock(s.start_seconds) : "") + '" placeholder="0:00" aria-label="' + esc(t("segFrom", { n: i + 1 })) + '">' +
+      "<span>" + esc(t("to")) + '</span><input class="field num"' + bindAttrs("L", P + ".end_seconds", "clock") + ' value="' + (isNum(s.end_seconds) ? clock(s.end_seconds) : "") + '" placeholder="0:00" aria-label="' + esc(t("segTo", { n: i + 1 })) + '">';
+    else range = "<span>" + esc(t("fromPara")) + '</span><input class="field num" type="number" min="1"' + bindAttrs("L", P + ".start_para", "int") + ' value="' + esc(isNum(s.start_para) ? s.start_para : "") + '" aria-label="' + esc(t("segFrom", { n: i + 1 })) + '">' +
+      "<span>" + esc(t("toPara")) + '</span><input class="field num" type="number" min="1"' + bindAttrs("L", P + ".end_para", "int") + ' value="' + esc(isNum(s.end_para) ? s.end_para : "") + '" aria-label="' + esc(t("segTo", { n: i + 1 })) + '">';
+    return '<div class="seg" data-item="segment" data-id="' + s.id + '"><div class="seg-h"><button class="grip" type="button" data-drag aria-label="' + esc(t("reorderSegment", { n: i + 1 })) + '">' + icon("grip") + "</button>" +
+      '<span class="q-n">' + (i + 1) + '</span><input class="field"' + bindAttrs("L", P + ".title") + ' value="' + esc(s.title) + '" placeholder="' + esc(t("segmentTitlePlaceholder")) + '" aria-label="' + esc(t("segmentTitle", { n: i + 1 })) + '">' +
+      '<button class="ib danger" type="button" data-act="seg-del" data-i="' + i + '" aria-label="' + esc(t("deleteSegment", { n: i + 1 })) + '">' + icon("trash") + "</button></div>" +
+      '<div class="seg-r">' + range + "<span>" + esc(t("minWatch")) + '</span><input class="field num" type="number" min="1" max="100"' + bindAttrs("L", P + ".min_watch_percent", "int") + ' value="' + esc(s.min_watch_percent) + '" aria-label="' + esc(t("minWatch")) + '"><span>%</span>' +
+      '<label class="row" style="gap:4px"><input type="checkbox"' + bindAttrs("L", P + ".is_preview", "bool") + (s.is_preview ? " checked" : "") + ">" + esc(t("segPreview")) + "</label>" +
+      (s.quiz ? "" : '<button class="btn sm" type="button" data-act="cp-add" data-i="' + i + '">' + icon("plus") + esc(t("addCheckpoint")) + "</button>") + "</div>" +
+      (s.quiz ? checkpointBox(s.quiz, P + ".quiz", i) : "") + "</div>";
+  }
+  function renderSegments() {
+    var d = S.L.draft, tm = timeMode(d);
+    var length = d.video && d.video.duration_seconds ? d.video.duration_seconds : d.lesson.duration_seconds;
+    $("#pane").innerHTML = problemsBox() + '<div class="led single"><div class="note" style="margin-bottom:12px">' + esc(t(tm ? "segmentsHintTime" : "segmentsHintPara", { n: paraCount(d), length: clock(length) })) + "</div>" +
+      (d.segments.length ? "" : '<div class="empty" style="padding:20px">' + esc(t("noSegments")) + "</div>") +
+      '<div id="segs" data-list="segment">' + d.segments.map(segCard).join("") + "</div>" +
+      '<button class="add-sec" type="button" data-act="seg-add">' + icon("plus") + esc(t("addSegment")) + "</button></div>";
+  }
+  function addSegment() {
+    var d = S.L.draft, last = d.segments[d.segments.length - 1], s = { id: key("s"), sid: null, title: t("segmentN", { n: d.segments.length + 1 }), min_watch_percent: LUT.defaults.segment.min_watch_percent, is_preview: false, quiz: null };
+    if (timeMode(d)) {
+      var length = d.video && d.video.duration_seconds ? d.video.duration_seconds : d.lesson.duration_seconds;
+      s.start_seconds = last && isNum(last.end_seconds) ? last.end_seconds : 0;
+      s.end_seconds = Math.max(s.start_seconds + 1, length);
+    } else {
+      var n = paraCount(d);
+      s.start_para = last && isNum(last.end_para) ? Math.min(last.end_para + 1, Math.max(n, 1)) : 1;
+      s.end_para = Math.max(s.start_para, n);
+    }
+    d.segments.push(s);
+    lessonChanged(true);
+  }
+
+  /* quiz lessons */
+  function renderQuestions() {
+    var e = S.L.draft.exam;
+    var total = e.questions.reduce(function (n, q) { return n + (Number(q.points) || 0); }, 0);
+    $("#pane").innerHTML = problemsBox() + '<div class="led single"><div class="card"><h3>' + esc(t("quizSettings")) + '</h3><div class="form">' +
+      lbl(t("quizTitle"), "", '<input class="field"' + bindAttrs("L", "exam.title") + ' value="' + esc(e.title) + '">', true) +
+      lbl(t("quizKind"), "", '<select class="field"' + bindAttrs("L", "exam.kind") + ">" + options(LUT.examKinds, e.kind) + "</select>") +
+      lbl(t("passMark"), t("passMarkHint"), '<input class="field num" type="number" min="1" max="100"' + bindAttrs("L", "exam.pass_pct", "int") + ' value="' + esc(e.pass_pct) + '">') +
+      '<div class="full">' + check("L", "exam.shuffle_options", e.shuffle_options, t("shuffle"), t("shuffleHint")) + check("L", "exam.reveal_answer", e.reveal_answer, t("revealAnswers"), t("revealHint")) + "</div></div></div>" +
+      '<div class="card"><h3>' + esc(t("questionsTitle", { n: e.questions.length, points: total })) + "</h3>" + questionList(e.questions, "exam.questions") + "</div></div>";
+  }
+
+  /* lesson settings */
+  function renderLessonSettings() {
+    var l = S.L.draft.lesson;
+    $("#pane").innerHTML = problemsBox() + '<div class="led single"><div class="card"><div class="form">' +
+      lbl(t("lessonTitle"), "", '<input class="field"' + bindAttrs("L", "lesson.title") + ' value="' + esc(l.title) + '">', true) +
+      lbl(t("lessonType"), t("lessonTypeHint"), '<select class="field"' + bindAttrs("L", "lesson.kind", "", true) + ">" + options(LUT.kinds, l.kind) + "</select>") +
+      lbl(t("durationMinutes"), "", '<input class="field num" type="number" min="0"' + bindAttrs("L", "lesson.duration_seconds", "minutes") + ' value="' + Math.round(l.duration_seconds / 60) + '">') +
+      lbl(t("completeAt"), t("completeAtHint"), '<input class="field num" type="number" min="1" max="100"' + bindAttrs("L", "lesson.min_complete_percent", "int") + ' value="' + esc(l.min_complete_percent) + '">') +
+      '</div></div><div class="card"><h3>' + esc(t("lessonAccess")) + "</h3>" +
+      check("L", "lesson.is_preview", l.is_preview, t("freePreview"), t("previewHint")) +
+      check("L", "lesson.gates_next", l.gates_next, t("gatesNext"), t("gatesNextHint")) +
+      check("L", "lesson.allow_comments", l.allow_comments, t("allowComments"), t("allowCommentsHint")) +
+      check("L", "lesson.show_segments", l.show_segments, t("showSegments"), t("showSegmentsHint")) + "</div></div>";
+  }
+
+  /* save: only the parts that changed, in the order the store needs */
+  function saveLesson() {
+    var L = S.L, d = L.draft, s = L.saved, probs = lessonProblems(d);
+    if (probs.length) { toast(t("fixFirst", { n: probs.length })); var p = $("#problems"); if (p) { p.innerHTML = problemsHtml(); p.scrollIntoView({ block: "nearest" }); } return; }
+    var c = S.course, id = L.id, tm = timeMode(d), steps = [];
+    if (!same(d.lesson, s.lesson)) steps.push(function () {
+      var p = { id: id };
+      Object.keys(d.lesson).forEach(function (k) { if (!same(d.lesson[k], s.lesson[k])) p[k] = d.lesson[k]; });
+      if (p.min_complete_percent === "") delete p.min_complete_percent;
+      return author("upsert_lesson", p);
+    });
+    if (!same(d.blocks, s.blocks)) steps.push(function () {
+      return rpc("lms_blocks_replace", { p_lesson_id: id, p_blocks: d.blocks.map(function (b) { return { kind: b.kind, body: b.body, is_gated: !!b.is_gated, material_slug: b.material_slug || null }; }) });
+    });
+    if (!same(d.segments, s.segments) || tm !== timeMode(s)) {
+      steps.push(function () {
+        return d.segments.reduce(function (chain, sg, i) {
+          return chain.then(function () {
+            if (!sg.quiz) return;
+            return author("upsert_assessment", { id: sg.quiz.assessment_id || null, course_id: c.id, lesson_id: id, title: t("checkpointTitle", { title: sg.title || t("segmentN", { n: i + 1 }) }), kind: "quiz", pass_pct: sg.quiz.pass_threshold })
+              .then(function (a) { sg.quiz.assessment_id = a.id; return author("replace_questions", { assessment_id: a.id, questions: sg.quiz.questions.map(questionOut) }); });
+          });
+        }, Promise.resolve());
+      });
+      steps.push(function () {
+        return rpc("lms_segments_replace", { p_lesson_id: id, p_segments: d.segments.map(function (sg, i) {
+          var o = { id: sg.sid || null, segment_index: i + 1, unit: tm ? "time" : "paragraph", title: sg.title, min_watch_percent: sg.min_watch_percent, is_preview: !!sg.is_preview };
+          if (tm) { o.start_seconds = sg.start_seconds; o.end_seconds = sg.end_seconds; } else { o.start_para = sg.start_para; o.end_para = sg.end_para; }
+          if (sg.quiz) {
+            o.assessment_id = sg.quiz.assessment_id; o.pass_threshold = sg.quiz.pass_threshold; o.max_attempts = sg.quiz.max_attempts === "" ? null : sg.quiz.max_attempts;
+            o.retry_allowed = sg.quiz.retry_allowed; o.reveal_answer = sg.quiz.reveal_answer; o.blocks_progress = sg.quiz.blocks_progress;
+          }
+          return o;
+        }) });
+      });
+      steps.push(function () { // checkpoints the teacher removed
+        var kept = d.segments.map(function (sg) { return sg.quiz && sg.quiz.assessment_id; }).filter(Boolean);
+        var gone = s.segments.map(function (sg) { return sg.quiz && sg.quiz.assessment_id; }).filter(function (a) { return a && kept.indexOf(a) < 0; });
+        return gone.reduce(function (chain, aid) { return chain.then(function () { return author("delete_assessment", { id: aid }); }); }, Promise.resolve());
+      });
+    }
+    if (d.exam && !same(d.exam, s.exam)) steps.push(function () {
+      var e = d.exam;
+      return author("upsert_assessment", { id: e.id || null, course_id: c.id, lesson_id: id, title: e.title.trim() || d.lesson.title, kind: e.kind, pass_pct: e.pass_pct,
+        config: Object.assign({}, e.config, { shuffle_options: e.shuffle_options, reveal_answer: e.reveal_answer }) })
+        .then(function (a) { e.id = a.id; return author("replace_questions", { assessment_id: a.id, questions: e.questions.map(questionOut) }); });
+    });
+    if (d.video && s.video && !same(d.video, s.video)) steps.push(function () {
+      var v = d.video;
+      return rpc("lms_video_upsert", { p_action: "video_upsert", p_payload: { lesson_id: id, bunny_library_id: v.bunny_library_id, bunny_video_guid: v.bunny_video_guid,
+        duration_seconds: isNum(v.duration_seconds) ? v.duration_seconds : 0, thumbnail_url: v.thumbnail_url || null, captions_url: v.captions_url || null, position: v.position || 0, meta: v.meta || {} } });
+    });
+    if (!steps.length) return;
+    write(function () { return steps.reduce(function (chain, f) { return chain.then(f); }, Promise.resolve()); }).then(function () {
+      var cl = lessonById(id);
+      if (cl) { cl.title = d.lesson.title; cl.kind = d.lesson.kind; cl.duration_seconds = d.lesson.duration_seconds; cl.is_preview = d.lesson.is_preview; }
+      syncRow(); renderSide(); toast(t("lessonSaved"));
+      if (S.L === L) return loadLesson();
+    }).catch(function () {});
+  }
+
+  /* ══ course tabs: pricing & access, students, insights, comments, certificates ══════════════════ */
+  function tabState(name) { return S.T[name] || (S.T[name] = { loaded: false, loading: false, error: null }); }
+  function loadTab(name, fn) {
+    var st = tabState(name), cid = S.course.id;
+    if (st.loaded || st.loading) return;
+    st.loading = true; st.error = null;
+    fn().then(function (data) {
+      if (!S.course || S.course.id !== cid || S.T[name] !== st) return;
+      Object.assign(st, data, { loaded: true, loading: false, error: null }); renderMain();
+    }).catch(function (e) {
+      if (!S.course || S.course.id !== cid || S.T[name] !== st) return;
+      st.loading = false; st.error = e.message; renderMain();
+    });
+  }
+  function tabWaiting(st) {
+    if (st.loaded) return false;
+    $("#pane").innerHTML = '<div class="empty">' + esc(st.error ? t("loadFailed", { reason: st.error }) : t("loading")) +
+      (st.error ? '<div><button class="btn" type="button" data-act="tab-retry">' + esc(t("retry")) + "</button></div>" : "") + "</div>";
+    return true;
+  }
+
+  /* pricing & access (step 4) */
+  function loadPricing() {
+    var c = S.course, first = allLessons(c)[0];
+    return Promise.all([
+      rpc("lms_course_price", { p_course_id: c.id }),
+      rpc("lms_course_rules", { p_course_id: c.id }),
+      rpc("lms_channels", { p_merchant_id: LUT.merchant }),
+      // The course's player settings come back with a lesson; a course without lessons has only its order rules.
+      first ? rpc("lms_lesson_player", { p_user_id: S.profile, p_lesson_id: first.id }).then(function (r) { return r && r.course; }).catch(function () { return null; }) : Promise.resolve(null),
+    ]).then(function (r) {
+      var p = r[0] || {}, rules = r[1] || {}, k = r[3], flags = {};
+      LUT.courseFlags.forEach(function (fl) {
+        var src = k && k[fl.id] !== undefined ? k : rules[fl.id] !== undefined ? rules : null;
+        if (src) flags[fl.id] = src[fl.id] == null ? fl.unset : !!src[fl.id];
+      });
+      var saved = { paid: Number(p.price_cents) > 0 ? "paid" : "free", price_cents: Number(p.price_cents) || 0, currency: p.currency, access: p.access, credential: "",
+        channel_id: p.channel_id == null ? "" : String(p.channel_id), flags: flags };
+      return { saved: saved, form: clone(saved), channels: Array.isArray(r[2]) ? r[2] : [] };
+    });
+  }
+  function pricingDirty() { var st = S.T.pricing; return !!(st && st.loaded && !same(st.form, st.saved)); }
+  function pricingChanged(rerender) {
+    if (rerender) { renderPricing(); return; }
+    var d = pricingDirty(), a = $("#pricing-save"), b = $("#pricing-discard");
+    if (a) a.disabled = !d;
+    if (b) b.disabled = !d;
+  }
+  function renderPricing() {
+    var st = tabState("pricing");
+    if (!st.loaded) { loadTab("pricing", loadPricing); if (tabWaiting(st)) return; }
+    var f = st.form, dirty = pricingDirty(), acc = byId(LUT.access, f.access);
+    var curr = LUT.currencies.map(function (c) { return { id: c, label: c }; });
+    if (LUT.currencies.indexOf(f.currency) < 0) curr.unshift({ id: f.currency, label: f.currency });
+    var flagsHtml = LUT.courseFlags.filter(function (fl) { return f.flags[fl.id] !== undefined; }).map(function (fl) { return check("P", "flags." + fl.id, f.flags[fl.id], fl.label, fl.hint); }).join("");
+    $("#pane").innerHTML = '<div class="wrap">' +
+      '<div class="card"><h3>' + esc(t("priceTitle")) + '</h3><p class="muted">' + esc(t("priceHint")) + "</p>" +
+        radios("P", "paid", f.paid, [{ id: "free", label: t("free") }, { id: "paid", label: t("paid") }], t("priceTitle")) +
+        (f.paid === "paid" ? '<div class="row" style="margin-top:12px;align-items:flex-end">' +
+          lbl(t("amount"), "", '<input class="field num" type="number" min="0" step="0.01" id="price-amount"' + bindAttrs("P", "price_cents", "money") + ' value="' + (f.price_cents / 100).toFixed(2) + '">') +
+          lbl(t("currency"), "", '<select class="field"' + bindAttrs("P", "currency") + ">" + options(curr, f.currency) + "</select>") + "</div>" : "") + "</div>" +
+      '<div class="card"><h3>' + esc(t("accessTitle")) + '</h3><p class="muted">' + esc(acc ? acc.hint : "") + "</p>" +
+        radios("P", "access", f.access, LUT.access, t("accessTitle")) +
+        (f.access === "credential" ? '<div style="margin-top:12px">' + lbl(t("credential"), st.saved.access === "credential" ? t("credentialKeep") : t("credentialHint"), '<input class="field" autocomplete="off" spellcheck="false"' + bindAttrs("P", "credential") + ' value="' + esc(f.credential) + '">') + "</div>" : "") + "</div>" +
+      '<div class="card"><h3>' + esc(t("channelTitle")) + '</h3><p class="muted">' + esc(t("channelHint")) + "</p>" +
+        (st.channels.length ? '<select class="field" style="max-width:360px"' + bindAttrs("P", "channel_id") + ' aria-label="' + esc(t("channelTitle")) + '">' + (f.channel_id ? "" : '<option value="" selected disabled>' + esc(t("noChannel")) + "</option>") +
+          options(st.channels.map(function (ch) { return { id: String(ch.id), label: ch.name + (ch.handle ? " (@" + ch.handle + ")" : "") }; }), f.channel_id) + "</select>"
+          : '<div class="note">' + esc(t("noChannels")) + "</div>") + "</div>" +
+      '<div class="card"><h3>' + esc(t("experienceTitle")) + "</h3>" + flagsHtml +
+        (Object.keys(f.flags).length < LUT.courseFlags.length ? '<div class="note" style="margin-top:8px">' + esc(t("flagsPartial")) + "</div>" : "") + "</div>" +
+      '<div class="form-actions"><button class="btn primary" type="button" data-act="pricing-save" id="pricing-save"' + (dirty ? "" : " disabled") + ">" + esc(t("saveChanges")) + "</button>" +
+        '<button class="btn" type="button" data-act="pricing-discard" id="pricing-discard"' + (dirty ? "" : " disabled") + ">" + esc(t("discard")) + "</button></div>" +
+      '<p class="note" style="margin-top:16px">' + esc(t("couponsGap")) + "</p></div>";
+  }
+  function savePricing() {
+    var st = S.T.pricing, f = st.form, s = st.saved, c = S.course, steps = [];
+    var cents = f.paid === "paid" ? f.price_cents : 0;
+    if (f.paid === "paid" && !(cents > 0)) { toast(t("priceRequired")); return; }
+    if (f.access === "credential" && s.access !== "credential" && !f.credential.trim()) { toast(t("credentialRequired")); return; }
+    if (cents !== s.price_cents || (cents > 0 && f.currency !== s.currency)) steps.push(function () { return rpc("lms_course_price_set", { p_course_id: c.id, p_price_cents: cents, p_currency: f.currency }); });
+    if (f.access !== s.access || (f.access === "credential" && f.credential.trim())) steps.push(function () {
+      return rpc("lms_course_access_set", { p_course_id: c.id, p_access: f.access, p_credential: f.access === "credential" ? f.credential.trim() : null });
+    });
+    if (f.channel_id && f.channel_id !== s.channel_id) steps.push(function () { return rpc("lms_course_channel_set", { p_course_id: c.id, p_channel_id: Number(f.channel_id) }); });
+    var flags = {};
+    Object.keys(f.flags).forEach(function (k) { if (f.flags[k] !== s.flags[k]) flags[k] = f.flags[k]; });
+    if (Object.keys(flags).length) steps.push(function () { return rpc("lms_flags_set", { p_scope: "course", p_id: c.id, p_flags: flags }); });
+    if (!steps.length) return;
+    write(function () { return steps.reduce(function (chain, fn) { return chain.then(fn); }, Promise.resolve()); }).then(function () {
+      f.price_cents = cents; f.paid = cents > 0 ? "paid" : "free"; f.credential = "";
+      st.saved = clone(f); st.form = clone(f);
+      if (S.tab === "pricing" && !S.L) renderPricing();
+      toast(t("settingsSaved"));
+    }).catch(function () {});
+  }
+
+  /* students (step 5) */
+  function loadRoster() { return rpc("lms_course_roster", { p_course_id: S.course.id }).then(function (rows) { return { rows: Array.isArray(rows) ? rows : [], q: "", filter: "all", paused: {} }; }); }
+  function memberName(r) { return t("memberN", { id: r.xano_user_id }); }
+  function renderStudents() {
+    var st = tabState("roster");
+    if (!st.loaded) { loadTab("roster", loadRoster); if (tabWaiting(st)) return; }
+    var rows = st.rows, total = lessonCount(S.course), q = st.q.trim();
+    var enrolled = rows.filter(function (r) { return r.status !== "dropped"; });
+    var count = function (s) { return rows.filter(function (r) { return r.status === s; }).length; };
+    var avg = enrolled.length ? enrolled.reduce(function (n, r) { return n + (Number(r.progress_pct) || 0); }, 0) / enrolled.length : 0;
+    var list = rows.filter(function (r) { return (st.filter === "all" || r.status === st.filter) && (!q || String(r.xano_user_id).indexOf(q) > -1); });
+    $("#pane").innerHTML = '<div class="wrap">' + stats([[enrolled.length, t("statEnrolled")], [count("active"), t("statActive")], [count("completed"), t("statCompleted")], [count("dropped"), t("statDropped")], [pct(avg), t("statAvgProgress")]]) +
+      '<div class="toolbar"><label class="search">' + icon("search") + '<input id="roster-q" type="search" inputmode="numeric" value="' + esc(st.q) + '" placeholder="' + esc(t("searchMembers")) + '" aria-label="' + esc(t("searchMembers")) + '"></label>' +
+      '<select class="menu-sel" id="roster-filter" aria-label="' + esc(t("filterStatus")) + '"><option value="all">' + esc(t("allStatuses")) + "</option>" + options(LUT.enrollStatuses, st.filter) + "</select>" +
+      '<button class="btn sm primary" type="button" data-act="student-add">' + icon("plus") + esc(t("addStudent")) + "</button></div>" +
+      (list.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>' + esc(t("colMember")) + "</th><th>" + esc(t("colStatus")) + "</th><th>" + esc(t("colProgress")) + '</th><th class="r">' + esc(t("colLessons")) +
+        "</th><th>" + esc(t("colEnrolled")) + "</th><th>" + esc(t("colCertificate")) + '</th><th class="r"><span class="sr">' + esc(t("colActions")) + "</span></th></tr></thead><tbody>" +
+        list.map(function (r) {
+          var es = byId(LUT.enrollStatuses, r.status) || { label: r.status, tone: "" }, paused = st.paused[r.xano_user_id];
+          return '<tr><td class="nw"><b>' + esc(memberName(r)) + "</b></td><td>" + '<span class="chip ' + esc(es.tone) + '">' + esc(es.label) + "</span>" + (paused ? ' <span class="chip warn">' + esc(t("paused")) + "</span>" : "") + "</td>" +
+            '<td><div class="bar-cell"><div class="meter' + (r.status === "completed" ? " ok" : "") + '"><i style="width:' + Math.min(100, Number(r.progress_pct) || 0) + '%"></i></div><span class="num">' + esc(pct(r.progress_pct)) + "</span></div></td>" +
+            '<td class="r num">' + esc(t("ofTotal", { n: Number(r.lessons_done) || 0, total: total })) + "</td><td>" + esc(fmtDate(r.enrolled_at)) + "</td>" +
+            '<td class="num">' + (r.certificate ? esc(r.certificate) : '<span class="muted">' + esc(t("none")) + "</span>") + "</td>" +
+            '<td class="r"><select class="menu-sel" data-member="' + esc(r.xano_user_id) + '" aria-label="' + esc(t("manageAccess", { who: memberName(r) })) + '"><option value="" selected>' + esc(t("manage")) + "</option>" +
+              '<option value="pause">' + esc(t("pauseAccess")) + '</option><option value="restore">' + esc(t("restoreAccess")) + "</option></select></td></tr>";
+        }).join("") + "</tbody></table></div>"
+        : '<div class="empty">' + esc(t(rows.length ? "noStudentsMatch" : "noStudents")) + "</div>") +
+      '<p class="note" style="margin-top:12px">' + esc(t("rosterGap")) + "</p></div>";
+  }
+  function addStudent() {
+    var c = S.course;
+    dialog({ title: t("addStudentTitle"), body: t("addStudentBody", { course: c.title }), confirm: t("addStudent"),
+      fields: [{ name: "id", label: t("memberId"), type: "number", placeholder: t("memberIdPlaceholder") }],
+      valid: function (v) { return /^\d+$/.test(v.id.trim()); } }).then(function (v) {
+      if (!v) return;
+      var id = Number(v.id.trim()), ro = S.T.roster;
+      var had = !!(ro && ro.rows && ro.rows.some(function (r) { return Number(r.xano_user_id) === id && r.status !== "dropped"; }));
+      write(function () { return rpc("lms_grant_enrollment", { p_course_id: c.id, p_user_id: id, p_source: "instructor", p_payment_ref: null }); }).then(function () {
+        S.T.roster = null; S.T.insights = null; if (!had) syncLearners(1); render(); toast(t("studentAdded", { who: t("memberN", { id: id }) }));
+      }).catch(function () {});
+    });
+  }
+  function syncLearners(delta) { var row = rowOf(S.course); if (row) row.learners = Math.max(0, row.learners + delta); }
+  function setAccess(memberId, action) {
+    var st = S.T.roster, c = S.course, who = t("memberN", { id: memberId });
+    var go = function (frozen, reason) {
+      write(function () { return rpc("lms_enrollment_freeze", { p_course_id: c.id, p_user_id: Number(memberId), p_frozen: frozen, p_reason: reason }); }).then(function () {
+        st.paused[memberId] = frozen; renderStudents(); toast(t(frozen ? "accessPaused" : "accessRestored", { who: who }));
+      }).catch(function () {});
+    };
+    if (action === "restore") { go(false, null); return; }
+    dialog({ title: t("pauseTitle", { who: who }), body: t("pauseBody"), confirm: t("pauseAccess"), danger: true, fields: [{ name: "reason", label: t("pauseReason") }] }).then(function (v) {
+      if (v) go(true, v.reason.trim() || null);
+    });
+  }
+
+  /* insights (step 5) */
+  function loadInsights() {
+    var ls = allLessons(S.course);
+    return mapLimit(ls, 4, function (l) { return rpc("lms_lesson_stats", { p_lesson_id: l.id, p_user_id: S.profile }).catch(function () { return null; }); }).then(function (res) {
+      var m = {};
+      ls.forEach(function (l, i) { m[l.id] = res[i]; });
+      return { stats: m, sel: null, segs: {} };
+    });
+  }
+  function renderInsights() {
+    var ro = tabState("roster"), st = tabState("insights");
+    if (!ro.loaded) loadTab("roster", loadRoster);
+    if (!st.loaded) loadTab("insights", loadInsights);
+    if (!ro.loaded ? tabWaiting(ro) : tabWaiting(st)) return;
+    var rows = ro.rows.filter(function (r) { return r.status !== "dropped"; }), n = rows.length;
+    var started = rows.filter(function (r) { return Number(r.progress_pct) > 0 || Number(r.lessons_done) > 0; }).length;
+    var half = rows.filter(function (r) { return Number(r.progress_pct) >= 50; }).length, done = rows.filter(function (r) { return r.status === "completed"; }).length;
+    var funnel = [[t("fEnrolled"), n], [t("fStarted"), started], [t("fHalfway"), half], [t("fCompleted"), done]].map(function (f) {
+      return '<div class="fr"><span>' + esc(f[0]) + '</span><div class="fb"><i style="width:' + (n ? Math.round(f[1] / n * 100) : 0) + '%"></i></div><span class="num" style="text-align:right">' + esc(f[1]) + "</span></div>";
+    }).join("");
+    var ls = allLessons(S.course), maxViews = Math.max.apply(null, [1].concat(ls.map(function (l) { return Number((st.stats[l.id] || {}).views) || 0; })));
+    var table = ls.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>#</th><th>' + esc(t("colLesson")) + "</th><th>" + esc(t("colViews")) + '</th><th class="r">' + esc(t("colLikes")) + '</th><th class="r">' + esc(t("colComments")) + "</th></tr></thead><tbody>" +
+      ls.map(function (l, i) {
+        var s = st.stats[l.id] || {}, k = LUT.kind[l.kind] || { label: l.kind }, v = Number(s.views) || 0;
+        return '<tr data-pick="' + l.id + '" tabindex="0" aria-selected="' + (String(st.sel) === String(l.id)) + '"><td class="num muted">' + (i + 1) + "</td><td><b>" + esc(l.title) + '</b><div class="muted" style="font-size:11.5px">' + esc(k.label + " · " + l.module) + "</div></td>" +
+          '<td><div class="bar-cell"><div class="meter"><i style="width:' + Math.round(v / maxViews * 100) + '%"></i></div><span class="num">' + esc(v) + "</span></div></td>" +
+          '<td class="r num">' + esc(t("likesDislikes", { up: Number(s.likes) || 0, down: Number(s.dislikes) || 0 })) + '</td><td class="r num">' + esc(Number(s.comments) || 0) + "</td></tr>";
+      }).join("") + "</tbody></table></div>" : '<div class="empty">' + esc(t("noLessonsYet")) + "</div>";
+    var detail = "";
+    if (st.sel != null) {
+      var sl = byId(ls, st.sel), segs = st.segs[st.sel];
+      detail = '<div class="card" style="margin-top:14px"><h3>' + esc(t("segmentsOf", { title: sl ? sl.title : "" })) + "</h3>" +
+        (segs === undefined ? '<p class="muted">' + esc(t("loading")) + "</p>" : segs === null ? '<p class="muted">' + esc(t("loadFailedShort")) + "</p>" : !segs.length ? '<p class="muted">' + esc(t("noSegmentsData")) + "</p>" :
+          '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>' + esc(t("colSegment")) + '</th><th class="r">' + esc(t("colReached")) + "</th><th>" + esc(t("colFinished")) + '</th><th class="r">' + esc(t("colAvgWatched")) + '</th><th class="r">' + esc(t("colCheckpoint")) + "</th></tr></thead><tbody>" +
+          segs.map(function (g) {
+            var reached = Number(g.reached) || 0, fin = Number(g.completed) || 0;
+            return "<tr><td>" + esc(g.segment_index + ". " + (g.title || "")) + '</td><td class="r num">' + reached + '</td><td><div class="bar-cell"><div class="meter ok"><i style="width:' + (reached ? Math.round(fin / reached * 100) : 0) + '%"></i></div><span class="num">' + fin + "</span></div></td>" +
+              '<td class="r num">' + esc(pct(g.avg_percent)) + '</td><td class="r num">' + (Number(g.quiz_attempts) ? esc(t("passedOf", { passed: Number(g.quiz_passed) || 0, attempts: Number(g.quiz_attempts) })) : '<span class="muted">' + esc(t("none")) + "</span>") + "</td></tr>";
+          }).join("") + "</tbody></table></div>") + "</div>";
+    }
+    $("#pane").innerHTML = '<div class="wrap"><div class="card"><h3>' + esc(t("funnelTitle")) + '</h3><p class="muted">' + esc(t("funnelHint")) + '</p><div class="funnel">' + funnel + "</div></div>" +
+      '<div class="card"><h3>' + esc(t("lessonsTitle")) + '</h3><p class="muted">' + esc(t("lessonsHint")) + "</p>" + table + "</div>" + detail +
+      '<p class="note" style="margin-top:14px">' + esc(t("insightsGap")) + "</p></div>";
+  }
+  function pickInsight(id) {
+    var st = S.T.insights; if (!st) return;
+    st.sel = String(st.sel) === String(id) ? null : id;
+    if (st.sel != null && st.segs[id] === undefined) {
+      rpc("lms_segment_analytics", { p_lesson_id: Number(id) }).then(function (r) { st.segs[id] = Array.isArray(r) ? r : []; }).catch(function () { st.segs[id] = null; })
+        .then(function () { if (S.T.insights === st && S.tab === "insights" && !S.L) renderInsights(); });
+    }
+    renderInsights();
+  }
+
+  /* comments (step 5) */
+  function loadComments() {
+    var ls = allLessons(S.course);
+    return mapLimit(ls, 4, function (l) {
+      return rpc("lms_comments", { p_action: "list", p_payload: { lesson_id: l.id, sort: "new" } }).then(function (list) {
+        return (Array.isArray(list) ? list : []).map(function (c) { return Object.assign(c, { lesson_id: l.id, replies: c.replies || [] }); });
+      }).catch(function () { return []; });
+    }).then(function (lists) { return { threads: [].concat.apply([], lists), lesson: "all", filter: "all", reply: null }; });
+  }
+  function answered(th) { return th.is_instructor || th.replies.some(function (r) { return r.is_instructor; }); }
+  function commentHead(c, lessonTitle) {
+    return '<div class="c-h"><b>' + esc(c.author_name) + "</b>" + (c.is_instructor ? '<span class="chip ok">' + esc(t("instructor")) + "</span>" : "") +
+      (c.pinned_at ? '<span class="chip warn">' + esc(t("pinned")) + "</span>" : "") + "<span>" + esc([lessonTitle, fmtDate(c.created_at, true)].filter(Boolean).join(" · ")) + "</span>" +
+      '<span class="grow"></span><span class="num">' + esc(plural("likes", Number(c.likes) || 0)) + "</span></div>";
+  }
+  function renderComments() {
+    var st = tabState("comments");
+    if (!st.loaded) { loadTab("comments", loadComments); if (tabWaiting(st)) return; }
+    var ls = allLessons(S.course);
+    var list = st.threads.filter(function (th) {
+      if (st.lesson !== "all" && String(th.lesson_id) !== st.lesson) return false;
+      return st.filter === "all" || (st.filter === "unanswered" ? !answered(th) : !!th.pinned_at);
+    }).sort(function (a, b) { return (b.pinned_at ? 1 : 0) - (a.pinned_at ? 1 : 0) || new Date(b.created_at) - new Date(a.created_at); });
+    var waiting = st.threads.filter(function (th) { return !answered(th); }).length;
+    $("#pane").innerHTML = '<div class="wrap">' + stats([[st.threads.length, t("statThreads")], [waiting, t("statUnanswered")], [st.threads.filter(function (th) { return th.pinned_at; }).length, t("statPinned")]]) +
+      '<div class="toolbar"><select class="menu-sel" id="cm-lesson" aria-label="' + esc(t("filterLesson")) + '"><option value="all">' + esc(t("allLessons")) + "</option>" + options(ls.map(function (l) { return { id: String(l.id), label: l.title }; }), st.lesson) + "</select>" +
+      '<select class="menu-sel" id="cm-filter" aria-label="' + esc(t("filterThreads")) + '">' + options(LUT.commentFilters, st.filter) + "</select></div>" +
+      '<div class="card">' + (list.length ? list.map(function (th) {
+        var l = byId(ls, th.lesson_id);
+        return '<div class="thread">' + commentHead(th, l ? l.title : "") + '<div class="c-body">' + esc(th.body) + "</div>" +
+          '<div class="row"><button class="btn sm" type="button" data-act="cm-reply" data-id="' + th.id + '">' + esc(t("reply")) + "</button>" +
+          '<button class="btn sm" type="button" data-act="' + (th.pinned_at ? "cm-unpin" : "cm-pin") + '" data-id="' + th.id + '">' + esc(t(th.pinned_at ? "unpin" : "pin")) + "</button></div>" +
+          (th.replies.length ? '<div class="replies">' + th.replies.map(function (r) { return '<div class="thread">' + commentHead(r, "") + '<div class="c-body">' + esc(r.body) + "</div></div>"; }).join("") + "</div>" : "") +
+          (String(st.reply) === String(th.id) ? '<form class="reply-box" data-thread="' + th.id + '"><textarea class="field" name="body" maxlength="2000" rows="3" placeholder="' + esc(t("replyPlaceholder")) + '" aria-label="' + esc(t("reply")) + '"></textarea>' +
+            '<div class="stack" style="gap:6px"><button class="btn sm primary" type="submit">' + esc(t("send")) + '</button><button class="btn sm" type="button" data-act="cm-cancel">' + esc(t("cancel")) + "</button></div></form>" : "") + "</div>";
+      }).join("") : '<div class="empty" style="padding:24px">' + esc(t(st.threads.length ? "noThreadsMatch" : "noThreads")) + "</div>") + "</div>" +
+      '<p class="note" style="margin-top:12px">' + esc(t("commentsGap")) + "</p></div>";
+  }
+  function threadById(id) { var st = S.T.comments; return st ? st.threads.filter(function (th) { return String(th.id) === String(id); })[0] || null : null; }
+  function sendReply(form) {
+    var th = threadById(form.dataset.thread), body = form.elements.body.value.trim(); if (!th || !body) return;
+    var st = S.T.comments;
+    write(function () { return rpc("lms_comments", { p_action: "add", p_payload: { lesson_id: th.lesson_id, body: body, parent_id: th.id } }); }).then(function (row) {
+      if (row && row.error) throw new Error(row.error);
+      th.replies.push({ id: row && row.id, body: body, created_at: (row && row.created_at) || new Date().toISOString(), is_instructor: !!(row && row.is_instructor), author_name: S.displayName || t("you"), likes: 0 });
+      st.reply = null; renderComments(); toast(t("replySent"));
+    }).catch(function () {});
+  }
+  function pinThread(id, on) {
+    var th = threadById(id); if (!th) return;
+    write(function () { return rpc("lms_comments", { p_action: on ? "pin" : "unpin", p_payload: { id: th.id } }); }).then(function (row) {
+      if (row && row.error) throw new Error(row.error);
+      th.pinned_at = on ? (row && row.pinned_at) || new Date().toISOString() : null; renderComments();
+    }).catch(function () {});
+  }
+
+  /* certificates (step 6) */
+  function renderCertificates() {
+    var ro = tabState("roster"), cs = tabState("certs");
+    if (!ro.loaded) { loadTab("roster", loadRoster); if (tabWaiting(ro)) return; }
+    var issued = ro.rows.filter(function (r) { return r.certificate; }), set = cs.set;
+    $("#pane").innerHTML = '<div class="wrap"><div class="card"><h3>' + esc(t("certTitle")) + '</h3><p class="muted">' + esc(t("certHint")) + '</p><div class="row">' +
+      '<span class="chip ' + (set === true ? "ok" : set === false ? "" : "warn") + '">' + esc(t(set === true ? "certOn" : set === false ? "certOff" : "certUnknown")) + "</span>" +
+      '<button class="btn sm" type="button" data-act="cert-set" data-on="1"' + (set === true ? " disabled" : "") + ">" + esc(t("turnOn")) + "</button>" +
+      '<button class="btn sm" type="button" data-act="cert-set" data-on="0"' + (set === false ? " disabled" : "") + ">" + esc(t("turnOff")) + "</button></div>" +
+      (set == null ? '<p class="note" style="margin-top:10px">' + esc(t("certUnknownNote")) + "</p>" : "") + "</div>" +
+      '<div class="card"><h3>' + esc(t("issuedTitle", { n: issued.length })) + "</h3>" +
+      (issued.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>' + esc(t("colMember")) + "</th><th>" + esc(t("colSerial")) + "</th><th>" + esc(t("colCompleted")) + "</th></tr></thead><tbody>" +
+        issued.map(function (r) { return '<tr><td class="nw"><b>' + esc(memberName(r)) + '</b></td><td class="num">' + esc(r.certificate) + "</td><td>" + esc(fmtDate(r.completed_at)) + "</td></tr>"; }).join("") + "</tbody></table></div>"
+        : '<p class="muted">' + esc(t("noCertificates")) + "</p>") + "</div>" +
+      '<div class="card"><h3>' + esc(t("pathsTitle")) + '</h3><p class="muted" style="margin:0">' + esc(t("pathsBody")) + "</p></div></div>";
+  }
+  function setCertificates(on) {
+    var cs = tabState("certs"), c = S.course;
+    write(function () { return rpc("lms_flags_set", { p_scope: "course", p_id: c.id, p_flags: { issue_certificate: on } }); }).then(function () {
+      cs.set = on; if (S.tab === "certificates" && !S.L) renderCertificates(); toast(t(on ? "certTurnedOn" : "certTurnedOff"));
+    }).catch(function () {});
+  }
+
+  /* actions for the lesson editor and the course tabs, by data-act */
+  function at(path) { var p = parentPath(path); return { list: getPath(S.L.draft, p.list), i: p.i }; }
+  var ACT = {
+    "lesson-close": function () { closeLesson(); },
+    "lesson-save": function () { saveLesson(); },
+    "lesson-revert": function () { S.L.draft = clone(S.L.saved); renderLessonView(); toast(t("reverted")); },
+    "preview-toggle": function () { S.L.preview = !S.L.preview; renderContent(); },
+    "add-block": function (a) {
+      var d = S.L.draft, b = { id: key("b"), kind: a.dataset.bkind, body: "", material_slug: "", is_gated: d.blocks.length > 0 };
+      d.blocks.push(b); S.L.sel = b.id; lessonChanged(true);
+      var el = document.querySelector('.blk[data-id="' + b.id + '"] .rte, .blk[data-id="' + b.id + '"] input, .blk[data-id="' + b.id + '"] select');
+      if (el) { el.focus(); el.scrollIntoView({ block: "center" }); }
+    },
+    "blk-del": function (a) { S.L.draft.blocks.splice(Number(a.dataset.i), 1); lessonChanged(true); },
+    "blk-dup": function (a) { var i = Number(a.dataset.i), b = clone(S.L.draft.blocks[i]); b.id = key("b"); S.L.draft.blocks.splice(i + 1, 0, b); lessonChanged(true); },
+    "blk-gate": function (a) { var b = S.L.draft.blocks[Number(a.dataset.i)]; b.is_gated = !b.is_gated; lessonChanged(true); },
+    "fmt-bold": function (a) { boldSelection(Number(a.dataset.i)); },
+    "fmt-term": function (a) { linkTerm(Number(a.dataset.i)); },
+    "mat-new": function (a) { materialDialog(a.dataset.mkind, null, a.dataset.for != null ? Number(a.dataset.for) : null); },
+    "mat-edit": function (a) { var m = matBySlug(a.dataset.slug); if (m) materialDialog(m.kind, m, null); },
+    "mat-del": function (a) { deleteMaterial(a.dataset.slug); },
+    "seg-add": function () { addSegment(); },
+    "seg-del": function (a) { S.L.draft.segments.splice(Number(a.dataset.i), 1); lessonChanged(true); },
+    "cp-add": function (a) { S.L.draft.segments[Number(a.dataset.i)].quiz = newCheckpoint(); lessonChanged(true); },
+    "cp-del": function (a) { S.L.draft.segments[Number(a.dataset.i)].quiz = null; lessonChanged(true); },
+    "q-add": function (a) {
+      var qt = byId(LUT.questionTypes, a.dataset.qtype), list = getPath(S.L.draft, a.dataset.path); if (!qt || !list) return;
+      var q = { id: key("q"), kind: qt.kind, prompt: "", options: clone(qt.options), answer: clone(qt.answer), points: LUT.defaults.points };
+      list.push(q); lessonChanged(true);
+      var el = document.querySelector('.q[data-id="' + q.id + '"] .q-h input'); if (el) { el.focus(); el.scrollIntoView({ block: "center" }); }
+    },
+    "q-del": function (a) { var p = at(a.dataset.path); p.list.splice(p.i, 1); lessonChanged(true); },
+    "q-mark": function (a) {
+      var q = getPath(S.L.draft, a.dataset.path), oi = Number(a.dataset.oi);
+      if (q.kind === "multi") { var k = q.answer.indexOf(oi); if (k > -1) q.answer.splice(k, 1); else q.answer.push(oi); q.answer.sort(function (x, y) { return x - y; }); }
+      else q.answer = oi;
+      lessonChanged(true);
+    },
+    "opt-add": function (a) { getPath(S.L.draft, a.dataset.path).options.push(""); lessonChanged(true); },
+    "opt-del": function (a) {
+      var q = getPath(S.L.draft, a.dataset.path), oi = Number(a.dataset.oi);
+      q.options.splice(oi, 1);
+      if (q.kind === "multi") q.answer = q.answer.filter(function (x) { return x !== oi; }).map(function (x) { return x > oi ? x - 1 : x; });
+      else q.answer = q.answer === oi ? -1 : q.answer > oi ? q.answer - 1 : q.answer;
+      lessonChanged(true);
+    },
+    "upload-clear": function () { S.L.upload = null; renderLessonPane(); },
+    "pricing-save": function () { savePricing(); },
+    "pricing-discard": function () { var st = S.T.pricing; st.form = clone(st.saved); renderPricing(); },
+    "student-add": function () { addStudent(); },
+    "tab-retry": function () { S.T[S.tab === "students" || S.tab === "certificates" ? "roster" : S.tab] = null; if (S.tab === "insights") S.T.roster = null; renderMain(); },
+    "cm-reply": function (a) { S.T.comments.reply = a.dataset.id; renderComments(); var f = document.querySelector('.reply-box[data-thread="' + a.dataset.id + '"] textarea'); if (f) f.focus(); },
+    "cm-cancel": function () { S.T.comments.reply = null; renderComments(); },
+    "cm-pin": function (a) { pinThread(a.dataset.id, true); },
+    "cm-unpin": function (a) { pinThread(a.dataset.id, false); },
+    "cert-set": function (a) { setCertificates(a.dataset.on === "1"); },
+  };
+
   /* ── drag to reorder (pointer: mouse, pen and touch) ─────────────────────────────────────────── */
   function startDrag(e, grip) {
     var item = grip.closest("[data-item]"), list = item && item.parentElement; if (!list) return;
@@ -838,7 +2090,7 @@ var componentProps = {};
       window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up);
       item.classList.remove("dragging"); document.body.classList.remove("drag-on");
       var after = ids(list, kind);
-      if (after.join() !== before.join()) { reorder(item, after); renderCurriculum(); }
+      if (after.join() !== before.join()) { reorder(item, after); if (!draftList(item)) renderCurriculum(); }
     }
     window.addEventListener("pointermove", move); window.addEventListener("pointerup", up); window.addEventListener("pointercancel", up);
   }
@@ -863,6 +2115,10 @@ var componentProps = {};
 
     var app = $("#app");
     app.addEventListener("click", function (e) {
+      var lt = e.target.closest("[data-ltab]");
+      if (lt && S.L) { S.L.tab = lt.dataset.ltab; renderLessonView(); remember(); return; }
+      var pk = e.target.closest("tr[data-pick]");
+      if (pk) { pickInsight(pk.dataset.pick); return; }
       var tab = e.target.closest("[data-tab]");
       if (tab) { S.tab = tab.dataset.tab; S.adding = null; renderMain(); remember(); return; }
       var kindBtn = e.target.closest("[data-kind]");
@@ -894,12 +2150,28 @@ var componentProps = {};
       else if (act === "delete-course") deleteCourse();
       else if (act === "discard") { S.form = null; renderDetails(); }
       else if (act === "untag") { S.form.tags.splice(Number(a.dataset.i), 1); renderDetails(); syncFormButtons(); var ti = $("#tag-in"); if (ti) ti.focus(); }
+      else if (ACT[act]) ACT[act](a, e);
     });
     app.addEventListener("change", function (e) {
-      if (e.target.dataset && e.target.dataset.field) rename(e.target);
+      var el = e.target;
+      if (el.dataset && el.dataset.field) { rename(el); return; }
+      if (el.dataset && el.dataset.bind) { bindInput(el, true); return; }
+      if (el.id === "video-file") { uploadVideo(el.files && el.files[0]); return; }
+      if (el.id === "roster-filter") { S.T.roster.filter = el.value; renderStudents(); return; }
+      if (el.dataset && el.dataset.member) { var v = el.value; el.value = ""; if (v) setAccess(el.dataset.member, v); return; }
+      if (el.id === "cm-lesson") { S.T.comments.lesson = el.value; renderComments(); return; }
+      if (el.id === "cm-filter") { S.T.comments.filter = el.value; renderComments(); return; }
     });
     app.addEventListener("input", function (e) {
-      var el = e.target, form = el.closest && el.closest("#details");
+      var el = e.target;
+      if (el.dataset && el.dataset.rte != null) { rteChanged(el); return; }
+      if (el.dataset && el.dataset.bind) { if (el.type !== "checkbox" && el.type !== "radio" && el.tagName !== "SELECT") bindInput(el, false); return; }
+      if (el.id === "roster-q") {
+        S.T.roster.q = el.value; renderStudents();
+        var rq = $("#roster-q"); rq.focus(); rq.setSelectionRange(rq.value.length, rq.value.length);
+        return;
+      }
+      var form = el.closest && el.closest("#details");
       if (!form || !el.name || !S.form || !(el.name in S.form) || el.name === "tags") return;
       S.form[el.name] = el.value;
       if (el.name === "slug") { var clean = el.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"); if (clean !== el.value) { el.value = clean; S.form.slug = clean; } }
@@ -913,6 +2185,29 @@ var componentProps = {};
       e.preventDefault();
       if (e.target.id === "details") saveDetails();
       else if (e.target.classList.contains("add-les")) addLesson(e.target);
+      else if (e.target.id === "attach-form") attachVideo(e.target.elements.guid.value);
+      else if (e.target.classList.contains("reply-box")) sendReply(e.target);
+    });
+    app.addEventListener("mousedown", function (e) { if (e.target.closest && e.target.closest(".fmt button")) e.preventDefault(); });
+    app.addEventListener("paste", function (e) {
+      var el = e.target.closest && e.target.closest(".rte"); if (!el) return;
+      e.preventDefault();
+      document.execCommand("insertText", false, ((e.clipboardData && e.clipboardData.getData("text/plain")) || "").replace(/\s*\n\s*/g, " "));
+    });
+    app.addEventListener("focusin", function (e) {
+      var blk = e.target.closest && e.target.closest(".blk");
+      if (!blk || !S.L || S.L.sel === blk.dataset.id) return;
+      S.L.sel = blk.dataset.id;
+      document.querySelectorAll(".blk").forEach(function (b) { b.setAttribute("aria-current", String(b === blk)); });
+      renderPreview();
+    });
+    // A video file dropped on the upload area.
+    app.addEventListener("dragover", function (e) { var d = e.target.closest && e.target.closest("#drop"); if (d && LUT.videoCreate) { e.preventDefault(); d.setAttribute("data-over", ""); } });
+    app.addEventListener("dragleave", function (e) { var d = e.target.closest && e.target.closest("#drop"); if (d) d.removeAttribute("data-over"); });
+    app.addEventListener("drop", function (e) {
+      var d = e.target.closest && e.target.closest("#drop"); if (!d || !LUT.videoCreate) return;
+      e.preventDefault(); d.removeAttribute("data-over");
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) uploadVideo(e.dataTransfer.files[0]);
     });
     app.addEventListener("keydown", function (e) {
       var el = e.target;
@@ -931,6 +2226,16 @@ var componentProps = {};
       }
       if (el.id === "tag-in" && e.key === "Backspace" && !el.value && S.form.tags.length) { S.form.tags.pop(); renderDetails(); syncFormButtons(); $("#tag-in").focus(); return; }
       if (el.closest && el.closest(".add-les") && e.key === "Escape") { S.adding = null; renderCurriculum(); return; }
+      if (el.dataset && el.dataset.rte != null) {
+        var bi = Number(el.dataset.rte);
+        if (e.key === "Enter") { e.preventDefault(); splitBlock(bi); return; }
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "b") { e.preventDefault(); boldSelection(bi); return; }
+        if (e.key === "Backspace" && !el.textContent && S.L.draft.blocks.length > 1) {
+          e.preventDefault(); S.L.draft.blocks.splice(bi, 1); lessonChanged(true); focusEnd(rteOf(Math.max(0, bi - 1)));
+          return;
+        }
+      }
+      if (el.matches && el.matches("tr[data-pick]") && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); pickInsight(el.dataset.pick); return; }
       if (el.matches && el.matches("[data-drag]") && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
         e.preventDefault(); step(el.closest("[data-item]"), e.key === "ArrowUp" ? -1 : 1);
       }
@@ -950,6 +2255,7 @@ var componentProps = {};
       var u = d.user || null;
       S.profile = u ? (u.profile_id != null ? u.profile_id : (typeof u.id === "number" ? u.id : null)) : null;
       S.roles = (u && u.roles) || {};
+      S.displayName = (u && (u.display_name || u.name)) || null;
       S.tok.value = (u && u.app_token) || null;
       S.tok.at = (u && u.app_token_at) || Date.now();
       S.tok.ttl = (u && u.app_token_expires_in) || 0;
@@ -957,6 +2263,7 @@ var componentProps = {};
       if (!S.restored && d.state && typeof d.state === "object") {
         if (d.state.open) { S.openSlug = d.state.open; S.pane = "course"; }
         if (d.state.tab && LUT.tabs.some(function (tb) { return tb.id === d.state.tab; })) S.tab = d.state.tab;
+        if (d.state.lesson) { S.pendingLesson = d.state.lesson; S.pendingLtab = d.state.ltab || null; }
       }
       S.restored = true;
       if (!S.tab) S.tab = LUT.tabs[0].id;

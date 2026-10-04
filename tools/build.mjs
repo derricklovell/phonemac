@@ -320,13 +320,16 @@ export async function buildAll({ assetBase = "assets/" } = {}) {
 // Mail: records/mail (sample inbox mock-inbox.json). Teacher: records/teacher (sample courses mock-courses.json).
 const STANDALONE = [
   { name: "mail", title: "Mail", mock: "mock-inbox.json", global: "__MAIL_MOCK__" },
-  { name: "teacher", title: "Teacher Course Builder", mock: "mock-courses.json", global: "__TEACHER_MOCK__" },
+  // The preview switches video upload on, pointed at the harness's stand-in video service and host.
+  { name: "teacher", title: "Teacher Course Builder", mock: "mock-courses.json", global: "__TEACHER_MOCK__",
+    config: { video_create_url: "preview/video-create", tus_endpoint: "preview/tusupload" } },
 ];
 function buildStandalonePreviews() {
   for (const r of STANDALONE) {
     const dir = join(UCA_DIR, "records", r.name);
     const record = read(join(dir, `${r.name}.html`));
-    const props = { ...JSON.parse(read(join(dir, "props.json"))), _viewer: { merchant_id: 41, requested_view: null } };
+    const own = JSON.parse(read(join(dir, "props.json")));
+    const props = { ...own, config: { ...own.config, ...(r.config || {}) }, _viewer: { merchant_id: 41, requested_view: null } };
     const mock = read(join(dir, r.mock));
     const harness = `<script>window.${r.global} = ${mock.replace(/</g, "\\u003c")};</script>\n<script>\n${read(join(dir, "preview-harness.js"))}</script>\n`;
     const page = injectProps(record, props).replace(/<body>/i, (b) => `${b}\n${harness}`);

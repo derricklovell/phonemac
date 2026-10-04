@@ -1009,6 +1009,159 @@ for (const width of [320, 360, 414]) {
   await context.close();
 }
 
+// Teacher, steps 2–6: the lesson editor (rich text, terms, segments and checkpoints, quiz questions,
+// video upload through the stand-in video service) and the course tabs (pricing & access, students,
+// insights, comments, certificates). Everything is saved to the sample store and read back after a reload.
+{
+  const { context, p } = await page(1440);
+  let escaped = 0;
+  await context.route("https://*.supabase.co/**", (r) => { escaped++; return r.abort(); });
+  const saved = () => p.waitForFunction(() => document.querySelector("#saving")?.textContent === "All changes saved");
+  await p.goto(`${base}/teacher.html`, { waitUntil: "networkidle" });
+  await p.locator('.course[data-slug="watercolor-foundations"]').click();
+  await p.locator('[data-act="edit"][data-id="103"]').click();
+  await p.locator("#blocks .rte").first().waitFor({ timeout: 5000 });
+  // Rich text: type, bold with the keyboard, start a new paragraph with Return, link a term.
+  const last = p.locator("#blocks .rte").last();
+  await last.click();
+  await last.press("Control+End");
+  await p.keyboard.type(" Rinse often.");
+  await p.keyboard.press("Enter");
+  await p.keyboard.type("Read about ");
+  const newIdx = await p.locator("#blocks .rte").last().getAttribute("data-rte");
+  await p.locator(`[data-act="fmt-term"][data-i="${newIdx}"]`).click();
+  await p.locator('#modal select[name="slug"]').selectOption("cold-press");
+  await p.locator("#modal [data-ok]").click();
+  await p.locator('[data-act="add-block"][data-bkind="heading"]').click();
+  await p.keyboard.type("Practice");
+  const previewText = await p.locator("#pv").innerText();
+  const previewTerm = await p.locator("#pv .term").count();
+  // Segments: a checkpoint with a true/false question; the problem list tracks what's missing.
+  await p.locator('[data-ltab="segments"]').click();
+  await p.locator('[data-act="cp-add"][data-i="1"]').click();
+  await p.locator('[data-act="q-add"][data-path="segments.1.quiz.questions"][data-qtype="truefalse"]').click();
+  const problemsBefore = await p.locator("#problems li").count();
+  await p.keyboard.type("Heavier paper buckles less.");
+  await p.locator('[data-act="q-mark"][data-path="segments.1.quiz.questions.0"][data-oi="0"]').click();
+  const problemsAfter = await p.locator("#problems li").count();
+  await p.locator("#lesson-save").click();
+  await p.waitForFunction(() => document.querySelector("#lesson-save")?.disabled);
+  await saved();
+  await p.screenshot({ path: join(OUT, "teacher-lesson-segments.png") });
+  await p.reload({ waitUntil: "networkidle" });
+  await p.locator("#lesson-h").waitFor({ timeout: 5000 });
+  const reopened = await p.locator("#lesson-h").textContent();
+  const tabAfter = await p.locator("[data-ltab][aria-selected=true]").getAttribute("data-ltab");
+  const cpQuestions = await p.locator('.seg[data-item="segment"]').nth(1).locator(".q").count();
+  await p.locator('[data-ltab="content"]').click();
+  const bodies = await p.locator("#blocks .rte").allInnerTexts();
+  const terms = await p.locator("#blocks .rte .term").count();
+  const headings = await p.locator("#blocks input.hd").evaluateAll((els) => els.map((e) => e.value));
+  results.checks.push([`Teacher lesson editor: rich text + Return + term link (${previewTerm} in the preview), heading, checkpoint (problems ${problemsBefore} → ${problemsAfter}), saved and reopened on ${tabAfter}`,
+    previewText.includes("Rinse often.") && previewText.includes("Practice") && previewTerm === 2 && problemsBefore > 0 && problemsAfter === 0 &&
+    reopened === "Paper, brushes and water" && tabAfter === "segments" && cpQuestions === 1 && bodies.some((b) => b.includes("Rinse often.")) && terms === 2 && headings.includes("Practice")]);
+  // A quiz lesson: types the Classroom can't show yet are flagged; a short-answer question is added.
+  await p.locator('[data-act="lesson-close"]').click();
+  await p.locator('[data-act="edit"][data-id="107"]').click();
+  await p.locator('[data-ltab="questions"]').waitFor({ timeout: 5000 });
+  const flagged = await p.locator(".chip.warn", { hasText: "can't show" }).count();
+  await p.locator('[data-act="q-add"][data-qtype="text"]').click();
+  await p.keyboard.type("What do painters call the texture of paper?");
+  await p.locator('[data-bind="exam.questions.4.answer"]').fill("tooth");
+  await p.locator("#lesson-save").click();
+  await saved();
+  await p.reload({ waitUntil: "networkidle" });
+  await p.locator('.q[data-item="question"]').first().waitFor({ timeout: 5000 });
+  const quizCount = await p.locator('.q[data-item="question"]').count();
+  const textAnswer = await p.locator('[data-bind="exam.questions.4.answer"]').inputValue();
+  results.checks.push([`Teacher quiz builder: ${flagged} type flagged for the Classroom, short answer added and kept (${quizCount} questions, answer "${textAnswer}")`, flagged === 1 && quizCount === 5 && textAnswer === "tooth"]);
+  // Video: upload through the stand-in video service and host, in chunks.
+  await p.locator('[data-act="lesson-close"]').click();
+  await p.locator('[data-act="edit"][data-id="104"]').click();
+  await p.locator('[data-ltab="media"]').click();
+  await p.locator("#video-file").setInputFiles({ name: "graded-wash.mp4", mimeType: "video/mp4", buffer: Buffer.alloc(12 * 1024 * 1024) });
+  await p.locator(".video-card .muted", { hasText: "c0ffee00" }).waitFor({ timeout: 15000 });
+  await p.screenshot({ path: join(OUT, "teacher-video.png") });
+  results.checks.push(["Teacher video upload: create → sign → chunked upload → recorded on the lesson", true]);
+  await p.locator('[data-act="lesson-close"]').click();
+  // Pricing & access.
+  await p.locator('[data-tab="pricing"]').click();
+  await p.locator("#price-amount").fill("59");
+  await p.locator(".seg-ctl label", { hasText: "Invite only" }).click();
+  await p.locator('input[data-bind="flags.allow_skip_ahead"]').check();
+  await p.locator("#pricing-save").click();
+  await saved();
+  await p.reload({ waitUntil: "networkidle" });
+  await p.locator("#price-amount").waitFor({ timeout: 5000 });
+  const price = await p.locator("#price-amount").inputValue();
+  const invite = await p.locator('input[data-bind="access"][value="invite"]').isChecked();
+  const skip = await p.locator('input[data-bind="flags.allow_skip_ahead"]').isChecked();
+  results.checks.push([`Teacher pricing & access: $${price}, invite only ${invite}, skip ahead ${skip} — kept after reload`, price === "59.00" && invite && skip]);
+  // Students: add one, pause their access.
+  await p.locator('[data-tab="students"]').click();
+  await p.locator('[data-act="student-add"]').waitFor({ timeout: 5000 });
+  await p.locator('[data-act="student-add"]').click();
+  await p.locator('#modal [name="id"]').fill("4242");
+  await p.locator("#modal [data-ok]").click();
+  await p.locator('select[data-member="4242"]').waitFor({ timeout: 5000 });
+  await p.locator("#roster-q").fill("4242");
+  await p.locator('select[data-member="4242"]').selectOption("pause");
+  await p.locator("#modal [data-ok]").click();
+  await p.locator(".chip.warn", { hasText: "Paused" }).waitFor({ timeout: 5000 });
+  const rosterRows = await p.locator(".tbl tbody tr").count();
+  results.checks.push([`Teacher students: added Member #4242 (${rosterRows} match), access paused`, rosterRows === 1]);
+  // Insights: drop-off inside a lesson.
+  await p.locator('[data-tab="insights"]').click();
+  await p.locator('tr[data-pick="104"]').click();
+  await p.locator(".card h3", { hasText: "Inside" }).waitFor({ timeout: 5000 });
+  await p.waitForFunction(() => document.querySelectorAll(".card")[2]?.querySelectorAll("tbody tr").length === 3);
+  await p.screenshot({ path: join(OUT, "teacher-insights.png") });
+  results.checks.push(["Teacher insights: funnel, lessons, and a lesson's segments (3) with checkpoint results", true]);
+  // Comments: answer a waiting thread, pin it.
+  await p.locator('[data-tab="comments"]').click();
+  await p.locator('[data-act="cm-reply"][data-id="806"]').waitFor({ timeout: 5000 });
+  const waiting0 = await p.locator(".stat b").nth(1).textContent();
+  await p.locator('[data-act="cm-reply"][data-id="806"]').click();
+  await p.locator(".reply-box textarea").fill("Damp, not shiny: tilt the sheet toward the light and stop when the shine is gone.");
+  await p.locator('.reply-box [type="submit"]').click();
+  await p.locator('[data-act="cm-pin"][data-id="806"]').click();
+  await saved();
+  await p.reload({ waitUntil: "networkidle" });
+  await p.locator(".stat b").first().waitFor({ timeout: 5000 });
+  const waiting1 = await p.locator(".stat b").nth(1).textContent();
+  const pinned1 = await p.locator(".stat b").nth(2).textContent();
+  results.checks.push([`Teacher comments: instructor reply + pin kept (waiting ${waiting0} → ${waiting1}, pinned ${pinned1})`, waiting0 === "3" && waiting1 === "2" && pinned1 === "2"]);
+  // Certificates.
+  await p.locator('[data-tab="certificates"]').click();
+  await p.locator('[data-act="cert-set"][data-on="0"]').click();
+  await p.locator(".card .chip", { hasText: "Off" }).waitFor({ timeout: 5000 });
+  const issued = await p.locator(".tbl tbody tr").count();
+  results.checks.push([`Teacher certificates: turned off; ${issued} issued listed`, issued > 0]);
+  results.checks.push([`Teacher steps 2–6 make no requests to the real store (${escaped})`, escaped === 0]);
+  await context.close();
+}
+{
+  const { context, p } = await page(390, PHONE);
+  await context.route("https://*.supabase.co/**", (r) => r.abort());
+  await p.goto(`${base}/teacher.html`, { waitUntil: "networkidle" });
+  await p.evaluate(() => localStorage.clear());
+  await p.reload({ waitUntil: "networkidle" });
+  await p.locator('.course[data-slug="watercolor-foundations"]').click();
+  await p.locator('[data-act="edit"][data-id="103"]').click();
+  await p.locator("#blocks .rte").first().waitFor({ timeout: 5000 });
+  const hidden = await p.locator("#pv").isHidden();
+  await p.locator('[data-act="preview-toggle"]').click();
+  const shown = await p.locator("#pv").isVisible();
+  const overflow = await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+  await p.screenshot({ path: join(OUT, "teacher-lesson-phone.png") });
+  await p.locator('[data-act="lesson-close"]').click();
+  await p.locator('[data-tab="students"]').click();
+  await p.locator(".tbl").waitFor({ timeout: 5000 });
+  const overflow2 = await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+  results.checks.push([`Teacher on a phone: lesson editor with preview on demand (${hidden} → ${shown}), students table scrolls inside itself, no sideways page scroll`, hidden && shown && !overflow && !overflow2]);
+  await context.close();
+}
+
 // Shell handshake inside an iframe.
 {
   const { context, p } = await page(1200);
