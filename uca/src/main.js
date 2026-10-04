@@ -12,7 +12,7 @@ import { settings, applyAppearance, watchSystemAppearance } from "./settings-sto
 import { createNotesApp } from "./apps/notes.js";
 import { createPendingApp } from "./apps/pending.js";
 import { createRecordApp, setFrontApp } from "./apps/record.js";
-import { detectMobileClientFromWindow } from "../../lib/device-detection";
+import { detectMobileClientFromWindow } from "./lib/device-detection";
 
 const LUT = {};
 

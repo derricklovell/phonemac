@@ -1,92 +1,13 @@
-// Builds the TEST componentProps from the original repository's hard-coded data
-// (app registry, OS wallpapers, strings, icons, theme tokens) plus the notes fixture.
+// Builds the TEST componentProps: the app registry, OS versions and icons (props/data/*.json — frozen
+// from the original Next.js project this was ported from), strings, theme tokens and the notes fixture.
 // These are the values a record's `props` column carries; the page itself holds none of them.
-import { build } from "esbuild";
 import { existsSync, readFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import { join } from "node:path";
 import { UCA_DIR, NOTES } from "./shared.mjs";
 
-const REPO = join(UCA_DIR, "..");
-const require = createRequire(join(REPO, "package.json"));
+const data = (name) => JSON.parse(readFileSync(join(UCA_DIR, `props/data/${name}.json`), "utf8"));
+const ICONS = data("icons");
 
-async function importTs(entrySource) {
-  const out = await build({
-    stdin: { contents: entrySource, resolveDir: REPO, loader: "ts" },
-    bundle: true,
-    write: false,
-    format: "esm",
-    platform: "node",
-    alias: { "@": REPO },
-    logLevel: "silent",
-  });
-  const code = out.outputFiles[0].text;
-  return import(`data:text/javascript;base64,${Buffer.from(code).toString("base64")}`);
-}
-
-// ---------------------------------------------------------------- icons
-function lucide(name, strokeWidth = 2) {
-  const src = readFileSync(join(REPO, `node_modules/lucide-react/dist/esm/icons/${name}.js`), "utf8");
-  const body = src.match(/createLucideIcon\("[^"]+",\s*(\[[\s\S]*\])\);/)[1];
-  const nodes = Function(`return ${body}`)();
-  const children = nodes
-    .map(([tag, attrs]) => {
-      const a = Object.entries(attrs)
-        .filter(([k]) => k !== "key")
-        .map(([k, v]) => `${k}="${v}"`)
-        .join(" ");
-      return `<${tag} ${a}></${tag}>`;
-    })
-    .join("");
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${children}</svg>`;
-}
-
-function fontAwesome(pkg, name) {
-  const def = require(pkg)[name].icon;
-  const [w, h, , , path] = def;
-  const d = Array.isArray(path) ? path.join(" ") : path;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" aria-hidden="true" focusable="false"><path fill="currentColor" d="${d}"></path></svg>`;
-}
-
-const ICONS = {
-  // lucide (stroke widths as the original passes them)
-  monitor: lucide("monitor"),
-  settings: lucide("settings"),
-  moon: lucide("moon"),
-  themeSun: lucide("sun", 1.75),
-  themeMoon: lucide("moon", 1.75),
-  themeMonitor: lucide("monitor", 1.75),
-  themeSunMoon: lucide("sun-moon", 1.75),
-  rotateCcw: lucide("rotate-ccw"),
-  power: lucide("power"),
-  lock: lucide("lock"),
-  logOut: lucide("log-out"),
-  info: lucide("info"),
-  x: lucide("x"),
-  ellipsis: lucide("ellipsis", 2.25),
-  penSquare: lucide("square-pen"),
-  search: lucide("search"),
-  check: lucide("check", 2),
-  chevronRight: lucide("chevron-right"),
-  chevronLeft: lucide("chevron-left"),
-  arrowUpDown: lucide("arrow-up-down", 1.8),
-  calendarDays: lucide("calendar-days", 1.8),
-  // Font Awesome
-  wifi: fontAwesome("@fortawesome/free-solid-svg-icons", "faWifi"),
-  battery: fontAwesome("@fortawesome/free-solid-svg-icons", "faBatteryFull"),
-  sliders: fontAwesome("@fortawesome/free-solid-svg-icons", "faSliders"),
-  // Window controls (components/window-controls.tsx)
-  wcClose:
-    '<svg viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><path d="M2.5 1.5L5 4L7.5 1.5L8.5 2.5L6 5L8.5 7.5L7.5 8.5L5 6L2.5 8.5L1.5 7.5L4 5L1.5 2.5Z"></path></svg>',
-  wcMinimize:
-    '<svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M2 5h6"></path></svg>',
-  wcZoom:
-    '<svg viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><polygon points="2,2 6,2 2,6"></polygon><polygon points="8,8 4,8 8,4"></polygon></svg>',
-  wcRestore:
-    '<svg viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><polygon points="4.5,0.5 0.5,4.5 4.5,4.5"></polygon><polygon points="5.5,5.5 9.5,5.5 5.5,9.5"></polygon></svg>',
-};
-
-// ---------------------------------------------------------------- strings
 const STRINGS = {
   "window.close": "Close window",
   "window.minimize": "Minimize window",
@@ -162,8 +83,8 @@ const RECORDS = { messages: 74 };
 
 // ---------------------------------------------------------------- props
 export async function makeTestProps({ theme, assetBase }) {
-  const { APPS } = await importTs('export { APPS } from "@/lib/app-config";');
-  const { OS_VERSIONS } = await importTs('export { OS_VERSIONS } from "@/lib/os-versions";');
+  const APPS = data("apps");
+  const OS_VERSIONS = data("os-versions");
 
   const assets = {
     trash: `${assetBase}trash.png`,

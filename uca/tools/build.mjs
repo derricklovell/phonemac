@@ -15,7 +15,6 @@ import { join } from "node:path";
 import { UCA_DIR } from "./shared.mjs";
 import { makeTestProps } from "./make-props.mjs";
 
-const REPO = join(UCA_DIR, "..");
 const SRC = join(UCA_DIR, "src");
 const DIST = join(UCA_DIR, "dist");
 const require = createRequire(import.meta.url);
@@ -23,9 +22,10 @@ const read = (p) => readFileSync(p, "utf8");
 
 // ---------------------------------------------------------------- CSS
 const ORIGINAL_CSS = [
-  join(REPO, "app/tiptap.css"),
-  join(REPO, "app/(desktop)/notes/styles/github-markdown.css"),
-  join(REPO, "app/globals.css"),
+  // The original app's stylesheets (Notes editor, markdown, globals + theme tokens).
+  join(SRC, "styles/original/tiptap.css"),
+  join(SRC, "styles/original/github-markdown.css"),
+  join(SRC, "styles/original/globals.css"),
 ];
 
 function cssSource() {
@@ -186,7 +186,7 @@ function themeFor(css, modes, literals) {
     if (!hex) throw new Error(`No colour value for --color-${name}`);
     palette[name] = rgbTriplet(hex);
   }
-  const fontFamily = require(join(REPO, "node_modules/tailwindcss/defaultTheme")).fontFamily;
+  const fontFamily = require("tailwindcss/defaultTheme").fontFamily;
   return {
     palette,
     literals,
@@ -228,7 +228,7 @@ async function buildJs() {
     write: false,
     format: "iife",
     target: "es2020",
-    alias: { "@": REPO },
+    alias: { "@": SRC },
     legalComments: "none",
     logLevel: "warning",
   });
@@ -294,7 +294,7 @@ export async function buildAll({ assetBase = "assets/" } = {}) {
   cpSync(join(UCA_DIR, "assets/brand"), join(DIST, "local/assets/brand"), { recursive: true });
   cpSync(join(UCA_DIR, "assets/wallpapers"), join(DIST, "local/assets/wallpapers"), { recursive: true });
   for (const a of LOCAL_ASSETS) {
-    const from = join(REPO, "public", a);
+    const from = join(UCA_DIR, "assets/static", a);
     if (existsSync(from)) cpSync(from, join(DIST, "local/assets", a), { recursive: true });
   }
   return { page, props, sizes: { page: page.length, css: css.length, script: script.length } };

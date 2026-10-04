@@ -7,11 +7,11 @@ import {
   groupNotesByTimestamp,
   sortNotes,
   getNotePreviewText,
-} from "../../../lib/notes/note-utils";
+} from "../lib/notes/note-utils";
 import {
   withDisplayCreatedAtForNotes,
   getDisplayCreatedAt,
-} from "../../../lib/notes/display-created-at";
+} from "../lib/notes/display-created-at";
 
 const CATEGORY_ORDER = ["pinned", "today", "yesterday", "7", "30", "older"];
 const UNGROUPED_ORDER = ["pinned", "notes"];
