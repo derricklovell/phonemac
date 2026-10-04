@@ -52,6 +52,7 @@ const STRINGS = {
   "record.loading": "Loading {app}…",
   "record.failed": "{app} couldn't load ({reason}).",
   "record.empty": "the record returned an empty page",
+  "record.untitled": "App {id}",
   "pending.body": "{app} is still being ported to the UCA build. It will appear here in a later phase.",
   "notes.displayOptions": "Notes display options",
   "notes.newNote": "New Note",
@@ -141,9 +142,12 @@ export async function makeTestProps({ theme, assetBase }) {
     features: { portedApps: ["notes"] },
     apps,
     responsive: { mobileFallbackAppId: "notes" },
+    // Record 50's config names; the appshell/devshell endpoints supply these (plus tabs, user, merchant_*)
+    // on the real page, and the record's own props add pages_endpoint and the desktop namespaces.
     config: {
-      viewEndpoint: "https://api.1ovr1.com/api:9yDRTI1I/viewer",
-      pagesEndpoint: "https://api.1ovr1.com/api:o-B1LTj7/get_pages",
+      view_endpoint: "https://api.1ovr1.com/api:9yDRTI1I/viewer",
+      gin_base: "https://api.1ovr1.com/api:9yDRTI1I",
+      pages_endpoint: "https://api.1ovr1.com/api:o-B1LTj7/get_pages",
     },
     phone: {
       barAppIds,
@@ -169,6 +173,8 @@ export async function makeTestProps({ theme, assetBase }) {
       privateNotes: "pc-private-notes",
       pinnedNotes: "pinnedNotes",
       phoneState: "pc-phone-state",
+      // Where Record 50 keeps the session (the cookie, the white-label gate's token, the cached profile).
+      session: { cookie: "authToken", token: "gin_dev_token", profile: "gin_profile" },
       appStatePrefix: "pc-app-state:",
       appRoutePrefix: "pc-app-route:",
     },
@@ -206,6 +212,22 @@ export async function makeTestProps({ theme, assetBase }) {
         focusedAppId: "notes",
       },
       wallpapers,
+      // A Record 50 tab that isn't one of the desktop's own apps becomes an app built from this.
+      recordApp: {
+        accentColor: "#007AFF",
+        defaultPosition: { x: 220, y: 80 },
+        defaultSize: { width: 900, height: 620 },
+        minSize: { width: 420, height: 360 },
+        dockOrder: null,
+        dockIconScale: 1,
+        showOnDockByDefault: true,
+        multiWindow: false,
+        cascadeOffset: 0,
+        canQuit: true,
+        alwaysShowsOpenIndicator: false,
+        mobile: { supported: true },
+        glyph: { path: "M4 4h16v16H4z", color: "#8E8E93" },
+      },
       boot: { stepMs: 150, stepPercent: 5, finishDelayMs: 500, background: "#262626", logoHeight: 200, logoGap: 0 },
     },
     dock: {

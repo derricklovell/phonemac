@@ -2,6 +2,7 @@
 // per-app context menu, resize handle and Trash.
 import { need, t, emit, on, el, html, raw, cn, asset, store, storageKey } from "./core.js";
 import * as wm from "./wm.js";
+import { appIconHtml } from "./app-icon.js";
 
 const items = new Map(); // id -> { root, frame, dot, badge }
 const badges = {};
@@ -80,7 +81,7 @@ export function mount(container) {
       <span aria-hidden="true" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/20 dark:bg-white/10 rounded-full"></span>
     </button>
   </div>`);
-  trashBtn = makeItem("trash", t("dock.trash"), asset("trash"), 1);
+  trashBtn = makeItem({ id: "trash", name: t("dock.trash"), icon: "trash", dockIconScale: 1 });
 
   dockApps()
     .filter((a) => keptInDock(a) || wm.hasOpenWindows(a.id))
@@ -95,14 +96,15 @@ export function mount(container) {
   setInterval(refreshCalendarIcon, 60000);
 }
 
-function makeItem(id, name, src, iconScale) {
+function makeItem(app) {
+  const { id, name } = app;
   const root = el(html`<button type="button" aria-label="${name}" aria-haspopup="menu" aria-expanded="false" data-dock-item="${id}"
     class="group relative flex flex-col items-center outline-none transition-[width,transform] duration-100 ease-out flex-shrink-0 active:scale-95">
     <div class="relative flex items-center justify-center transition-transform duration-100 ease-out" data-frame style="transform-origin: center bottom;">
       ${
         id === "calendar"
           ? raw('<div data-calendar-icon class="relative overflow-hidden shadow-md bg-white flex flex-col items-center justify-center"><span class="text-calendar-red font-medium leading-none"></span><span class="text-calendar-ink font-normal leading-none"></span></div>')
-          : html`<img alt="${name}" draggable="false" decoding="async" src="${src}" class="object-contain [filter:drop-shadow(0_2px_4px_rgba(0,0,0,0.35))] pointer-events-none" style="transform: scale(${iconScale})">`
+          : appIconHtml(app, "object-contain [filter:drop-shadow(0_2px_4px_rgba(0,0,0,0.35))] pointer-events-none", `transform: scale(${app.dockIconScale})`)
       }
     </div>
     <div class="rounded-full mt-1 transition-opacity" data-dot></div>
@@ -155,7 +157,7 @@ function reconcile() {
     let entry = items.get(app.id);
     if (!entry || animState[app.id] === "exiting") {
       if (entry) entry.root.remove();
-      const root = makeItem(app.id, app.name, asset(app.icon), app.dockIconScale);
+      const root = makeItem(app);
       entry = { root, frame: root.querySelector("[data-frame]"), dot: root.querySelector("[data-dot]") };
       items.set(app.id, entry);
       if (!initial.has(app.id)) {

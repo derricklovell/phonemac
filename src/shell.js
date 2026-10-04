@@ -1,5 +1,5 @@
 // App-shell integration (Record 50): gin: postMessage handshake and window.qcEmbed for thread embedding.
-import { need, emit, on } from "./core.js";
+import { need, has, emit, on, store } from "./core.js";
 
 const subscribers = new Set();
 const pending = new Map();
@@ -12,6 +12,45 @@ let embedState = { key: null, content: {}, sources: null };
 let session = { authed: false, user: null };
 
 export const getSession = () => session;
+
+// Resolves once the first session check is done, so hosted records load with the session.
+let sessionSettled;
+const sessionReadyPromise = new Promise((r) => (sessionSettled = r));
+export const sessionReady = () => sessionReadyPromise;
+
+// Top-level (this page is what the appshell/devshell endpoints served, in Record 50's place): the session
+// is found the way Record 50 finds it — the authToken cookie, or the token the white-label gate keeps in
+// localStorage (gin_dev_token); the cached profile (gin_profile) shows at once, then GET auth/me with the
+// token (and x-merchant-id on a merchant host) confirms it. 401 means signed out.
+function readCookie(name) {
+  try {
+    const row = document.cookie.split("; ").find((c) => c.startsWith(`${name}=`));
+    return row ? decodeURIComponent(row.slice(name.length + 1)) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function bootSession() {
+  const keys = need("storage.session");
+  const token = readCookie(keys.cookie) || store.get("localStorage", keys.token);
+  if (!token) return setSession(false, null);
+  const cached = store.json("localStorage", keys.profile);
+  if (cached && typeof cached === "object") setSession(true, { ...cached, auth_token: token });
+  const headers = { Authorization: `Bearer ${token}` };
+  const scope = has("config.host_scope") ? need("config.host_scope") : null;
+  if (scope && scope.merchant_id) headers["x-merchant-id"] = String(scope.merchant_id);
+  try {
+    const r = await fetch(`${need("config.gin_base")}/auth/me`, { headers });
+    if (r.status === 401) return setSession(false, null);
+    if (!r.ok) return; // keep the cached profile; the next check will tell
+    const body = await r.json();
+    const me = body && body.profile ? body.profile : body;
+    if (me && typeof me === "object") setSession(true, { ...me, auth_token: token });
+  } catch {
+    /* offline: the cached profile stands */
+  }
+}
 
 export const isEmbedded = () => window.parent !== window;
 
@@ -55,7 +94,10 @@ export function boot() {
     }
     if (msg.gin === "profile:avatar" && isPictureUrl(msg.url)) emit("profile:avatar", msg.url);
   });
-  if (isEmbedded()) window.parent.postMessage({ gin: "app:ready", weight: need("shell.weight") }, "*");
+  if (isEmbedded()) {
+    window.parent.postMessage({ gin: "app:ready", weight: need("shell.weight") }, "*");
+    sessionSettled(); // the host's app:restore brings the session; hosted records get it when it does
+  } else bootSession().finally(() => sessionSettled());
 
   // Thread embedding: the chat thread mounts/patches content keyed by entry.
   window.qcEmbed = {

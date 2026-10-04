@@ -22,7 +22,7 @@ const server = createServer((req, res) => {
     res.writeHead(200, { "content-type": "text/html" });
     return res.end(url.searchParams.has("session") ? SESSION_HOST : SHELL_HOST);
   }
-  // Mock of the appshell's viewer endpoint (`${viewEndpoint}_iframe?view=<id>`).
+  // Mock of the appshell's viewer endpoint (`${view_endpoint}_iframe?view=<id>`).
   if (path === "/viewer_iframe") {
     const view = url.searchParams.get("view");
     if (!["9001", "9002"].includes(view)) {
@@ -86,7 +86,7 @@ parent.postMessage({ gin: "app:ready", weight: "dom" }, "*");
 const TEST_TOKEN = "test-session-token"; // what the stand-in appshell restores; not a real credential
 const RECORD_74 = readFileSync(join(UCA_DIR, "props/fixtures/records/74.s01.html"), "utf8");
 const INBOX = readFileSync(join(UCA_DIR, "props/fixtures/inbox.json"), "utf8");
-const api = { inboxAuth: [], sends: [] };
+const api = { inboxAuth: [], sends: [], viewer: [] };
 async function mockApi(route) {
   const req = route.request();
   const url = new URL(req.url());
@@ -99,7 +99,18 @@ async function mockApi(route) {
   };
   const json = (status, body) => route.fulfill({ status, headers: { ...cors, "content-type": "application/json" }, body: JSON.stringify(body) });
   if (req.method() === "OPTIONS") return route.fulfill({ status: 204, headers: cors });
-  if (url.pathname === "/api:9yDRTI1I/viewer_iframe") return route.fulfill({ status: 200, headers: { ...cors, "content-type": "text/html" }, body: "" });
+  if (url.pathname === "/api:9yDRTI1I/viewer_iframe") {
+    api.viewer.push({ view: url.searchParams.get("view"), auth: req.headers()["authorization"] || null, merchant: req.headers()["x-merchant-id"] || null });
+    // Blank for record 74 (as the live endpoint is without a cookie); a small page for the sample tabs.
+    const body = ["54", "100"].includes(url.searchParams.get("view"))
+      ? `<!doctype html><body><h1 id="tab">Tab ${url.searchParams.get("view")}</h1><script>parent.postMessage({gin:"app:ready",weight:"dom"},"*")</script></body>`
+      : "";
+    return route.fulfill({ status: 200, headers: { ...cors, "content-type": "text/html" }, body });
+  }
+  if (url.pathname === "/api:9yDRTI1I/auth/me") {
+    if (req.headers()["authorization"] !== `Bearer ${TEST_TOKEN}`) return json(401, { message: "Unauthorized" });
+    return json(200, { username: "sample-merchant", user_id: "u-1", display_name: "Sample Studio", profile_picture_url: null });
+  }
   if (url.pathname === "/api:o-B1LTj7/get_pages/74") return json(200, [{ id: 74, name: "Messages", s01: RECORD_74 }]);
   if (url.pathname.startsWith("/api:9yDRTI1I/messages/")) {
     const auth = req.headers()["authorization"] || null;
@@ -685,6 +696,44 @@ for (const width of [320, 360, 414]) {
   await p.waitForTimeout(300);
   await p.screenshot({ path: join(OUT, "preview-host.png") });
   results.checks.push(["preview build: appshell stand-in → desktop → record 74 shows the sample inbox", (await rec.locator(".conv").count()) === 4]);
+  await context.close();
+}
+
+// Record 50-style props (what devshell injects): each tab becomes a Dock app drawn from its face;
+// a tab the desktop already has (74) joins Messages; opening a tab loads its record.
+{
+  const { context, p } = await page(1440);
+  await p.goto(`${base}/devshell.html#/notes`, { waitUntil: "networkidle" });
+  const items = await p.$$eval("[data-dock-item]", (b) => b.map((x) => x.dataset.dockItem));
+  const glyph = await p.locator('[data-dock-item="rec-54"] [data-glyph]').count();
+  await p.locator('[data-dock-item="rec-54"]').click();
+  const tab = p.frameLocator('[data-window-id="rec-54"] iframe');
+  await tab.locator("#tab").waitFor({ timeout: 5000 });
+  await p.screenshot({ path: join(OUT, "devshell-tabs.png") });
+  results.checks.push([
+    `Record 50 tabs become Dock apps (${items.filter((i) => i.startsWith("rec-")).join(", ")}); Messages (74) isn't duplicated; a tab opens its record`,
+    items.includes("rec-54") && items.includes("rec-100") && !items.includes("rec-74") && items.includes("messages") && glyph === 1 && (await tab.locator("#tab").textContent()) === "Tab 54",
+  ]);
+  await context.close();
+}
+
+// Top-level, as served by appshell/devshell: the session comes from the authToken cookie + auth/me (as
+// Record 50 gets it), shows in the avatar, and reaches the hosted records (viewer + inbox carry it).
+{
+  const { context, p } = await page(1440);
+  await context.addCookies([{ name: "authToken", value: TEST_TOKEN, url: base }]);
+  const inboxBefore = api.inboxAuth.length;
+  const viewerBefore = api.viewer.length;
+  await p.goto(`${base}/devshell.html#/notes`, { waitUntil: "networkidle" });
+  const rec = p.frameLocator('[data-window-id="messages"] iframe');
+  await rec.locator('.conv[data-id="101"]').waitFor({ timeout: 8000 });
+  const avatar = (await p.locator('[data-menu="apple"] [data-avatar]').textContent()).trim();
+  const viewerCalls = api.viewer.slice(viewerBefore);
+  results.checks.push([
+    `top-level: authToken cookie → auth/me → session (avatar ${avatar}); viewer + inbox get the token and the merchant`,
+    avatar === "SA" && api.inboxAuth.slice(inboxBefore).includes(`Bearer ${TEST_TOKEN}`) &&
+      viewerCalls.some((c) => c.view === "74" && c.auth === `Bearer ${TEST_TOKEN}` && c.merchant === "41"),
+  ]);
   await context.close();
 }
 

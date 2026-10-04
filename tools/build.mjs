@@ -4,6 +4,7 @@
 //   dist/local/index.html     — the same file with the TEST props injected, plus assets/ (local preview)
 //   dist/local/preview-host.html + desktop.html — the artifact preview: an appshell stand-in hosting
 //                               the desktop, which hosts record 74 (snapshot) on a sample inbox
+//   dist/local/devshell.html  — test variant: the desktop with Record 50-style props (sample tabs, merchant)
 //   dist/local/records.html   — test variant: every app on the phone bar, Messages/Photos hosted as
 //                               records from the test server's mock viewer endpoint
 import { build } from "esbuild";
@@ -273,6 +274,7 @@ export async function buildAll({ assetBase = "assets/" } = {}) {
   writeFileSync(join(DIST, "split/props.json"), JSON.stringify(props, null, 2));
   writeFileSync(join(DIST, "local/index.html"), injectProps(page, props));
   writeFileSync(join(DIST, "local/records.html"), injectProps(page, recordsVariant(props)));
+  writeFileSync(join(DIST, "local/devshell.html"), injectProps(page, devshellVariant(props)));
   // Artifact preview: the publish skeleton supplies doctype/head/body, so ship the inner parts only.
   mkdirSync(join(DIST, "artifact"), { recursive: true });
   const fragment = `<title>${props.meta.previewTitle}</title>\n<style>\n${css}\n</style>\n${body.trim()}\n<script>\n${script}\n</script>\n`;
@@ -302,12 +304,12 @@ export async function buildAll({ assetBase = "assets/" } = {}) {
 
 // Preview (claude.ai artifact) variant. The artifact host only allows same-origin images and requests,
 // so the boot logo is bundled and records come from same-origin copies at records/viewer_iframe
-// (the shell still fetches `${viewEndpoint}_iframe?view=<id>`, as from the database). The record
+// (the shell still fetches `${view_endpoint}_iframe?view=<id>`, as from the database). The record
 // file keeps the real URLs.
 function previewVariant(props) {
   return {
     ...props,
-    config: { ...props.config, viewEndpoint: "records/viewer" },
+    config: { ...props.config, view_endpoint: "records/viewer" },
     assets: { ...props.assets, bootLogo: "assets/brand/1ovr1-logo.jpg" },
   };
 }
@@ -318,11 +320,23 @@ function withViewerProps(recordHtml, props) {
   return recordHtml.replace(/<head>/i, (h) => `${h}\n${tag}`);
 }
 
+// What devshell injects on a merchant's shell (Record 50's props: tabs, merchant_*, a visitor user)
+// over the desktop's own props — sample tab faces, not a real merchant's.
+function devshellVariant(props) {
+  return {
+    ...props,
+    tabs: JSON.parse(read(join(UCA_DIR, "props/fixtures/tabs.json"))),
+    merchant_id: "sample-merchant",
+    merchant_slug: "sample-merchant",
+    merchant_pk: 41,
+  };
+}
+
 function recordsVariant(props) {
   const RECORDS = { messages: 9001, photos: 9002 };
   return {
     ...props,
-    config: { ...props.config, viewEndpoint: "/viewer" },
+    config: { ...props.config, view_endpoint: "/viewer" },
     apps: props.apps.map((a) => (a.id in RECORDS ? { ...a, view_id: RECORDS[a.id] } : a)),
     phone: { ...props.phone, barAppIds: props.apps.map((a) => a.id) },
   };

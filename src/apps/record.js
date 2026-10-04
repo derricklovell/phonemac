@@ -7,9 +7,10 @@
 // this page (user + auth_token) is restored to them, sign-in/out and app events are passed down,
 // shell:active names the app in front here, and requests only the appshell can serve
 // (apps:open for a record not hosted here) are passed up.
-import { need, t, on, emit, el, html, raw, cn, store, storageKey } from "../core.js";
+import { need, has, t, on, emit, el, html, raw, cn, store, storageKey } from "../core.js";
 import { settings, appearanceScheme } from "../settings-store.js";
-import { isPictureUrl, getSession, toHost } from "../shell.js";
+import { isPictureUrl, getSession, sessionReady, toHost } from "../shell.js";
+import * as wm from "../wm.js";
 
 const frames = new Map(); // contentWindow -> { viewId, appId, iframe }
 let frontViewId = null; // view_id of the hosted app in front (null when the front app isn't a record)
@@ -75,7 +76,7 @@ function listen() {
   on("shell:relay", (msg) => broadcast(msg));
   // apps:open with a context: the record gets view:context (now if it is up, else after app:ready).
   on("app:open", ({ appId, context }) => {
-    const app = need("apps").find((a) => a.id === appId);
+    const app = wm.getApp(appId);
     if (!app || app.view_id == null || context == null) return;
     const up = [...frames].find(([, f]) => f.appId === appId);
     if (up) post(up[0], { gin: "view:context", view_id: app.view_id, context });
@@ -134,7 +135,7 @@ function listen() {
     }
     // Open another app: one hosted here opens here; anything else is the appshell's to open.
     if (d.gin === "apps:open" && d.view_id != null) {
-      const target = need("apps").find((a) => a.view_id != null && String(a.view_id) === String(d.view_id));
+      const target = wm.apps().find((a) => a.view_id != null && String(a.view_id) === String(d.view_id));
       if (target) emit("app:open", { appId: target.id, context: d.context ?? null });
       else toHost({ gin: "apps:open", view_id: d.view_id, context: d.context ?? null });
       return;
@@ -144,21 +145,33 @@ function listen() {
   });
 }
 
-// Same as the appshell: `${viewEndpoint}_iframe?view=<id>` (with the session cookie) serves the record
-// with its props injected. A blank answer (no dev slot, or no session) falls back to the record's raw
-// s01 from `${pagesEndpoint}/<id>`, as the appshell's own fallback does. Blank there too is a failure:
-// never cached, never mounted (it would be a blank frame).
+// Same as Record 50: `${config.view_endpoint}` with /viewer → /viewer_iframe, `?view=<id>`, serves the
+// record with its props injected. With a session the request carries it the way the white-label shell's
+// fetch does (Bearer token, x-merchant-id for the business it acts for, no cookies); without one it goes
+// with credentials, as Record 50's own fetch does. A blank answer falls back to the record's raw s01 from
+// `${config.pages_endpoint}/<id>`. Blank there too is a failure: never cached, never mounted.
 async function fetchText(url, init) {
   const r = await fetch(url, init);
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.text();
 }
 
+function viewerRequest() {
+  const sess = getSession();
+  const token = sess.authed && sess.user ? sess.user.auth_token || sess.user.authToken : null;
+  if (!token) return { credentials: "include" };
+  const headers = { Authorization: `Bearer ${token}` };
+  if (has("merchant_pk") && need("merchant_pk")) headers["x-merchant-id"] = String(need("merchant_pk"));
+  return { credentials: "omit", headers };
+}
+
 async function fetchRecord(viewId) {
+  await sessionReady();
   const id = encodeURIComponent(viewId);
-  const viewed = await fetchText(`${need("config.viewEndpoint")}_iframe?view=${id}`, { credentials: "include" });
+  const endpoint = need("config.view_endpoint").replace("/viewer", "/viewer_iframe");
+  const viewed = await fetchText(`${endpoint}?view=${id}`, viewerRequest());
   if (viewed.trim()) return viewed;
-  const pages = JSON.parse(await fetchText(`${need("config.pagesEndpoint")}/${id}`));
+  const pages = JSON.parse(await fetchText(`${need("config.pages_endpoint")}/${id}`));
   const s01 = Array.isArray(pages) && pages[0] && typeof pages[0].s01 === "string" ? pages[0].s01 : "";
   if (!s01.trim()) throw new Error(t("record.empty"));
   return s01;

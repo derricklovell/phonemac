@@ -1,11 +1,14 @@
-// Live check against the real 1ovr1 API with a real session, READ-ONLY.
-//   node tools/live.mjs                  reads the token from $auth_token
-//   node tools/live.mjs --env MY_TOKEN   reads it from $MY_TOKEN instead
-// A stand-in appshell restores the token to the desktop (dist/local/index.html), which passes it to
-// Messages (record 74, loaded live via viewer_iframe → get_pages). messages/inbox goes to the real
-// API; messages/send and messages/state are answered locally and never reach the merchant's data.
-// The token stays in this process's memory: it is not written to disk, logged, or put in a page file.
-// Output: dist/live/*.png and a summary of counts only (no message contents are printed).
+// Live run of the desktop with a real merchant's values, READ-ONLY.
+//   node tools/live.mjs                  token from $auth_token
+//   node tools/live.mjs --env MY_TOKEN   token from $MY_TOKEN
+//   --origin https://www.1ovr1.com       the host the page is served from (default https://app.1ovr1.com)
+// It does what the devshell endpoint does: GET devshell with the token (Record 50's props for that
+// account: tabs, config, merchant_*, app/seo), lay those over the desktop's own props, and replace
+// `var componentProps = {};` in dist/phonemac.html with the result. The page is opened top-level with the
+// authToken cookie (as the white-label gate leaves it), so it finds its session the way Record 50 does.
+// All api.1ovr1.com traffic goes to the live API except writes: anything but GET is stopped locally.
+// The token and the real props stay in this process's memory. Prints counts and statuses only.
+// Output: dist/live/desktop-live.png (it shows real data: not committed, dist/ is ignored).
 import { chromium } from "playwright";
 import { createServer } from "node:http";
 import { execFile } from "node:child_process";
@@ -13,6 +16,11 @@ import { readFileSync, existsSync, mkdirSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
 import { UCA_DIR, HEIGHT } from "./shared.mjs";
 
+// The page is served from a platform or merchant host, and the API answers by that Origin
+// (get_ip_info: app.* → the dev builds, www.* → the live builds; viewer_iframe is blank for anything else).
+// Requests are forwarded with the Origin the served page would have.
+const originFlag = process.argv.indexOf("--origin");
+const ORIGIN = originFlag > -1 ? process.argv[originFlag + 1] : "https://app.1ovr1.com";
 const flag = process.argv.indexOf("--env");
 const TOKEN_ENV = flag > -1 ? process.argv[flag + 1] : "auth_token";
 const TOKEN = process.env[TOKEN_ENV];
@@ -25,21 +33,46 @@ const OUT = join(UCA_DIR, "dist/live");
 mkdirSync(OUT, { recursive: true });
 const TYPES = { ".html": "text/html", ".png": "image/png", ".jpg": "image/jpeg", ".webp": "image/webp" };
 
-// The appshell stand-in; the token is put in the response, never in a file.
-const host = () => `<!doctype html><body style="margin:0"><iframe id="f" src="/index.html#/notes" style="border:0;position:fixed;inset:0;width:100%;height:100%"></iframe>
-<script>
-var SESSION = ${JSON.stringify({ authed: true, user: { username: "live-check", auth_token: TOKEN } }).replace(/</g, "\\u003c")};
-addEventListener("message", function (e) {
-  var m = e.data; if (!m || m.gin !== "app:ready") return;
-  e.source.postMessage({ gin: "app:restore", view_id: "desktop", state: null, ts: 0, authed: true, user: SESSION.user }, "*");
-});
-</script></body>`;
+function curlSync(args) {
+  return new Promise((resolve, reject) =>
+    execFile("curl", args, { maxBuffer: 1 << 26, encoding: "buffer" }, (err, stdout) => (err ? reject(err) : resolve(stdout.toString("utf8")))),
+  );
+}
+
+// 1. devshell for this account → Record 50's props (the brace walk Record 50's own _parseProps uses).
+const shellHtml = await curlSync(["-sSf", "-H", `Authorization: Bearer ${TOKEN}`, "-H", `Origin: ${ORIGIN}`, "https://api.1ovr1.com/api:9yDRTI1I/devshell"]);
+const at = shellHtml.indexOf("var componentProps = {");
+if (at < 0) throw new Error("devshell answered without injected props");
+let depth = 0;
+let endAt = -1;
+for (let i = shellHtml.indexOf("{", at); i < shellHtml.length; i++) {
+  if (shellHtml[i] === "{") depth++;
+  else if (shellHtml[i] === "}" && --depth === 0) {
+    endAt = i;
+    break;
+  }
+}
+const real = JSON.parse(shellHtml.slice(shellHtml.indexOf("{", at), endAt + 1));
+
+// 2. The desktop's own props (theme from the built page's split props), with Record 50's on top.
+const own = JSON.parse(readFileSync(join(UCA_DIR, "dist/split/props.json"), "utf8"));
+const props = {
+  ...own,
+  ...Object.fromEntries(["tabs", "user", "merchant_id", "merchant_slug", "merchant_pk", "app", "seo", "route", "voice"].filter((k) => k in real).map((k) => [k, real[k]])),
+  config: { ...own.config, ...real.config },
+};
+
+// 3. Inject exactly as devshell does.
+const page = readFileSync(join(UCA_DIR, "dist/phonemac.html"), "utf8").replace(
+  "var componentProps = {};",
+  `var componentProps = ${JSON.stringify(props).replace(/</g, "\\u003c")};`,
+);
 
 const server = createServer((req, res) => {
   const url = new URL(req.url, "http://x");
-  if (url.pathname === "/live-host.html") {
+  if (url.pathname === "/live.html") {
     res.writeHead(200, { "content-type": "text/html", "cache-control": "no-store" });
-    return res.end(host());
+    return res.end(page);
   }
   const file = join(ROOT, normalize(decodeURIComponent(url.pathname)).replace(/^(\.\.[/\\])+/, ""));
   if (!existsSync(file)) {
@@ -70,11 +103,11 @@ async function liveApi(route) {
     "access-control-allow-methods": "GET, POST, OPTIONS",
   };
   if (req.method() === "OPTIONS") return route.fulfill({ status: 204, headers: cors });
-  if (/\/messages\/(send|state)$/.test(url.pathname)) {
+  if (req.method() !== "GET") {
     calls.push({ path: url.pathname, status: "blocked (read-only)" });
     return route.fulfill({ status: 200, headers: { ...cors, "content-type": "application/json" }, body: JSON.stringify({ message: { id: `local-${Date.now()}`, ts: Date.now() } }) });
   }
-  const args = ["-sS", "-X", req.method(), "-w", "\n%{http_code}"];
+  const args = ["-sS", "-X", req.method(), "-w", "\n%{http_code}", "-H", `Origin: ${ORIGIN}`];
   const auth = req.headers()["authorization"];
   if (auth) args.push("-H", `Authorization: ${auth}`);
   if (req.headers()["content-type"]) args.push("-H", `Content-Type: ${req.headers()["content-type"]}`);
@@ -97,39 +130,33 @@ async function liveApi(route) {
 const browser = await chromium.launch();
 const context = await browser.newContext({ viewport: { width: 1440, height: HEIGHT } });
 await context.route("https://api.1ovr1.com/**", liveApi);
+await context.addCookies([{ name: "authToken", value: TOKEN, url: base }]);
 const p = await context.newPage();
 const errors = [];
 p.on("pageerror", (e) => errors.push(e.message));
-await p.goto(`${base}/live-host.html`, { waitUntil: "load" });
+await p.goto(`${base}/live.html`, { waitUntil: "load" });
+await p.waitForTimeout(8000); // auth/me, records, first inbox read
 
-const d = p.frameLocator("#f");
-const rec = d.frameLocator('[data-window-id="messages"] iframe');
-let threads = 0;
-let state = "";
-try {
-  await rec.locator(".conv, #listState").first().waitFor({ timeout: 20000 });
-  await p.waitForTimeout(4000); // first inbox read
-  threads = await rec.locator(".conv").count();
-  state = ((await rec.locator("#listState").textContent().catch(() => "")) || "").trim();
-} catch (err) {
-  state = `record did not render: ${err.message.split("\n")[0]}`;
-}
-// Bring Messages to the front and give it room, then screenshot.
-const win = d.locator('[data-window-id="messages"]');
-const r = await win.boundingBox();
-if (r) {
-  await p.mouse.click(r.x + r.width - 40, r.y + 300);
-  const t = await d.locator('[data-window-id="messages"] [data-window-drag-handle]').boundingBox();
-  await p.mouse.move(t.x + t.width / 2, t.y + t.height / 2);
-  await p.mouse.down();
-  await p.mouse.move(t.x + t.width / 2 - 300, t.y + t.height / 2 + 20, { steps: 10 });
-  await p.mouse.up();
-}
-await p.waitForTimeout(500);
-await p.screenshot({ path: join(OUT, "messages-live.png") });
-const badge = await d.locator('[data-dock-item="messages"] [data-badge]').textContent().catch(() => null);
+const dock = await p.$$eval("[data-dock-item]", (b) => b.map((x) => x.dataset.dockItem));
+const windows = await p.$$eval("[data-window-id]", (w) => w.map((x) => x.dataset.windowId));
+const avatarSignedIn = (await p.locator('[data-menu="apple"] [data-avatar-dot]').count()) === 1;
+await p.screenshot({ path: join(OUT, "desktop-live.png") });
 
 await browser.close();
 server.close();
-console.log(JSON.stringify({ threads, listState: state || null, dockBadge: badge, calls, pageErrors: errors }, null, 2));
-console.log(`screenshot: ${join(OUT, "messages-live.png")}`);
+const summarise = (c) => ({ path: c.path, status: c.status, bytes: c.bytes, auth: c.auth });
+console.log(
+  JSON.stringify(
+    {
+      realProps: { tabs: (real.tabs || []).map((t) => t.view_id), merchant_pk: real.merchant_pk ?? null },
+      dock,
+      windows,
+      avatarSignedIn,
+      calls: calls.map(summarise),
+      pageErrors: errors,
+    },
+    null,
+    2,
+  ),
+);
+console.log(`screenshot (real data, not committed): ${join(OUT, "desktop-live.png")}`);

@@ -9,7 +9,12 @@ const state = { windows: {}, focusedId: null, nextZ: 1, nextInstance: {} };
 let menuOpen = false;
 
 const D = () => need("desktop");
-export const apps = () => need("apps");
+let appList = null;
+// The app list is built once at boot (desktop apps + the Record 50 tabs, see main.js buildApps).
+export function setApps(list) {
+  appList = list;
+}
+export const apps = () => appList;
 export const getApp = (appId) => apps().find((a) => a.id === appId);
 export const appIdOf = (windowId) => windowId.replace(/-\d+$/, "");
 

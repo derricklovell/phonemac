@@ -1,6 +1,6 @@
 // UCA 3.0 entry: applyCSSProps() → buildLUT() → boot().
 /* global componentProps */
-import { need, t, on, emit, el, html, applyCSSProps, MissingProp } from "./core.js";
+import { need, has, t, on, emit, el, html, applyCSSProps, MissingProp } from "./core.js";
 import * as wm from "./wm.js";
 import * as menubar from "./menubar.js";
 import * as dock from "./dock.js";
@@ -16,8 +16,38 @@ import { detectMobileClientFromWindow } from "./lib/device-detection";
 
 const LUT = {};
 
+// The desktop's apps, built the way Record 50 builds its bar: the desktop's own apps (props.apps)
+// plus every tab the appshell endpoints put in props.tabs (each the record's own dev json — view_id,
+// name, icon path, colour). A tab whose view_id a desktop app already has joins that app (Messages
+// keeps its macOS icon); any other tab becomes a record app of its own.
+function buildApps() {
+  const list = need("apps").map((a) => ({ ...a }));
+  const byView = new Map(list.filter((a) => a.view_id != null).map((a) => [String(a.view_id), a]));
+  if (has("tabs")) {
+    const base = need("desktop.recordApp");
+    for (const tab of need("tabs")) {
+      if (tab.view_id == null || byView.has(String(tab.view_id))) continue;
+      const name = tab.name || tab.label || t("record.untitled", { id: tab.view_id });
+      const app = {
+        ...structuredClone(base),
+        id: `rec-${tab.view_id}`,
+        name,
+        menuBarTitle: name,
+        description: tab.tagline || "",
+        view_id: tab.view_id,
+        glyph: tab.icon && tab.color ? { path: tab.icon, color: tab.color } : base.glyph,
+      };
+      list.push(app);
+      byView.set(String(tab.view_id), app);
+    }
+  }
+  return list;
+}
+
 function buildLUT() {
-  LUT.apps = new Map(need("apps").map((a) => [a.id, a]));
+  const apps = buildApps();
+  wm.setApps(apps);
+  LUT.apps = new Map(apps.map((a) => [a.id, a]));
   LUT.ported = new Set(need("features.portedApps"));
 }
 
@@ -89,7 +119,7 @@ function boot() {
   const layer = el(`<div data-windows></div>`);
   root.appendChild(layer);
 
-  for (const app of need("apps")) {
+  for (const app of wm.apps()) {
     const factory = factoryFor(app);
     wm.registerApp(app.id, (ctx) =>
       factory(ctx, { mobile: false, initialSlug: app.id === route.appId ? route.rest || null : null, app }),
@@ -122,7 +152,7 @@ function boot() {
 function bootPhone(root, route) {
   on("route:set", setRoute);
   on("phone:active", (appId) => setFrontApp(wm.getApp(appId)));
-  on("app:open", ({ appId }) => need("phone.barAppIds").includes(appId) && phone.activate(appId));
+  on("app:open", ({ appId }) => phone.onBar(appId) && phone.activate(appId));
   phone.mount(root, { factoryFor, route, fallbackAppId: need("responsive.mobileFallbackAppId") });
 }
 

@@ -1,0 +1,5 @@
+[
+  { "view_id": 54, "name": "Booking", "label": "Booking", "color": "#F5A623", "icon": "M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2z M16 2v4 M8 2v4 M3 10h18", "s01_only": true },
+  { "view_id": 100, "name": "Invoices", "label": "Invoices", "color": "#50E3C2", "icon": "M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-16a2 2 0 0 1 2 -2z M9 7h6 M9 11h6 M9 15h4", "dock": "right", "s01_only": true },
+  { "view_id": 74, "name": "Messages", "label": "Messages", "color": "#BD10E0", "icon": "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z", "dock": "right", "s01_only": true, "native": true }
+]

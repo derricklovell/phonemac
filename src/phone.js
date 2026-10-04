@@ -4,6 +4,7 @@
 // shows/hides it the same way the appshell's drag bar does (tap, or swipe up/down).
 import { need, t, on, emit, el, html, raw, cn, asset, store, storageKey } from "./core.js";
 import * as wm from "./wm.js";
+import { appIconHtml } from "./app-icon.js";
 
 const P = () => need("phone");
 
@@ -15,6 +16,7 @@ let active = null;
 let recent = []; // most recent first
 const routes = {}; // appId -> last route the app reported, restored when it comes back to the front
 let barVisible = true;
+let barIds = [];
 
 function saveState() {
   store.set("sessionStorage", storageKey("phoneState"), JSON.stringify({ active, barVisible }));
@@ -50,7 +52,9 @@ export function mount(root, { factoryFor, route, fallbackAppId }) {
 
   // Centred while the icons fit; once they don't, the row is wider than the bar and scrolls.
   const row = bar.querySelector("[data-phone-row]");
-  for (const appId of c.barAppIds) row.appendChild(makeIcon(wm.getApp(appId)));
+  // The bar: the desktop's phone apps, then the Record 50 tabs that aren't one of them.
+  barIds = [...c.barAppIds, ...wm.apps().filter((a) => a.glyph && !c.barAppIds.includes(a.id)).map((a) => a.id)];
+  for (const appId of barIds) row.appendChild(makeIcon(wm.getApp(appId)));
   wireBar();
   wireHandle();
   applyBarVisibility();
@@ -67,7 +71,7 @@ export function mount(root, { factoryFor, route, fallbackAppId }) {
     if (panes.has(appId)) routes[appId] = path;
   });
 
-  const start = route.appId && c.barAppIds.includes(route.appId) ? route.appId : saved.active && c.barAppIds.includes(saved.active) ? saved.active : fallbackAppId;
+  const start = route.appId && barIds.includes(route.appId) ? route.appId : saved.active && barIds.includes(saved.active) ? saved.active : fallbackAppId;
   activate(start, { initialSlug: route.appId === start ? route.rest || null : null });
 }
 
@@ -81,8 +85,7 @@ function makeIcon(app) {
       ${
         app.id === "calendar"
           ? raw('<span data-calendar-icon class="relative flex h-full w-full flex-col items-center justify-center overflow-hidden bg-white shadow-sm"><span class="text-calendar-red font-medium leading-none"></span><span class="text-calendar-ink font-normal leading-none"></span></span>')
-          : html`<img alt="" draggable="false" decoding="async" src="${asset(app.icon)}" width="${c.iconSize}" height="${c.iconSize}"
-              class="pointer-events-none h-full w-full object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.3))]" style="transform: scale(${app.dockIconScale})">`
+          : appIconHtml(app, "pointer-events-none h-full w-full object-contain [filter:drop-shadow(0_1px_2px_rgba(0,0,0,0.3))]", `transform: scale(${app.dockIconScale})`)
       }
     </span>
     <span aria-hidden="true" data-phone-dot class="absolute left-1/2 -translate-x-1/2 rounded-full bg-black/60 dark:bg-white/70 opacity-0 transition-opacity duration-200"
@@ -329,3 +332,4 @@ export function closeApp(appId) {
 }
 
 export const activeAppId = () => active;
+export const onBar = (appId) => barIds.includes(appId);

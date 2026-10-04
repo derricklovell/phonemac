@@ -1,6 +1,26 @@
 # phonemac — macOS desktop appshell (1ovr1 UCA 3.0)
 
-A macOS-style desktop for the 1ovr1 appshell. It's one plain HTML/JS file, with no React and no framework. Everything it shows comes from `componentProps`: the record's props, injected by the server. Apps are either ported into the file (Notes) or loaded as their own records from the 1ovr1 database (Messages = record 74).
+A macOS-style desktop for the 1ovr1 appshell, meant to be served in Record 50's place by the `appshell` / `devshell` endpoints. It's one plain HTML/JS file, with no React and no framework. Everything it shows comes from `componentProps`, which the endpoint injects in place of `var componentProps = {};`.
+
+## How the appshell endpoints populate it
+
+`appshell` (visitors) and `devshell` (signed in, `auth = "user"`) load Record 50 and build its props per request:
+
+- **Merchant:** found from the host (`x_forwarded_host` → `merchant_hosts`), the `x_merchant_id` header, or the signed-in user.
+- **Props built:** `tabs` (each app's own dev json: `view_id`, `name`, `icon` path, `color`, `dock`, `s01_only`), `config` (`view_endpoint`, `gin_base`, `messages_view_id`, …), `merchant_id` / `merchant_slug` / `merchant_pk`, `app` / `seo` branding, and a visitor `user`.
+- **Injection:** the props replace `var componentProps = {};` in the record's `s01` (live) or `devs01` (dev).
+
+The desktop reads that same shape:
+
+- **Tabs:** every entry in `tabs` becomes a Dock app (phone-bar app on phones), with its icon drawn from the tab's path and colour. A tab whose `view_id` a desktop app already has joins it, so Messages (74) keeps its macOS icon. New tabs use the template `desktop.recordApp`.
+- **Records:** opened from `config.view_endpoint` with `/viewer` → `/viewer_iframe`, as Record 50 does. The API picks the build by the page's Origin (`get_ip_info`): `app.*` gets the dev build and `www.*` the live one. Any other origin gets an empty answer, which falls back to `config.pages_endpoint`.
+- **Session:** found the way Record 50 finds it:
+  1. the `authToken` cookie, or the white-label gate's `gin_dev_token`;
+  2. the cached `gin_profile` straight away;
+  3. then `GET {gin_base}/auth/me`.
+  
+  Records get the session in `app:restore`. Viewer requests carry the Bearer token and `x-merchant-id`, as the white-label shell's fetch does.
+- **The desktop's own namespaces** (`apps`, `dock`, `desktop`, `phone`, `strings`, `icons`, `theme`, …) are added to Record 50's props alongside these.
 
 ## Setup
 
@@ -9,7 +29,7 @@ npm install              # build/test tools only; the page itself has no depende
 npm run build            # dist/phonemac.html (the record file), dist/split/*, dist/local/ (test props), dist/artifact/ (claude.ai preview)
 npm test                 # headless checks + pixel diff against reference/
 npm run check            # build + test
-node tools/live.mjs      # read-only check against the real API, using a session token in $auth_token (or --env NAME)
+node tools/live.mjs --env MERCHANT_TOKEN   # the desktop with a real account's devshell props, live API, read-only (writes stopped)
 node tools/fetch-record.mjs 74   # refresh a record snapshot in props/fixtures/records/
 ```
 
@@ -37,7 +57,7 @@ The tests use Playwright's Chromium. Cloud sessions have it preinstalled at `/op
 
 For each entry in `apps[]`, in order:
 
-1. **`view_id` set**: the app is its own record. It is loaded from `` `${config.viewEndpoint}_iframe?view=<view_id>` ``, which is the same URL the appshell uses for a tab. It runs in a sandboxed `srcdoc` iframe with the appshell's sandbox flags.
+1. **`view_id` set**: the app is its own record. It is loaded from `` `${config.view_endpoint}` → `/viewer_iframe?view=<view_id>` ``, which is the same URL the appshell uses for a tab. It runs in a sandboxed `srcdoc` iframe with the appshell's sandbox flags.
 2. **Ported in this file**: listed in `features.portedApps`. Currently only `notes`.
 3. **Otherwise**: a labelled placeholder.
 
@@ -84,9 +104,9 @@ The test logo is a 1080px square on #262626 with its own padding. At 200px tall 
 
 Messages is record 74 (`apps[].view_id`).
 
-**Loading:** the shell fetches `${config.viewEndpoint}_iframe?view=74` with credentials, as the appshell does. If that comes back blank (no dev slot, or no session cookie), it falls back to the record's `s01` from `${config.pagesEndpoint}/74`.
+**Loading:** see "How the appshell endpoints populate it" above.
 
-**Session pass-through:** inside the appshell this page is itself a tab, so hosted records talk to this page, not the appshell. This page stands in for the appshell towards them:
+**Session pass-through (when embedded):** if this page is itself a tab inside the appshell, so hosted records talk to this page, not the appshell. This page stands in for the appshell towards them:
 
 - The session the appshell restored to this page (`app:restore`: user, `auth_token`) is restored to each record. It's kept in memory only.
 - `auth:user` sign-in/out is passed down to the records. On sign-in this page asks the appshell for a fresh `app:restore`.
