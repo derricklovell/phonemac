@@ -320,7 +320,7 @@ export async function buildAll({ assetBase = "assets/" } = {}) {
 // Mail: records/mail (sample inbox mock-inbox.json). Teacher: records/teacher (sample courses mock-courses.json).
 const STANDALONE = [
   { name: "mail", title: "Mail", mock: "mock-inbox.json", global: "__MAIL_MOCK__" },
-  { name: "teacher", title: "Teacher", mock: "mock-courses.json", global: "__TEACHER_MOCK__" },
+  { name: "teacher", title: "Teacher Course Builder", mock: "mock-courses.json", global: "__TEACHER_MOCK__" },
 ];
 function buildStandalonePreviews() {
   for (const r of STANDALONE) {
