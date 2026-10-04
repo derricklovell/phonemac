@@ -332,7 +332,7 @@
 <body>
 <div id="app" data-size="wide" data-pane="list" hidden>
   <aside id="side">
-    <div class="side-top"><h1 id="side-title" class="grow"></h1><button class="btn sm primary" id="btn-new" type="button"></button></div>
+    <div class="side-top"><button class="ib" id="btn-classroom" type="button"></button><h1 id="side-title" class="grow"></h1><button class="btn sm primary" id="btn-new" type="button"></button></div>
     <div class="side-scope" id="side-scope"></div>
     <label class="search"><span id="search-icon"></span><span class="sr" id="search-label"></span><input id="search" type="search" aria-labelledby="search-label"></label>
     <div id="courses" role="list"></div>
@@ -419,6 +419,7 @@ var componentProps = {};
     LUT.thumbFile = need("config.thumbnail_file");
     LUT.videoAccept = need("config.video_accept");
     LUT.locale = need("formats.locale");
+    LUT.classroom = need("config.classroom"); // the view Teacher was opened from: {view_id, slot_code}
     LUT.lessonTabs = need("lesson_tabs");
     LUT.blockKinds = need("block_kinds"); LUT.blockKind = {};
     LUT.blockKinds.forEach(function (b) { LUT.blockKind[b.id] = b; });
@@ -2111,6 +2112,12 @@ var componentProps = {};
     $("#search").placeholder = t("search");
     $("#search").addEventListener("input", function () { S.query = this.value; renderSide(); });
     $("#btn-new").addEventListener("click", newCourse);
+    $("#btn-classroom").innerHTML = icon("back");
+    $("#btn-classroom").setAttribute("aria-label", t("backToClassroom"));
+    $("#btn-classroom").title = t("backToClassroom");
+    $("#btn-classroom").addEventListener("click", function () {
+      guardLesson(function () { post({ gin: "view:swap", view_id: LUT.classroom.view_id, slot_code: LUT.classroom.slot_code }); });
+    });
     $("#courses").addEventListener("click", function (e) { var b = e.target.closest(".course"); if (b) openCourse(b.dataset.slug); });
 
     var app = $("#app");

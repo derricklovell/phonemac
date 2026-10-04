@@ -987,6 +987,12 @@ for (const width of [320, 360, 414]) {
   results.checks.push([`Teacher: add section + lesson, rename, keyboard reorder (${order11.join(",")}), drag section (${sectionsDragged.join(",")}), free preview, delete — all kept after reload (${sectionsAfter.join(",")}; ${order11After.join(",")}; ${renamed}; ${preview104}; ${gone107}; ${newLesson})`, order11.join() === "101,103,102" && sectionsDragged.slice(0, 3).join() === "11,13,12" && sectionsAfter.join() === sectionsDragged.join() && order11After.join() === "101,103,102" && renamed === "Setting up your palette (2026)" && preview104 === "true" && gone107 === 0 && newLesson === "Choosing a mat and frame"]);
   results.checks.push([`Teacher: details saved and restored (subtitle, tags ${tags.join("/")}), open course + tab restored by the shell`, subtitle === "Three weekends from first wash to a finished painting." && tags.some((x) => x.startsWith("watercolour"))]);
   results.checks.push([`Teacher: unpublish → ${unpublished}, publish again; new course gets a free URL (${created}), empty course stays ${stillDraft}; delete needs the title typed (${locked ? "locked" : "open"}) → ${coursesAfter} courses`, unpublished === "Draft" && created === "watercolor-foundations-2" && stillDraft === "Draft" && locked && coursesAfter === 4]);
+  // Back to the Classroom: the shell swaps the record back to its s01 view.
+  await p.evaluate(() => { window.__swaps = []; window.addEventListener("message", (e) => { if (e.data && e.data.gin === "view:swap") window.__swaps.push(e.data); }); });
+  await p.locator("#btn-classroom").click();
+  await p.waitForTimeout(100);
+  const swaps = await p.evaluate(() => window.__swaps);
+  results.checks.push([`Teacher: Back to Classroom asks the shell for view:swap ${JSON.stringify(swaps[0] && { view_id: swaps[0].view_id, slot_code: swaps[0].slot_code })}`, swaps.length === 1 && swaps[0].view_id === 57 && swaps[0].slot_code === "s01"]);
   results.checks.push([`Teacher preview makes no requests to the real store (${escaped})`, escaped === 0]);
   await context.close();
 }

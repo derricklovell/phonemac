@@ -25,7 +25,11 @@
   "upload_chunk_bytes": 5242880,
   "sign_seconds": 3600,
   "thumbnail_file": "thumbnail.jpg",
-  "video_accept": "video/*"
+  "video_accept": "video/*",
+  "classroom": {
+   "view_id": 57,
+   "slot_code": "s01"
+  }
  },
  "statuses": [
   {
@@ -554,7 +558,8 @@
   "noCertificates": "No certificates issued yet.",
   "pathsTitle": "Learning paths",
   "pathsBody": "Paths bundle several courses into one certificate. The store can show and issue them, but it can't create or edit them yet, so they're set up by the platform for now.",
-  "statDropped": "Dropped"
+  "statDropped": "Dropped",
+  "backToClassroom": "Back to Classroom"
  },
  "theme": {
   "defaultScheme": "light",
