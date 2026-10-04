@@ -1,0 +1,355 @@
+{
+ "_note": "SAMPLE DATA for the Mail preview, in the shape of /messages/inbox (thread 'time' and message 'ts' are given as 'ago' minutes and filled in when the preview loads). Not a real business's inbox.",
+ "me": {
+  "username": "sample-owner",
+  "display_name": "Alex Rivera"
+ },
+ "business": {
+  "name": "Harbor Lane Studio"
+ },
+ "sources": [
+  "contact"
+ ],
+ "note": "",
+ "threads": [
+  {
+   "id": "contact:41:m01",
+   "kind": "contact",
+   "name": "Priya Raman",
+   "sub": "priya.raman@example.com",
+   "initials": "PR",
+   "tint": "blue",
+   "ago": 18,
+   "unread": 1,
+   "pinned": false,
+   "muted": false,
+   "known": false,
+   "group": false,
+   "can_reply": true,
+   "reply_via": "email",
+   "meta": {
+    "email": "priya.raman@example.com",
+    "phone": "(555) 014-2290"
+   },
+   "messages": [
+    {
+     "id": 1,
+     "out": false,
+     "text": "Hi! I have an appointment Thursday at 11 but something came up at work. Is there anything Friday afternoon instead?",
+     "ago": 18,
+     "delivered": true,
+     "read": false,
+     "extra": {
+      "page": "/book",
+      "phone": "(555) 014-2290"
+     }
+    }
+   ]
+  },
+  {
+   "id": "contact:41:m02",
+   "kind": "contact",
+   "name": "Marcus Bell",
+   "sub": "marcus.bell@example.com",
+   "initials": "MB",
+   "tint": "green",
+   "ago": 120,
+   "unread": 2,
+   "pinned": true,
+   "muted": false,
+   "known": false,
+   "group": false,
+   "can_reply": true,
+   "reply_via": "email",
+   "meta": {
+    "email": "marcus.bell@example.com"
+   },
+   "messages": [
+    {
+     "id": 2,
+     "out": false,
+     "text": "Hello, I'm planning a bridal party for 6 people on the 14th. Do you do group bookings, and is there a deposit?",
+     "ago": 130,
+     "delivered": true,
+     "read": false,
+     "extra": {
+      "page": "/contact",
+      "business": "Bell & Co Events"
+     }
+    },
+    {
+     "id": 3,
+     "out": false,
+     "text": "Also, could we get the private room if it's available? Thanks!",
+     "ago": 120,
+     "delivered": true,
+     "read": false
+    }
+   ]
+  },
+  {
+   "id": "contact:41:m03",
+   "kind": "contact",
+   "name": "Aiko Tanaka",
+   "sub": "aiko.t@example.com",
+   "initials": "AT",
+   "tint": "plum",
+   "ago": 270,
+   "unread": 0,
+   "pinned": false,
+   "muted": false,
+   "known": false,
+   "group": false,
+   "can_reply": true,
+   "reply_via": "email",
+   "meta": {
+    "email": "aiko.t@example.com"
+   },
+   "messages": [
+    {
+     "id": 4,
+     "out": false,
+     "text": "Do you sell gift cards? I'd like to get one for my sister's birthday.",
+     "ago": 340,
+     "delivered": true,
+     "read": false,
+     "extra": {
+      "page": "/contact"
+     }
+    },
+    {
+     "id": 5,
+     "out": true,
+     "text": "We do! You can buy them at the front desk or online at /gift-cards, any amount from $25.",
+     "ago": 300,
+     "delivered": true,
+     "read": true,
+     "via": "email"
+    },
+    {
+     "id": 6,
+     "out": false,
+     "text": "Perfect, just bought one online. Thank you!",
+     "ago": 270,
+     "delivered": true,
+     "read": false
+    }
+   ]
+  },
+  {
+   "id": "contact:41:m04",
+   "kind": "contact",
+   "name": "Daniel Ortiz",
+   "sub": "d.ortiz@example.com",
+   "initials": "DO",
+   "tint": "warm",
+   "ago": 540,
+   "unread": 1,
+   "pinned": false,
+   "muted": false,
+   "known": false,
+   "group": false,
+   "can_reply": true,
+   "reply_via": "email",
+   "meta": {
+    "email": "d.ortiz@example.com",
+    "phone": "(555) 019-7734"
+   },
+   "messages": [
+    {
+     "id": 7,
+     "out": false,
+     "text": "I was charged twice for my visit on Saturday. Can you look into it? I can send a screenshot of my bank statement.",
+     "ago": 540,
+     "delivered": true,
+     "read": false,
+     "extra": {
+      "page": "/contact",
+      "phone": "(555) 019-7734"
+     }
+    }
+   ]
+  },
+  {
+   "id": "contact:41:m05",
+   "kind": "contact",
+   "name": "Lena Fischer",
+   "sub": "lena.fischer@example.com",
+   "initials": "LF",
+   "tint": "blue",
+   "ago": 1560,
+   "unread": 1,
+   "pinned": false,
+   "muted": false,
+   "known": false,
+   "group": false,
+   "can_reply": true,
+   "reply_via": "email",
+   "meta": {
+    "email": "lena.fischer@example.com"
+   },
+   "messages": [
+    {
+     "id": 8,
+     "out": false,
+     "text": "Is there parking near the studio? First time visiting next week.",
+     "ago": 1560,
+     "delivered": true,
+     "read": false,
+     "extra": {
+      "page": "/contact"
+     }
+    }
+   ]
+  },
+  {
+   "id": "contact:41:m06",
+   "kind": "contact",
+   "name": "Grace Whitfield",
+   "sub": "grace@whitfieldsupply.example",
+   "initials": "GW",
+   "tint": "green",
+   "ago": 2940,
+   "unread": 0,
+   "pinned": false,
+   "muted": true,
+   "known": false,
+   "group": false,
+   "can_reply": true,
+   "reply_via": "email",
+   "meta": {
+    "email": "grace@whitfieldsupply.example"
+   },
+   "messages": [
+    {
+     "id": 9,
+     "out": false,
+     "text": "Hi there, I represent Whitfield Supply. We'd love to send you samples of our new vegan polish line. Who's the best person to talk to?",
+     "ago": 3180,
+     "delivered": true,
+     "read": false,
+     "extra": {
+      "page": "/contact",
+      "business": "Whitfield Supply"
+     }
+    },
+    {
+     "id": 10,
+     "out": true,
+     "text": "Thanks Grace! Send samples to the studio address, attention: Studio Manager. We'll take a look.",
+     "ago": 2940,
+     "delivered": true,
+     "read": true,
+     "via": "email"
+    }
+   ]
+  },
+  {
+   "id": "contact:41:m07",
+   "kind": "contact",
+   "name": "Jordan Lee",
+   "sub": "jordan.lee@example.com",
+   "initials": "JL",
+   "tint": "plum",
+   "ago": 4320,
+   "unread": 1,
+   "pinned": false,
+   "muted": false,
+   "known": false,
+   "group": false,
+   "can_reply": true,
+   "reply_via": "email",
+   "meta": {
+    "email": "jordan.lee@example.com",
+    "phone": "(555) 017-0021"
+   },
+   "messages": [
+    {
+     "id": 11,
+     "out": false,
+     "text": "Are you hiring? I'm a licensed nail tech with 4 years of experience. Happy to send my portfolio.",
+     "ago": 4320,
+     "delivered": true,
+     "read": false,
+     "extra": {
+      "page": "/careers",
+      "phone": "(555) 017-0021"
+     }
+    }
+   ]
+  },
+  {
+   "id": "contact:41:m08",
+   "kind": "contact",
+   "name": "Sam Okafor",
+   "sub": "sam.okafor@example.com",
+   "initials": "SO",
+   "tint": "warm",
+   "ago": 5760,
+   "unread": 0,
+   "pinned": false,
+   "muted": false,
+   "known": false,
+   "group": false,
+   "can_reply": true,
+   "reply_via": "email",
+   "meta": {
+    "email": "sam.okafor@example.com"
+   },
+   "messages": [
+    {
+     "id": 12,
+     "out": false,
+     "text": "Do you take walk-ins on weekdays?",
+     "ago": 5940,
+     "delivered": true,
+     "read": false,
+     "extra": {
+      "page": "/contact"
+     }
+    },
+    {
+     "id": 13,
+     "out": true,
+     "text": "Yes, Monday to Thursday until 4pm, depending on availability. Booking ahead guarantees your spot!",
+     "ago": 5760,
+     "delivered": true,
+     "read": true,
+     "via": "email"
+    }
+   ]
+  },
+  {
+   "id": "contact:41:m09",
+   "kind": "contact",
+   "name": "Hannah Brooks",
+   "sub": "hannah.b@example.com",
+   "initials": "HB",
+   "tint": "blue",
+   "ago": 8640,
+   "unread": 0,
+   "pinned": false,
+   "muted": false,
+   "known": false,
+   "group": false,
+   "can_reply": true,
+   "reply_via": "email",
+   "meta": {
+    "email": "hannah.b@example.com"
+   },
+   "messages": [
+    {
+     "id": 14,
+     "out": false,
+     "text": "I need to cancel my appointment for tomorrow, sorry for the short notice. Will I lose my deposit?",
+     "ago": 8640,
+     "delivered": true,
+     "read": false,
+     "extra": {
+      "page": "/book"
+     }
+    }
+   ]
+  }
+ ]
+}

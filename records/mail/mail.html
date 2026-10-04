@@ -181,7 +181,7 @@ var componentProps = {};
     token: null, user: null, scheme: null,
     inbox: { loaded: false, loading: null, error: null, me: null, business: null, last: 0 },
     threads: [], view: null, query: "", openId: null, mode: "reply", notice: null,
-    meta: {}, sleeping: false, timer: null, saveTimer: null, restored: false,
+    meta: {}, sleeping: false, timer: null, restored: false,
     sentLocal: {}, // thread id -> replies sent from here that the server hasn't returned yet
   };
 
@@ -267,6 +267,14 @@ var componentProps = {};
       S.inbox.loaded = true; S.inbox.error = null; S.inbox.last = Date.now();
       S.inbox.me = j && j.me || null; S.inbox.business = j && j.business || null;
       S.threads = ((j && j.threads) || []).filter(function (th) { return LUT.kinds.indexOf(th.kind) > -1; }).map(adopt);
+      // The inbox leaves archived (hidden) conversations out; the copy kept when archiving shows them.
+      var have = {};
+      S.threads.forEach(function (th) { have[th.id] = true; });
+      Object.keys(S.meta).forEach(function (id) {
+        var kept = S.meta[id].archived;
+        if (kept && !have[id]) S.threads.push(Object.assign({}, kept, { hidden: true, unread: 0 }));
+        if (kept && have[id]) { delete S.meta[id].archived; saveState(); }
+      });
       wakeSnoozed();
       render();
       badge();
@@ -326,9 +334,9 @@ var componentProps = {};
   }
 
   /* ── state the shell keeps for this account ──────────────────────────────────────────────────── */
+  // Sent straight away (no debounce): a reload right after a change must not lose it.
   function saveState() {
-    clearTimeout(S.saveTimer);
-    S.saveTimer = setTimeout(function () { post({ gin: "app:state", state: { meta: S.meta, view: S.view, open: S.openId } }); }, 250);
+    post({ gin: "app:state", state: { meta: S.meta, view: S.view, open: S.openId } });
   }
 
   /* ── formatting ─────────────────────────────────────────────────────────────────────────────── */
@@ -483,7 +491,12 @@ var componentProps = {};
   function state(op, on) {
     var th = openThread(); if (!th) return;
     var key = op === "hide" ? "hidden" : op === "pin" ? "pinned" : "muted";
-    th[key] = on; render(); badge();
+    th[key] = on;
+    if (op === "hide") {
+      if (on) setMeta(th.id, { archived: JSON.parse(JSON.stringify(Object.assign({}, th, { hidden: false }))) });
+      else { var m = S.meta[th.id]; if (m) { delete m.archived; saveState(); } }
+    }
+    render(); badge();
     api("POST", "/messages/state", { args: { op: op, thread_id: th.id, on: on } }).catch(function (e) { th[key] = !on; render(); toast(t("actionFailed", { reason: e.message })); });
   }
   function send() {

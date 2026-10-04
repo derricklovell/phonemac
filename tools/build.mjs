@@ -308,7 +308,28 @@ export async function buildAll({ assetBase = "assets/" } = {}) {
     const from = join(UCA_DIR, "assets/static", a);
     if (existsSync(from)) cpSync(from, join(DIST, "local/assets", a), { recursive: true });
   }
+  buildMailPreview();
   return { page, props, sizes: { page: page.length, css: css.length, script: script.length } };
+}
+
+// The Mail record on its own, as the viewer would serve it (its props + _viewer injected), with the
+// preview harness in front of it: a stand-in shell and API answering from records/mail/mock-inbox.json,
+// so the page opens already populated and every action works. The record itself is unchanged.
+//   dist/records/mail-local.html   — a complete page to open in a browser (also dist/local/mail.html)
+//   dist/records/mail-preview.html — the same, as the inner parts for the claude.ai artifact
+function buildMailPreview() {
+  const record = read(join(UCA_DIR, "records/mail/mail.html"));
+  const props = { ...JSON.parse(read(join(UCA_DIR, "records/mail/props.json"))), _viewer: { merchant_id: 41, requested_view: null } };
+  const mock = read(join(UCA_DIR, "records/mail/mock-inbox.json"));
+  const harness = `<script>window.__MAIL_MOCK__ = ${mock.replace(/</g, "\\u003c")};</script>\n<script>\n${read(join(UCA_DIR, "records/mail/preview-harness.js"))}</script>\n`;
+  const page = injectProps(record, props).replace(/<body>/i, (b) => `${b}\n${harness}`);
+  if (page === record) throw new Error("mail preview: props placeholder not found");
+  mkdirSync(join(DIST, "records"), { recursive: true });
+  writeFileSync(join(DIST, "records/mail-local.html"), page);
+  writeFileSync(join(DIST, "local/mail.html"), page);
+  const style = page.match(/<style>[\s\S]*?<\/style>/i)[0];
+  const body = page.match(/<body>([\s\S]*)<\/body>/i)[1];
+  writeFileSync(join(DIST, "records/mail-preview.html"), `<title>Mail</title>\n${style}\n${body.trim()}\n`);
 }
 
 // Preview (claude.ai artifact) variant. The artifact host only allows same-origin images and requests,

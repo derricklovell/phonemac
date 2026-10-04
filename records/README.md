@@ -31,6 +31,12 @@ Requests send the session's Bearer token and `x-merchant-id` (`_viewer.merchant_
 
 **Origin:** the interaction patterns (views, statuses, reply versus private note, details sidebar) follow open-source helpdesks such as Libredesk (AGPL-3.0). No Libredesk code, assets or branding are used: the code, design and wording are original.
 
+**Local preview (Mail on its own):** `npm run build` writes `dist/records/mail-local.html`, a complete page to open in a browser, and `dist/records/mail-preview.html`, the same page for the claude.ai artifact. Each is the record exactly as the viewer would serve it (`props.json` plus `_viewer`, injected), with `preview-harness.js` in front of it. The harness stands in for the shell (a signed-in sample user and saved state) and for the API (`messages/inbox`, `send` and `state`, answered from `mock-inbox.json` the way the real endpoints behave), so the page opens populated and every action works. To change what you see:
+- the look and the app: `mail.html` and `props.json`;
+- the sample conversations: `mock-inbox.json` (times are "minutes ago").
+
+Then rebuild. The harness is never part of the record.
+
 **Not yet in the database:** it has no record id. Locally it's tab `900` (`props/fixtures/tabs.json`), served by the test mock as `viewer_iframe` would serve it. To publish it:
 1. Create the record with `mail.html` as `s01` and `devs01`, `props.json` as `props`, and `dev.json` as `dev` (with the new id as `view_id`).
 2. Add it to an account's apps (`me/apps`).

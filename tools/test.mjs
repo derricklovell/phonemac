@@ -844,6 +844,54 @@ for (const width of [320, 360, 414]) {
   await context.close();
 }
 
+// Mail on its own (dist/records/mail-local.html): the record + the preview harness standing in for the
+// shell and the API with records/mail/mock-inbox.json — opens populated, every action works.
+{
+  const { context, p } = await page(1440);
+  await p.goto(`${base}/mail.html`, { waitUntil: "networkidle" });
+  await p.locator(".row").first().waitFor({ timeout: 5000 });
+  const rows = await p.locator(".row").count();
+  const size = await p.locator("#app").getAttribute("data-size");
+  await p.locator('.row[data-id="contact:41:m02"]').click();
+  await p.locator("#text").fill("Yes — groups of 6 are welcome, and the private room is free on the 14th.");
+  await p.locator("#btn-send").click();
+  await p.waitForTimeout(400);
+  const replied = await p.locator(".msg.out .mb").allTextContents();
+  await p.locator('.row[data-id="contact:41:m04"]').click();
+  await p.locator('[data-act="archive"]').click();
+  await p.waitForTimeout(300);
+  const inboxAfter = await p.locator(".row").count();
+  await p.locator('[data-view="archived"]').click();
+  const archived = await p.locator(".row").evaluateAll((r) => r.map((x) => x.dataset.id));
+  await p.screenshot({ path: join(OUT, "mail-standalone.png") });
+  await p.reload({ waitUntil: "networkidle" });
+  await p.locator(".row").first().waitFor({ timeout: 5000 });
+  await p.waitForTimeout(300);
+  const viewAfter = await p.locator('.view[aria-current="true"]').getAttribute("data-view");
+  const archivedAfter = await p.locator(".row").evaluateAll((r) => r.map((x) => x.dataset.id));
+  await p.locator('.row[data-id="contact:41:m04"]').click();
+  await p.locator('[data-act="archive"]').click();
+  await p.waitForTimeout(300);
+  await p.locator('[data-view="inbox"]').click();
+  const backInInbox = await p.locator('.row[data-id="contact:41:m04"]').count();
+  await p.locator('.row[data-id="contact:41:m02"]').click();
+  const repliedAfter = await p.locator(".msg.out .mb").allTextContents();
+  results.checks.push([`Mail alone opens populated from the mock API (${rows} conversations, ${size} layout)`, rows === 9 && size === "wide"]);
+  results.checks.push(["Mail alone: reply shows and survives a reload", replied.includes("Yes — groups of 6 are welcome, and the private room is free on the 14th.") && repliedAfter.includes("Yes — groups of 6 are welcome, and the private room is free on the 14th.")]);
+  results.checks.push([`Mail alone: archive → Archived (${archived.join(",")}), still there after reload, Move to Inbox brings it back`, inboxAfter === 8 && archived.includes("contact:41:m04") && viewAfter === "archived" && archivedAfter.includes("contact:41:m04") && backInInbox === 1]);
+  await context.close();
+}
+{
+  const { context, p } = await page(390, PHONE);
+  await p.goto(`${base}/mail.html`, { waitUntil: "networkidle" });
+  await p.locator(".row").first().waitFor({ timeout: 5000 });
+  const size = await p.locator("#app").getAttribute("data-size");
+  const overflow = await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+  await p.screenshot({ path: join(OUT, "mail-standalone-phone.png") });
+  results.checks.push([`Mail alone on a phone: ${size} layout, populated, no sideways scroll`, size === "phone" && (await p.locator(".row").count()) === 9 && !overflow]);
+  await context.close();
+}
+
 // Shell handshake inside an iframe.
 {
   const { context, p } = await page(1200);
