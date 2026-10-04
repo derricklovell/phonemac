@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title></title>
+<!-- Mail — a shared support inbox for a business's email conversations (1ovr1 record, UCA 3.0).
+     Data: messages/inbox (the business's website-form threads, kind "contact"), replies by email through
+     messages/send (kind "email", from the business), read / pin / mute / archive through messages/state.
+     Status, priority, assignee, tags and private notes have no server fields yet: they are kept in the
+     app's state, which the shell persists per account (app:state / app:restore).
+     Interaction patterns follow open-source helpdesks (shared inbox, views, statuses, reply / private
+     note); the code, design and wording are original. Everything shown comes from componentProps. -->
+<style>
+  :root { color-scheme: light; }
+  :root.dark { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 13px/1.4 var(--font); -webkit-font-smoothing: antialiased; }
+  button, input, textarea, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  [hidden] { display: none !important; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  svg.i { width: 16px; height: 16px; flex-shrink: 0; }
+
+  #app { display: grid; grid-template-columns: var(--sidebar-w) var(--list-w) minmax(0, 1fr) var(--details-w); height: 100%; }
+  #app[data-details="off"] { grid-template-columns: var(--sidebar-w) var(--list-w) minmax(0, 1fr) 0; }
+  #app[data-size="narrow"] { grid-template-columns: var(--list-w) minmax(0, 1fr) 0; }
+  #app[data-size="narrow"] #sidebar { display: none; }
+  #app[data-size="phone"] { display: block; }
+  #app[data-size="phone"] #sidebar, #app[data-size="phone"] #details { display: none; }
+  #app[data-size="phone"][data-pane="list"] #thread { display: none; }
+  #app[data-size="phone"][data-pane="thread"] #list { display: none; }
+  #app[data-size="phone"] #list, #app[data-size="phone"] #thread { height: 100%; }
+
+  /* sidebar: views */
+  #sidebar { background: var(--panel); border-right: 1px solid var(--line); padding: 10px 8px; overflow-y: auto; }
+  .side-h { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 10px 8px 4px; }
+  .view { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; border-radius: 6px; cursor: pointer; color: var(--text); }
+  .view:hover { background: var(--hover); }
+  .view[aria-current="true"] { background: var(--selected); color: var(--selected-text); }
+  .view .n { margin-left: auto; font-size: 11px; color: var(--muted); }
+  .view[aria-current="true"] .n { color: var(--selected-text); }
+  .view:focus-visible { outline: 2px solid var(--accent); }
+
+  /* list */
+  #list { display: flex; flex-direction: column; min-width: 0; border-right: 1px solid var(--line); background: var(--bg); }
+  .bar { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--line); min-height: 44px; }
+  .bar h1 { font-size: 14px; margin: 0; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar .sub { color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .grow { flex: 1; min-width: 0; }
+  .ib { all: unset; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; color: var(--muted); flex-shrink: 0; }
+  .ib:hover { background: var(--hover); color: var(--text); }
+  .ib[aria-pressed="true"] { color: var(--accent); }
+  .ib:focus-visible { outline: 2px solid var(--accent); }
+  .search { display: flex; align-items: center; gap: 6px; margin: 8px 10px 4px; padding: 5px 8px; border-radius: 7px; background: var(--input); color: var(--muted); }
+  .search input { all: unset; flex: 1; min-width: 0; color: var(--text); }
+  #rows { overflow-y: auto; flex: 1; padding: 4px 6px 10px; }
+  .row { all: unset; box-sizing: border-box; display: grid; grid-template-columns: 10px 1fr auto; column-gap: 6px; width: 100%; padding: 8px 8px 9px 4px; border-radius: 8px; cursor: pointer; border-bottom: 1px solid var(--line-soft); }
+  .row:hover { background: var(--hover); }
+  .row[aria-selected="true"] { background: var(--selected); color: var(--selected-text); }
+  .row[aria-selected="true"] .meta, .row[aria-selected="true"] .prev { color: var(--selected-sub); }
+  .row:focus-visible { outline: 2px solid var(--accent); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-top: 5px; visibility: hidden; }
+  .row[data-unread="true"] .dot { visibility: visible; }
+  .who { font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meta { font-size: 11px; color: var(--muted); white-space: nowrap; display: flex; align-items: center; gap: 4px; }
+  .subj, .prev { grid-column: 2 / 4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .prev { color: var(--muted); }
+  .chips { grid-column: 2 / 4; display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+  .chip { font-size: 10.5px; padding: 1px 6px; border-radius: 999px; background: var(--chip); color: var(--chip-text); }
+  .chip[data-tone="warn"] { background: var(--warn-bg); color: var(--warn); }
+  .chip[data-tone="ok"] { background: var(--ok-bg); color: var(--ok); }
+  .chip[data-tone="bad"] { background: var(--bad-bg); color: var(--bad); }
+  .state { padding: 28px 18px; text-align: center; color: var(--muted); }
+
+  /* thread */
+  #thread { display: flex; flex-direction: column; min-width: 0; background: var(--bg); }
+  .thead { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--line); min-height: 44px; flex-wrap: wrap; }
+  .thead .title, .thead .email { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .thead .title { font-size: 14px; font-weight: 650; }
+  .thead .email { color: var(--muted); font-size: 12px; }
+  .sel { appearance: none; border: 1px solid var(--line); background: var(--input); border-radius: 6px; padding: 3px 22px 3px 8px; font-size: 12px; background-image: var(--chevron); background-repeat: no-repeat; background-position: right 6px center; background-size: 10px; }
+  #msgs { flex: 1; overflow-y: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+  .msg { max-width: min(680px, 92%); border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+  .msg.out { align-self: flex-end; background: var(--out); border-color: var(--out-line); }
+  .msg.note { align-self: stretch; max-width: none; background: var(--note); border-color: var(--note-line); }
+  .msg .mh { display: flex; gap: 8px; align-items: baseline; padding: 8px 12px 0; font-size: 12px; }
+  .msg .mh b { font-weight: 650; }
+  .msg .mh span { color: var(--muted); }
+  .msg .mb { padding: 6px 12px 10px; white-space: pre-wrap; word-wrap: break-word; }
+  .msg .mx { margin: 0 12px 10px; padding: 8px 10px; border-radius: 8px; background: var(--input); font-size: 12px; color: var(--muted); }
+  .msg .mx div + div { margin-top: 2px; }
+  .empty { margin: auto; text-align: center; color: var(--muted); padding: 24px; }
+  .empty svg { width: 34px; height: 34px; opacity: .6; }
+
+  /* composer */
+  #composer { border-top: 1px solid var(--line); padding: 8px 12px 12px; background: var(--bg); }
+  .tabs { display: flex; gap: 2px; margin-bottom: 6px; }
+  .tab { all: unset; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; color: var(--muted); }
+  .tab[aria-selected="true"] { background: var(--selected); color: var(--selected-text); }
+  .tab:focus-visible { outline: 2px solid var(--accent); }
+  .field { display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 8px 8px 0 0; padding: 5px 8px; background: var(--card); }
+  .field label { color: var(--muted); font-size: 12px; }
+  .field input { all: unset; flex: 1; min-width: 0; }
+  #text { display: block; width: 100%; min-height: 84px; max-height: 40vh; resize: vertical; border: 1px solid var(--line); border-radius: 0 0 8px 8px; border-top: 0; padding: 8px 10px; background: var(--card); }
+  #composer[data-mode="note"] #text { border-radius: 8px; border-top: 1px solid var(--note-line); background: var(--note); }
+  #composer[data-mode="note"] .field { display: none; }
+  .crow { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .hint { color: var(--muted); font-size: 11.5px; }
+  .btn { border: 0; border-radius: 7px; padding: 6px 14px; background: var(--accent); color: var(--accent-text); font-weight: 600; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .notice { margin: 0 12px 8px; padding: 8px 10px; border-radius: 8px; font-size: 12px; background: var(--warn-bg); color: var(--warn); }
+
+  /* details */
+  #details { border-left: 1px solid var(--line); background: var(--panel); overflow-y: auto; padding: 12px 14px; min-width: 0; }
+  #details h2 { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 14px 0 6px; }
+  #details h2:first-child { margin-top: 2px; }
+  .kv { display: grid; grid-template-columns: 76px 1fr; gap: 6px 8px; align-items: center; font-size: 12px; }
+  .kv dt { color: var(--muted); }
+  .kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+  .kv .sel { width: 100%; }
+  .tags { display: flex; gap: 4px; flex-wrap: wrap; }
+  .tag { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; padding: 1px 4px 1px 7px; border-radius: 999px; background: var(--chip); color: var(--chip-text); }
+  .tag button { all: unset; cursor: pointer; padding: 0 3px; border-radius: 50%; }
+  .tag button:focus-visible { outline: 2px solid var(--accent); }
+  .taginput { all: unset; box-sizing: border-box; width: 100%; margin-top: 6px; padding: 4px 8px; border-radius: 6px; background: var(--input); font-size: 12px; }
+  .local { margin-top: 14px; font-size: 11px; color: var(--muted); }
+  #toast { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); padding: 7px 12px; border-radius: 8px; background: var(--toast); color: var(--toast-text); font-size: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  #toast[data-on] { opacity: 1; }
+  #fatal { padding: 24px; white-space: pre-wrap; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div id="app" data-size="wide" data-pane="list" data-details="on" hidden>
+  <nav id="sidebar"></nav>
+  <section id="list" aria-labelledby="list-title">
+    <div class="bar">
+      <button class="ib" id="btn-back-views" type="button" hidden></button>
+      <h1 id="list-title" class="grow"></h1>
+      <span class="sub" id="list-count"></span>
+      <button class="ib" id="btn-refresh" type="button"></button>
+    </div>
+    <label class="search"><span id="search-icon"></span><span class="sr" id="search-label"></span><input id="search" type="search" aria-labelledby="search-label"></label>
+    <div id="rows" role="listbox" aria-labelledby="list-title" tabindex="-1"></div>
+  </section>
+  <section id="thread" aria-live="polite"></section>
+  <aside id="details"></aside>
+</div>
+<div id="toast" role="status"></div>
+<script>
+var componentProps = {};
+</script>
+<script>
+(function () {
+  "use strict";
+
+  /* ── props (the only source of truth; a missing one stops the app with its name) ─────────────── */
+  function Missing(path) { this.message = "componentProps." + path + " is not configured"; }
+  function need(path) {
+    var v = path.split(".").reduce(function (o, k) { return o == null ? undefined : o[k]; }, componentProps);
+    if (v === undefined || v === null) throw new Missing(path);
+    return v;
+  }
+  function t(key, vars) {
+    var s = need("strings")[key];
+    if (s === undefined) throw new Missing("strings." + key);
+    return String(s).replace(/\{(\w+)\}/g, function (_, k) { return vars && vars[k] != null ? vars[k] : ""; });
+  }
+  function icon(name) {
+    var d = need("icons")[name];
+    if (d === undefined) throw new Missing("icons." + name);
+    return '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + d + '"></path></svg>';
+  }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function $(s) { return document.querySelector(s); }
+
+  var LUT = {};
+  var S = {
+    token: null, user: null, scheme: null,
+    inbox: { loaded: false, loading: null, error: null, me: null, business: null, last: 0 },
+    threads: [], view: null, query: "", openId: null, mode: "reply", notice: null,
+    meta: {}, sleeping: false, timer: null, saveTimer: null, restored: false,
+    sentLocal: {}, // thread id -> replies sent from here that the server hasn't returned yet
+  };
+
+  /* ── 1. CSS props: theme tokens for the scheme in force ─────────────────────────────────────── */
+  function applyCSSProps() {
+    var scheme = S.scheme || need("theme.defaultScheme");
+    var tokens = need("theme." + scheme);
+    var root = document.documentElement;
+    Object.keys(tokens).forEach(function (k) { root.style.setProperty("--" + k, tokens[k]); });
+    var L = need("layout");
+    root.style.setProperty("--sidebar-w", L.sidebarWidth + "px");
+    root.style.setProperty("--list-w", L.listWidth + "px");
+    root.style.setProperty("--details-w", L.detailsWidth + "px");
+    root.classList.toggle("dark", scheme === "dark");
+  }
+
+  /* ── 2. LUT from props ───────────────────────────────────────────────────────────────────────── */
+  function buildLUT() {
+    LUT.api = need("config.gin_base");
+    LUT.kinds = need("config.kinds");
+    LUT.pollMs = need("config.poll_ms");
+    LUT.merchant = componentProps._viewer && componentProps._viewer.merchant_id ? String(componentProps._viewer.merchant_id) : null;
+    LUT.viewId = componentProps._viewer && componentProps._viewer.requested_view != null ? componentProps._viewer.requested_view : null;
+    LUT.statuses = need("statuses");
+    LUT.status = {};
+    LUT.statuses.forEach(function (s) { LUT.status[s.id] = s; });
+    LUT.priorities = need("priorities");
+    LUT.priority = {};
+    LUT.priorities.forEach(function (p) { LUT.priority[p.id] = p; });
+    LUT.views = need("views");
+    LUT.defaults = need("defaults");
+    LUT.snooze = need("snooze");
+    LUT.layout = need("layout");
+    LUT.palette = need("theme.avatars");
+  }
+
+  /* ── API (Bearer + the business, as the platform's apps send it) ─────────────────────────────── */
+  function api(method, path, body) {
+    var h = { "Content-Type": "application/json" };
+    if (S.token) h.Authorization = "Bearer " + S.token;
+    if (LUT.merchant) h["x-merchant-id"] = LUT.merchant;
+    return fetch(LUT.api + path, { method: method, headers: h, body: body ? JSON.stringify(body) : undefined }).then(function (r) {
+      return r.text().then(function (txt) {
+        var j = null;
+        try { j = JSON.parse(txt); } catch (e) {}
+        if (!r.ok) { var err = new Error((j && j.message) || ("HTTP " + r.status)); err.status = r.status; throw err; }
+        return j;
+      });
+    });
+  }
+  function post(msg) { try { window.parent.postMessage(msg, "*"); } catch (e) {} }
+
+  /* ── data ─────────────────────────────────────────────────────────────────────────────────── */
+  function metaOf(id) {
+    var m = S.meta[id] || {};
+    return {
+      status: LUT.status[m.status] ? m.status : LUT.defaults.status,
+      priority: LUT.priority[m.priority] ? m.priority : LUT.defaults.priority,
+      assignee: m.assignee || null,
+      tags: Array.isArray(m.tags) ? m.tags : [],
+      notes: Array.isArray(m.notes) ? m.notes : [],
+      snoozeUntil: m.snoozeUntil || 0,
+    };
+  }
+  function setMeta(id, patch) {
+    S.meta[id] = Object.assign({}, S.meta[id] || {}, patch);
+    saveState();
+  }
+  // A snooze that has run out reopens the conversation.
+  function wakeSnoozed() {
+    var now = Date.now(), changed = false;
+    Object.keys(S.meta).forEach(function (id) {
+      var m = S.meta[id];
+      if (m.status === "snoozed" && m.snoozeUntil && m.snoozeUntil <= now) { m.status = LUT.defaults.status; m.snoozeUntil = 0; changed = true; }
+    });
+    if (changed) saveState();
+  }
+  function load(reason) {
+    if (!S.token) { S.inbox.error = "signed-out"; render(); return Promise.resolve(); }
+    if (S.inbox.loading) return S.inbox.loading;
+    S.inbox.loading = api("GET", "/messages/inbox").then(function (j) {
+      S.inbox.loading = null;
+      S.inbox.loaded = true; S.inbox.error = null; S.inbox.last = Date.now();
+      S.inbox.me = j && j.me || null; S.inbox.business = j && j.business || null;
+      S.threads = ((j && j.threads) || []).filter(function (th) { return LUT.kinds.indexOf(th.kind) > -1; }).map(adopt);
+      wakeSnoozed();
+      render();
+      badge();
+    }).catch(function (e) {
+      S.inbox.loading = null;
+      S.inbox.error = e.status === 401 ? "signed-out" : (e.message || "failed");
+      render();
+    });
+    return S.inbox.loading;
+  }
+  function adopt(th) {
+    var msgs = (th.messages || []).map(function (m) {
+      return { id: m.id, out: !!m.out, text: m.text || "", ts: Number(m.ts) || 0, via: m.via || null, extra: m.extra || null, read: !!m.read };
+    });
+    // A reply sent from here stays on screen until the inbox returns it.
+    var id = String(th.id), echoed = {};
+    msgs.forEach(function (m) { if (m.out) echoed[m.text] = true; });
+    S.sentLocal[id] = (S.sentLocal[id] || []).filter(function (m) { return !echoed[m.text]; });
+    msgs = msgs.concat(S.sentLocal[id]);
+    var first = msgs.filter(function (m) { return !m.out; })[0];
+    return {
+      id: String(th.id), kind: th.kind, name: th.name || "", email: (th.meta && th.meta.email) || th.sub || "",
+      phone: (th.meta && th.meta.phone) || "", page: (first && first.extra && first.extra.page) || "",
+      initials: th.initials || (th.name || "?").charAt(0).toUpperCase(), tint: th.tint || null,
+      ts: Number(th.time) || (msgs.length ? msgs[msgs.length - 1].ts : 0), unread: Number(th.unread) || 0,
+      pinned: !!th.pinned, muted: !!th.muted, hidden: !!th.hidden, canReply: !!th.can_reply && th.reply_via === "email",
+      messages: msgs,
+    };
+  }
+  function inView(th, view) {
+    var m = metaOf(th.id), f = view.filter;
+    if (f.hidden !== undefined && Boolean(th.hidden) !== f.hidden) return false;
+    if (f.status && f.status.indexOf(m.status) < 0) return false;
+    if (f.unread && !th.unread) return false;
+    if (f.pinned && !th.pinned) return false;
+    if (f.mine && m.assignee !== myId()) return false;
+    if (f.unassigned && m.assignee) return false;
+    return true;
+  }
+  function matches(th) {
+    if (!S.query) return true;
+    var q = S.query.toLowerCase();
+    return [th.name, th.email, th.phone, th.page].concat(th.messages.map(function (m) { return m.text; })).join(" ").toLowerCase().indexOf(q) > -1;
+  }
+  function visible() {
+    var view = currentView();
+    return S.threads.filter(function (th) { return inView(th, view) && matches(th); })
+      .sort(function (a, b) { return (b.pinned - a.pinned) || (b.ts - a.ts); });
+  }
+  function currentView() { return LUT.views.filter(function (v) { return v.id === S.view; })[0] || LUT.views[0]; }
+  function openThread() { return S.threads.filter(function (th) { return th.id === S.openId; })[0] || null; }
+  function myId() { return S.user ? String(S.user.user_id || S.user.id || S.user.username || "") : ""; }
+  function myName() { return S.user ? (S.user.display_name || S.user.username || t("you")) : t("you"); }
+  function badge() {
+    var n = S.threads.filter(function (th) { return th.unread && !th.muted && !th.hidden && metaOf(th.id).status === LUT.defaults.status; }).length;
+    post({ gin: "messages:unread", n: n });
+  }
+
+  /* ── state the shell keeps for this account ──────────────────────────────────────────────────── */
+  function saveState() {
+    clearTimeout(S.saveTimer);
+    S.saveTimer = setTimeout(function () { post({ gin: "app:state", state: { meta: S.meta, view: S.view, open: S.openId } }); }, 250);
+  }
+
+  /* ── formatting ─────────────────────────────────────────────────────────────────────────────── */
+  function when(ts) {
+    if (!ts) return "";
+    var d = new Date(ts), now = new Date(), locale = need("formats.locale");
+    if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit" });
+    var y = new Date(now); y.setDate(now.getDate() - 1);
+    if (d.toDateString() === y.toDateString()) return t("yesterday");
+    if (now - d < 6 * 864e5) return d.toLocaleDateString(locale, { weekday: "short" });
+    return d.toLocaleDateString(locale, { month: "short", day: "numeric" });
+  }
+  function full(ts) { return ts ? new Date(ts).toLocaleString(need("formats.locale"), { dateStyle: "medium", timeStyle: "short" }) : ""; }
+  function avatarColor(th) { return LUT.palette[th.tint] || LUT.palette[Object.keys(LUT.palette)[th.name.length % Object.keys(LUT.palette).length]]; }
+  function subjectOf(th) { return th.page ? t("subjectPage", { page: th.page }) : t("subjectDefault", { business: (S.inbox.business && S.inbox.business.name) || "" }); }
+
+  /* ── render ─────────────────────────────────────────────────────────────────────────────────── */
+  function render() {
+    renderSidebar();
+    renderList();
+    renderThread();
+    renderDetails();
+  }
+  function renderSidebar() {
+    var side = $("#sidebar");
+    var html = '<div class="side-h">' + esc(t("viewsHeading")) + "</div>";
+    LUT.views.forEach(function (v) {
+      var n = S.threads.filter(function (th) { return inView(th, v); }).length;
+      html += '<button type="button" class="view" data-view="' + esc(v.id) + '" aria-current="' + (v.id === currentView().id) + '">' + icon(v.icon) + "<span>" + esc(v.label) + '</span><span class="n">' + (n || "") + "</span></button>";
+    });
+    side.innerHTML = html;
+  }
+  function renderList() {
+    var view = currentView();
+    $("#list-title").textContent = view.label;
+    var rows = $("#rows"), list = visible();
+    $("#list-count").textContent = S.inbox.loaded ? t("count", { n: list.length }) : "";
+    if (!S.inbox.loaded || S.inbox.error) {
+      rows.innerHTML = '<div class="state">' + esc(S.inbox.error === "signed-out" ? t("signedOut") : S.inbox.error ? t("loadFailed", { reason: S.inbox.error }) : t("loading")) + "</div>";
+      return;
+    }
+    if (!list.length) { rows.innerHTML = '<div class="state">' + esc(S.query ? t("noMatches") : t("emptyView")) + "</div>"; return; }
+    rows.innerHTML = list.map(function (th) {
+      var m = metaOf(th.id), last = th.messages[th.messages.length - 1];
+      var chips = [];
+      if (m.status !== LUT.defaults.status) chips.push('<span class="chip" data-tone="' + esc(LUT.status[m.status].tone) + '">' + esc(LUT.status[m.status].label) + "</span>");
+      if (m.priority !== LUT.defaults.priority) chips.push('<span class="chip" data-tone="' + esc(LUT.priority[m.priority].tone) + '">' + esc(LUT.priority[m.priority].label) + "</span>");
+      m.tags.forEach(function (tg) { chips.push('<span class="chip">' + esc(tg) + "</span>"); });
+      return '<button type="button" class="row" role="option" data-id="' + esc(th.id) + '" data-unread="' + Boolean(th.unread) + '" aria-selected="' + (th.id === S.openId) + '">' +
+        '<span class="dot" aria-hidden="true"></span>' +
+        '<span class="who">' + esc(th.name || th.email) + "</span>" +
+        '<span class="meta">' + (th.pinned ? icon("pin") : "") + (th.muted ? icon("bellOff") : "") + esc(when(th.ts)) + "</span>" +
+        '<span class="subj">' + esc(subjectOf(th)) + "</span>" +
+        '<span class="prev">' + esc(last ? (last.out ? t("youPrefix") : "") + last.text : "") + "</span>" +
+        (chips.length ? '<span class="chips">' + chips.join("") + "</span>" : "") +
+        "</button>";
+    }).join("");
+  }
+  function renderThread() {
+    var th = openThread(), box = $("#thread");
+    if (!th) {
+      box.innerHTML = '<div class="empty">' + icon("mail") + "<p>" + esc(t("pickOne")) + "</p></div>";
+      return;
+    }
+    var m = metaOf(th.id);
+    var statusOpts = LUT.statuses.map(function (s) { return '<option value="' + esc(s.id) + '"' + (s.id === m.status ? " selected" : "") + ">" + esc(s.label) + "</option>"; }).join("");
+    var msgs = th.messages.map(function (msg) { return { k: "msg", ts: msg.ts, msg: msg }; })
+      .concat(m.notes.map(function (n) { return { k: "note", ts: n.ts, note: n }; }))
+      .sort(function (a, b) { return a.ts - b.ts; });
+    var head =
+      '<div class="thead">' +
+        '<button class="ib" type="button" id="btn-back" aria-label="' + esc(t("back")) + '"' + (LUT.size === "phone" ? "" : " hidden") + ">" + icon("back") + "</button>" +
+        '<div class="grow"><div class="title">' + esc(th.name || th.email) + '</div><div class="email">' + esc(th.email) + "</div></div>" +
+        '<label class="sr" for="th-status">' + esc(t("status")) + '</label><select class="sel" id="th-status">' + statusOpts + "</select>" +
+        '<button class="ib" type="button" data-act="snooze" aria-label="' + esc(t("snooze")) + '" title="' + esc(t("snooze")) + '">' + icon("clock") + "</button>" +
+        '<button class="ib" type="button" data-act="pin" aria-pressed="' + th.pinned + '" aria-label="' + esc(th.pinned ? t("unpin") : t("pin")) + '" title="' + esc(th.pinned ? t("unpin") : t("pin")) + '">' + icon("pin") + "</button>" +
+        '<button class="ib" type="button" data-act="mute" aria-pressed="' + th.muted + '" aria-label="' + esc(th.muted ? t("unmute") : t("mute")) + '" title="' + esc(th.muted ? t("unmute") : t("mute")) + '">' + icon("bellOff") + "</button>" +
+        '<button class="ib" type="button" data-act="archive" aria-label="' + esc(th.hidden ? t("unarchive") : t("archive")) + '" title="' + esc(th.hidden ? t("unarchive") : t("archive")) + '">' + icon("archive") + "</button>" +
+        '<button class="ib" type="button" data-act="details" aria-pressed="' + (LUT.detailsOn) + '" aria-label="' + esc(t("details")) + '" title="' + esc(t("details")) + '"' + (LUT.size === "wide" ? "" : " hidden") + ">" + icon("panel") + "</button>" +
+      "</div>";
+    var body = '<div id="msgs">' + msgs.map(function (it) {
+      if (it.k === "note") return '<div class="msg note"><div class="mh"><b>' + esc(it.note.by) + "</b><span>" + esc(t("privateNote")) + " · " + esc(full(it.ts)) + '</span></div><div class="mb">' + esc(it.note.text) + "</div></div>";
+      var msg = it.msg, x = msg.extra, extra = "";
+      if (x && (x.phone || x.business || x.page)) {
+        extra = '<div class="mx">' + (x.business ? "<div>" + esc(t("formBusiness")) + ": " + esc(x.business) + "</div>" : "") + (x.phone ? "<div>" + esc(t("formPhone")) + ": " + esc(x.phone) + "</div>" : "") + (x.page ? "<div>" + esc(t("formPage")) + ": " + esc(x.page) + "</div>" : "") + "</div>";
+      }
+      return '<div class="msg' + (msg.out ? " out" : "") + '"><div class="mh"><b>' + esc(msg.out ? t("youSent") : th.name || th.email) + "</b><span>" + esc(full(msg.ts)) + (msg.via === "email" ? " · " + esc(t("viaEmail")) : "") + '</span></div><div class="mb">' + esc(msg.text) + "</div>" + extra + "</div>";
+    }).join("") + "</div>";
+    var canReply = th.canReply;
+    var composer =
+      (S.notice ? '<div class="notice" role="alert">' + esc(S.notice) + "</div>" : "") +
+      '<div id="composer" data-mode="' + S.mode + '">' +
+        '<div class="tabs" role="tablist">' +
+          '<button type="button" class="tab" role="tab" data-mode="reply" aria-selected="' + (S.mode === "reply") + '"' + (canReply ? "" : " disabled") + ">" + esc(t("reply")) + "</button>" +
+          '<button type="button" class="tab" role="tab" data-mode="note" aria-selected="' + (S.mode === "note") + '">' + esc(t("privateNote")) + "</button>" +
+        "</div>" +
+        '<div class="field"><label for="subject">' + esc(t("subject")) + '</label><input id="subject" value="' + esc(t("replySubject", { subject: subjectOf(th) })) + '"></div>' +
+        '<label class="sr" for="text">' + esc(S.mode === "note" ? t("privateNote") : t("reply")) + "</label>" +
+        '<textarea id="text" placeholder="' + esc(S.mode === "note" ? t("notePlaceholder") : canReply ? t("replyPlaceholder", { email: th.email }) : t("cannotReply")) + '"' + (S.mode === "reply" && !canReply ? " disabled" : "") + "></textarea>" +
+        '<div class="crow"><span class="hint grow">' + esc(S.mode === "note" ? t("noteHint") : t("replyHint")) + '</span><button type="button" class="btn" id="btn-send" disabled>' + esc(S.mode === "note" ? t("addNote") : t("send")) + "</button></div>" +
+      "</div>";
+    box.innerHTML = head + body + composer;
+    var list = $("#msgs"); list.scrollTop = list.scrollHeight;
+  }
+  function renderDetails() {
+    var th = openThread(), box = $("#details");
+    if (!th) { box.innerHTML = ""; return; }
+    var m = metaOf(th.id);
+    var opt = function (arr, cur) { return arr.map(function (o) { return '<option value="' + esc(o.id) + '"' + (o.id === cur ? " selected" : "") + ">" + esc(o.label) + "</option>"; }).join(""); };
+    var me = myId();
+    box.innerHTML =
+      "<h2>" + esc(t("contact")) + "</h2>" +
+      '<dl class="kv"><dt>' + esc(t("name")) + "</dt><dd>" + esc(th.name || "—") + "</dd><dt>" + esc(t("email")) + "</dt><dd>" + esc(th.email || "—") + "</dd>" +
+      (th.phone ? "<dt>" + esc(t("formPhone")) + "</dt><dd>" + esc(th.phone) + "</dd>" : "") +
+      (th.page ? "<dt>" + esc(t("formPage")) + "</dt><dd>" + esc(th.page) + "</dd>" : "") + "</dl>" +
+      "<h2>" + esc(t("conversation")) + "</h2>" +
+      '<dl class="kv">' +
+        '<dt><label for="d-status">' + esc(t("status")) + '</label></dt><dd><select class="sel" id="d-status">' + opt(LUT.statuses, m.status) + "</select></dd>" +
+        '<dt><label for="d-priority">' + esc(t("priority")) + '</label></dt><dd><select class="sel" id="d-priority">' + opt(LUT.priorities, m.priority) + "</select></dd>" +
+        '<dt><label for="d-assignee">' + esc(t("assignee")) + '</label></dt><dd><select class="sel" id="d-assignee"><option value="">' + esc(t("unassigned")) + "</option>" + (me ? '<option value="' + esc(me) + '"' + (m.assignee === me ? " selected" : "") + ">" + esc(myName()) + "</option>" : "") + (m.assignee && m.assignee !== me ? '<option value="' + esc(m.assignee) + '" selected>' + esc(m.assignee) + "</option>" : "") + "</select></dd>" +
+        (m.status === "snoozed" && m.snoozeUntil ? "<dt>" + esc(t("until")) + "</dt><dd>" + esc(full(m.snoozeUntil)) + "</dd>" : "") +
+        "<dt>" + esc(t("started")) + "</dt><dd>" + esc(full(th.messages.length ? th.messages[0].ts : th.ts)) + "</dd>" +
+      "</dl>" +
+      "<h2>" + esc(t("tags")) + "</h2>" +
+      '<div class="tags">' + m.tags.map(function (tg) { return '<span class="tag">' + esc(tg) + '<button type="button" data-untag="' + esc(tg) + '" aria-label="' + esc(t("removeTag", { tag: tg })) + '">×</button></span>'; }).join("") + "</div>" +
+      '<label class="sr" for="d-tag">' + esc(t("addTag")) + '</label><input id="d-tag" class="taginput" placeholder="' + esc(t("addTag")) + '">' +
+      '<p class="local">' + esc(t("localNote")) + "</p>";
+  }
+
+  /* ── layout follows the frame (a window on the desktop, a pane on the phone) ─────────────────── */
+  function size() {
+    var w = window.innerWidth, L = LUT.layout;
+    LUT.size = w < L.phoneBelow ? "phone" : w < L.narrowBelow ? "narrow" : "wide";
+    var app = $("#app");
+    app.dataset.size = LUT.size;
+    app.dataset.details = LUT.size === "wide" && LUT.detailsOn ? "on" : "off";
+    app.dataset.pane = LUT.size === "phone" && S.openId ? "thread" : "list";
+  }
+
+  /* ── actions ─────────────────────────────────────────────────────────────────────────────────── */
+  function open(id, quiet) {
+    S.openId = id; S.mode = "reply"; S.notice = null;
+    var th = openThread();
+    if (th && !th.canReply) S.mode = "note";
+    size(); render(); saveState();
+    if (!quiet) post({ gin: "route:changed", route: "/c/" + encodeURIComponent(id) });
+    if (th && th.unread) {
+      th.unread = 0; renderList(); renderSidebar(); badge();
+      api("POST", "/messages/state", { args: { op: "read", thread_id: th.id } }).catch(function () {});
+    }
+  }
+  function state(op, on) {
+    var th = openThread(); if (!th) return;
+    var key = op === "hide" ? "hidden" : op === "pin" ? "pinned" : "muted";
+    th[key] = on; render(); badge();
+    api("POST", "/messages/state", { args: { op: op, thread_id: th.id, on: on } }).catch(function (e) { th[key] = !on; render(); toast(t("actionFailed", { reason: e.message })); });
+  }
+  function send() {
+    var th = openThread(); if (!th) return;
+    var text = $("#text").value.trim(); if (!text) return;
+    if (S.mode === "note") {
+      var notes = metaOf(th.id).notes.concat([{ text: text, ts: Date.now(), by: myName() }]);
+      setMeta(th.id, { notes: notes });
+      renderThread(); toast(t("noteAdded"));
+      return;
+    }
+    var subject = $("#subject").value.trim();
+    var btn = $("#btn-send"); btn.disabled = true; btn.textContent = t("sending");
+    api("POST", "/messages/send", { args: { kind: "email", thread_id: th.id, email: th.email, subject: subject, text: text } }).then(function (j) {
+      var sent = j && j.message;
+      var local = { id: sent && sent.id || "local-" + Date.now(), out: true, text: text, ts: Number(sent && sent.ts) || Date.now(), via: "email", extra: null };
+      th.messages.push(local);
+      (S.sentLocal[th.id] = S.sentLocal[th.id] || []).push(local);
+      th.ts = Date.now(); S.notice = null;
+      render(); toast(t("sent", { email: th.email }));
+      load("sent");
+    }).catch(function (e) {
+      S.notice = e.status === 403 ? t("sendForbidden") : t("sendFailed", { reason: e.message });
+      renderThread();
+      $("#text").value = text;
+    });
+  }
+  function toast(msg) {
+    var el = $("#toast"); el.textContent = msg; el.setAttribute("data-on", "");
+    clearTimeout(toast._t); toast._t = setTimeout(function () { el.removeAttribute("data-on"); }, 2600);
+  }
+
+  function wire() {
+    $("#btn-refresh").innerHTML = icon("refresh");
+    $("#btn-refresh").setAttribute("aria-label", t("refresh"));
+    $("#search-icon").innerHTML = icon("search");
+    $("#search-label").textContent = t("search");
+    $("#search").placeholder = t("search");
+    document.addEventListener("click", function (e) {
+      var v = e.target.closest("[data-view]");
+      if (v) { S.view = v.dataset.view; saveState(); render(); return; }
+      var row = e.target.closest(".row");
+      if (row) { open(row.dataset.id); return; }
+      var act = e.target.closest("[data-act]");
+      if (act) {
+        var th = openThread(), a = act.dataset.act;
+        if (a === "pin") state("pin", !th.pinned);
+        if (a === "mute") state("mute", !th.muted);
+        if (a === "archive") state("hide", !th.hidden);
+        if (a === "details") { LUT.detailsOn = !LUT.detailsOn; size(); renderThread(); }
+        if (a === "snooze") snoozeMenu(act);
+        return;
+      }
+      var tab = e.target.closest(".tab");
+      if (tab && !tab.disabled) { S.mode = tab.dataset.mode; renderThread(); $("#text").focus(); return; }
+      var un = e.target.closest("[data-untag]");
+      if (un) { var th2 = openThread(); setMeta(th2.id, { tags: metaOf(th2.id).tags.filter(function (x) { return x !== un.dataset.untag; }) }); render(); return; }
+      if (e.target.closest("#btn-send")) { send(); return; }
+      if (e.target.closest("#btn-back")) { S.openId = null; size(); render(); saveState(); return; }
+      if (e.target.closest("#btn-refresh")) { load("manual"); return; }
+      var so = e.target.closest("[data-snooze]");
+      if (so) { snooze(Number(so.dataset.snooze)); return; }
+    });
+    document.addEventListener("change", function (e) {
+      var th = openThread(); if (!th) return;
+      if (e.target.id === "th-status" || e.target.id === "d-status") { setMeta(th.id, { status: e.target.value, snoozeUntil: 0 }); render(); badge(); }
+      if (e.target.id === "d-priority") { setMeta(th.id, { priority: e.target.value }); render(); }
+      if (e.target.id === "d-assignee") { setMeta(th.id, { assignee: e.target.value || null }); render(); }
+    });
+    document.addEventListener("input", function (e) {
+      if (e.target.id === "search") { S.query = e.target.value.trim(); renderList(); }
+      if (e.target.id === "text") { var b = $("#btn-send"); if (b) b.disabled = !e.target.value.trim(); }
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.target.id === "d-tag" && e.key === "Enter") {
+        var th = openThread(), tag = e.target.value.trim();
+        if (th && tag && metaOf(th.id).tags.indexOf(tag) < 0) { setMeta(th.id, { tags: metaOf(th.id).tags.concat([tag]) }); render(); $("#d-tag").focus(); }
+        return;
+      }
+      if (e.target.id === "text" && e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); send(); return; }
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+      var list = visible(), i = list.findIndex(function (th) { return th.id === S.openId; });
+      if (e.key === "j" || e.key === "ArrowDown") { if (list[i + 1]) { e.preventDefault(); open(list[i + 1].id); } }
+      if (e.key === "k" || e.key === "ArrowUp") { if (i > 0) { e.preventDefault(); open(list[i - 1].id); } }
+      if (e.key === "e" && S.openId) state("hide", !openThread().hidden);
+      if (e.key === "r" && S.openId) { var tx = $("#text"); if (tx) { e.preventDefault(); tx.focus(); } }
+      if (e.key === "/") { e.preventDefault(); $("#search").focus(); }
+    });
+    window.addEventListener("resize", function () { size(); renderThread(); });
+  }
+  function snoozeMenu(anchor) {
+    var html = LUT.snooze.map(function (o) { return '<button type="button" class="tab" data-snooze="' + o.hours + '">' + esc(o.label) + "</button>"; }).join("");
+    var box = document.createElement("div");
+    box.className = "tabs"; box.style.cssText = "padding:6px 10px;border-bottom:1px solid var(--line);flex-wrap:wrap";
+    box.innerHTML = '<span class="hint" style="align-self:center;margin-right:6px">' + esc(t("snoozeUntil")) + "</span>" + html;
+    var head = anchor.closest(".thead");
+    if (head.nextElementSibling && head.nextElementSibling.classList.contains("tabs")) { head.nextElementSibling.remove(); return; }
+    head.after(box);
+  }
+  function snooze(hours) {
+    var th = openThread(); if (!th) return;
+    setMeta(th.id, { status: "snoozed", snoozeUntil: Date.now() + hours * 3600e3 });
+    render(); badge(); toast(t("snoozed"));
+  }
+
+  /* ── the shell ───────────────────────────────────────────────────────────────────────────────── */
+  function poll() {
+    clearInterval(S.timer);
+    S.timer = setInterval(function () { if (!S.sleeping && Date.now() - S.inbox.last > LUT.pollMs * 0.8) load("tick"); }, LUT.pollMs);
+  }
+  window.addEventListener("message", function (e) {
+    var d = e.data; if (!d || typeof d.gin !== "string") return;
+    if (d.scheme && d.scheme !== S.scheme) { S.scheme = d.scheme; applyCSSProps(); }
+    if (d.gin === "app:restore") {
+      S.token = (d.user && (d.user.auth_token || d.user.authToken)) || null;
+      S.user = d.user || null;
+      if (!S.restored && d.state && typeof d.state === "object") {
+        S.meta = d.state.meta || {}; S.view = d.state.view || S.view; S.openId = d.state.open || null;
+      }
+      S.restored = true;
+      size(); render(); load("restore"); poll();
+    } else if (d.gin === "auth:user") {
+      if (d.authed === false) { S.token = null; S.user = null; S.threads = []; S.inbox.loaded = false; S.inbox.error = "signed-out"; render(); }
+      else post({ gin: "app:ready", view_id: LUT.viewId, weight: "dom" });
+    } else if (d.gin === "route:set" && /^\/c\//.test(d.route || "")) {
+      open(decodeURIComponent(d.route.slice(3)), true);
+    } else if (d.gin === "shell:sleep") { S.sleeping = true; }
+    else if (d.gin === "shell:wake") { S.sleeping = false; if (Date.now() - S.inbox.last > LUT.pollMs / 2) load("wake"); }
+    else if (d.gin === "app:event" && d.name === "messages:refresh") { load("event"); }
+  });
+
+  /* ── boot ────────────────────────────────────────────────────────────────────────────────────── */
+  function boot() {
+    document.title = t("title");
+    LUT.detailsOn = true;
+    S.view = LUT.views[0].id;
+    wire();
+    $("#app").hidden = false;
+    size(); render();
+    post({ gin: "app:ready", view_id: LUT.viewId, weight: "dom" });
+  }
+
+  function init() {
+    try {
+      if (!componentProps || !Object.keys(componentProps).length) throw new Missing("* (props were not injected)");
+      applyCSSProps();
+      buildLUT();
+      boot();
+    } catch (e) {
+      if (!(e instanceof Missing)) throw e;
+      var box = document.createElement("pre");
+      box.id = "fatal"; box.setAttribute("role", "alert");
+      box.textContent = e.message + ".\nMail renders only from its componentProps (record props injected by the viewer).";
+      document.body.replaceChildren(box);
+    }
+  }
+  init();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,331 @@
+{
+ "config": {
+  "gin_base": "https://api.1ovr1.com/api:9yDRTI1I",
+  "kinds": [
+   "contact"
+  ],
+  "poll_ms": 30000
+ },
+ "formats": {
+  "locale": "en-US"
+ },
+ "defaults": {
+  "status": "open",
+  "priority": "none"
+ },
+ "statuses": [
+  {
+   "id": "open",
+   "label": "Open",
+   "tone": "ok"
+  },
+  {
+   "id": "snoozed",
+   "label": "Snoozed",
+   "tone": "warn"
+  },
+  {
+   "id": "resolved",
+   "label": "Resolved",
+   "tone": "ok"
+  },
+  {
+   "id": "closed",
+   "label": "Closed",
+   "tone": ""
+  }
+ ],
+ "priorities": [
+  {
+   "id": "none",
+   "label": "No priority",
+   "tone": ""
+  },
+  {
+   "id": "low",
+   "label": "Low",
+   "tone": ""
+  },
+  {
+   "id": "medium",
+   "label": "Medium",
+   "tone": "warn"
+  },
+  {
+   "id": "high",
+   "label": "High",
+   "tone": "bad"
+  },
+  {
+   "id": "urgent",
+   "label": "Urgent",
+   "tone": "bad"
+  }
+ ],
+ "views": [
+  {
+   "id": "inbox",
+   "label": "Inbox",
+   "icon": "inbox",
+   "filter": {
+    "hidden": false,
+    "status": [
+     "open"
+    ]
+   }
+  },
+  {
+   "id": "mine",
+   "label": "Assigned to me",
+   "icon": "user",
+   "filter": {
+    "hidden": false,
+    "status": [
+     "open",
+     "snoozed"
+    ],
+    "mine": true
+   }
+  },
+  {
+   "id": "unassigned",
+   "label": "Unassigned",
+   "icon": "users",
+   "filter": {
+    "hidden": false,
+    "status": [
+     "open"
+    ],
+    "unassigned": true
+   }
+  },
+  {
+   "id": "unread",
+   "label": "Unread",
+   "icon": "dotCircle",
+   "filter": {
+    "hidden": false,
+    "unread": true
+   }
+  },
+  {
+   "id": "pinned",
+   "label": "Pinned",
+   "icon": "pin",
+   "filter": {
+    "hidden": false,
+    "pinned": true
+   }
+  },
+  {
+   "id": "snoozed",
+   "label": "Snoozed",
+   "icon": "clock",
+   "filter": {
+    "hidden": false,
+    "status": [
+     "snoozed"
+    ]
+   }
+  },
+  {
+   "id": "done",
+   "label": "Resolved",
+   "icon": "check",
+   "filter": {
+    "hidden": false,
+    "status": [
+     "resolved",
+     "closed"
+    ]
+   }
+  },
+  {
+   "id": "archived",
+   "label": "Archived",
+   "icon": "archive",
+   "filter": {
+    "hidden": true
+   }
+  }
+ ],
+ "snooze": [
+  {
+   "label": "1 hour",
+   "hours": 1
+  },
+  {
+   "label": "Tomorrow",
+   "hours": 24
+  },
+  {
+   "label": "3 days",
+   "hours": 72
+  },
+  {
+   "label": "Next week",
+   "hours": 168
+  }
+ ],
+ "layout": {
+  "sidebarWidth": 196,
+  "listWidth": 300,
+  "detailsWidth": 256,
+  "narrowBelow": 980,
+  "phoneBelow": 600
+ },
+ "icons": {
+  "mail": "M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z M22 6l-10 7L2 6",
+  "inbox": "M22 12h-6l-2 3h-4l-2-3H2 M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z",
+  "user": "M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2 M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z",
+  "users": "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z M22 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75",
+  "dotCircle": "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M12 11a1 1 0 1 0 0 2 1 1 0 0 0 0-2z",
+  "pin": "M12 17v5 M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z",
+  "clock": "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z M12 6v6l4 2",
+  "check": "M22 11.08V12a10 10 0 1 1-5.93-9.14 M22 4 12 14.01l-3-3",
+  "archive": "M3 3h18v5H3z M5 8v11a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8 M10 12h4",
+  "bellOff": "M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5 M17 17H3s3-2 3-9a4.67 4.67 0 0 1 .3-1.7 M10.3 21a1.94 1.94 0 0 0 3.4 0 M2 2l20 20",
+  "refresh": "M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8 M21 3v5h-5 M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16 M8 16H3v5",
+  "search": "M11 3a8 8 0 1 0 0 16 8 8 0 0 0 0-16z M21 21l-4.3-4.3",
+  "back": "M15 18l-6-6 6-6",
+  "panel": "M3 3h18v18H3z M15 3v18"
+ },
+ "strings": {
+  "title": "Mail",
+  "viewsHeading": "Mailboxes",
+  "count": "{n}",
+  "search": "Search mail",
+  "refresh": "Refresh",
+  "loading": "Loading…",
+  "signedOut": "Sign in to see your business's mail.",
+  "loadFailed": "Couldn't load mail ({reason}). It will try again.",
+  "emptyView": "Nothing here.",
+  "noMatches": "No conversations match.",
+  "pickOne": "Select a conversation to read it.",
+  "yesterday": "Yesterday",
+  "you": "You",
+  "youPrefix": "You: ",
+  "youSent": "You",
+  "subjectPage": "Message from {page}",
+  "subjectDefault": "Message to {business}",
+  "replySubject": "Re: {subject}",
+  "back": "Back",
+  "status": "Status",
+  "priority": "Priority",
+  "assignee": "Assignee",
+  "unassigned": "Unassigned",
+  "snooze": "Snooze",
+  "snoozeUntil": "Snooze until",
+  "snoozed": "Snoozed",
+  "until": "Until",
+  "pin": "Pin",
+  "unpin": "Unpin",
+  "mute": "Mute",
+  "unmute": "Unmute",
+  "archive": "Archive",
+  "unarchive": "Move to Inbox",
+  "details": "Details",
+  "privateNote": "Private note",
+  "reply": "Reply",
+  "subject": "Subject",
+  "replyPlaceholder": "Reply to {email}…",
+  "notePlaceholder": "Only your team sees notes…",
+  "cannotReply": "This conversation can't be replied to by email.",
+  "replyHint": "Sent by email from your business · ⌘↵ to send",
+  "noteHint": "Not sent to the customer",
+  "send": "Send",
+  "sending": "Sending…",
+  "addNote": "Add note",
+  "noteAdded": "Note added",
+  "sent": "Sent to {email}",
+  "sendFailed": "Couldn't send ({reason}).",
+  "sendForbidden": "Only the business's owner or an admin can send email.",
+  "actionFailed": "That didn't work ({reason}).",
+  "viaEmail": "by email",
+  "formBusiness": "Business",
+  "formPhone": "Phone",
+  "formPage": "Page",
+  "contact": "Contact",
+  "name": "Name",
+  "email": "Email",
+  "conversation": "Conversation",
+  "started": "Started",
+  "tags": "Tags",
+  "addTag": "Add a tag and press Return",
+  "removeTag": "Remove tag {tag}",
+  "localNote": "Status, priority, assignee, tags and notes are saved to your account. They aren't shared with your team yet."
+ },
+ "theme": {
+  "defaultScheme": "light",
+  "light": {
+   "font": "-apple-system, BlinkMacSystemFont, \"SF Pro Text\", \"Segoe UI\", Inter, system-ui, sans-serif",
+   "bg": "#ffffff",
+   "panel": "#f5f5f7",
+   "card": "#ffffff",
+   "input": "#f2f2f5",
+   "line": "#e3e3e8",
+   "line-soft": "#f0f0f3",
+   "text": "#1d1d1f",
+   "muted": "#6e6e73",
+   "hover": "rgba(0,0,0,.045)",
+   "selected": "#0a84ff",
+   "selected-text": "#ffffff",
+   "selected-sub": "rgba(255,255,255,.82)",
+   "accent": "#0a84ff",
+   "accent-text": "#ffffff",
+   "out": "#eef5ff",
+   "out-line": "#cfe2ff",
+   "note": "#fff7e6",
+   "note-line": "#f2d7a1",
+   "chip": "#ececf1",
+   "chip-text": "#3a3a3c",
+   "warn": "#9a5800",
+   "warn-bg": "#fff1dc",
+   "ok": "#1e7438",
+   "ok-bg": "#e2f4e7",
+   "bad": "#b42318",
+   "bad-bg": "#fde6e3",
+   "toast": "rgba(29,29,31,.92)",
+   "toast-text": "#ffffff",
+   "chevron": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236e6e73' stroke-width='1.5'/%3E%3C/svg%3E\")"
+  },
+  "dark": {
+   "font": "-apple-system, BlinkMacSystemFont, \"SF Pro Text\", \"Segoe UI\", Inter, system-ui, sans-serif",
+   "bg": "#1e1e20",
+   "panel": "#252528",
+   "card": "#2a2a2d",
+   "input": "#2f2f33",
+   "line": "#38383c",
+   "line-soft": "#2c2c30",
+   "text": "#f2f2f4",
+   "muted": "#9c9ca3",
+   "hover": "rgba(255,255,255,.06)",
+   "selected": "#0a84ff",
+   "selected-text": "#ffffff",
+   "selected-sub": "rgba(255,255,255,.82)",
+   "accent": "#3b9bff",
+   "accent-text": "#ffffff",
+   "out": "#18304d",
+   "out-line": "#24476f",
+   "note": "#3a2e17",
+   "note-line": "#5c4720",
+   "chip": "#36363b",
+   "chip-text": "#e3e3e8",
+   "warn": "#f2b45c",
+   "warn-bg": "#3b2a12",
+   "ok": "#6fd38c",
+   "ok-bg": "#173323",
+   "bad": "#ff8a7d",
+   "bad-bg": "#3d1a17",
+   "toast": "rgba(242,242,244,.94)",
+   "toast-text": "#1d1d1f",
+   "chevron": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239c9ca3' stroke-width='1.5'/%3E%3C/svg%3E\")"
+  },
+  "avatars": {
+   "blue": "#6b9fd4",
+   "green": "#4caf72",
+   "warm": "#e8884a",
+   "plum": "#a78bda"
+  }
+ }
+}

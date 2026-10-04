@@ -165,6 +165,113 @@
      "read": true
     }
    ]
+  },
+  {
+   "id": "contact:41:a1",
+   "kind": "contact",
+   "name": "Priya Raman",
+   "sub": "priya@example.com",
+   "initials": "PR",
+   "tint": "blue",
+   "time": 1790932560000,
+   "unread": 1,
+   "pinned": false,
+   "muted": false,
+   "known": false,
+   "group": false,
+   "can_reply": true,
+   "reply_via": "email",
+   "meta": {
+    "email": "priya@example.com"
+   },
+   "messages": [
+    {
+     "id": 201,
+     "out": false,
+     "text": "Hi! Can I move my Thursday appointment to Friday afternoon?",
+     "ts": 1790932560000,
+     "delivered": true,
+     "read": false,
+     "extra": {
+      "page": "/book"
+     }
+    }
+   ]
+  },
+  {
+   "id": "contact:41:a2",
+   "kind": "contact",
+   "name": "Sam Okafor",
+   "sub": "sam@example.com",
+   "initials": "SO",
+   "tint": "green",
+   "time": 1790916060000,
+   "unread": 0,
+   "pinned": false,
+   "muted": false,
+   "known": false,
+   "group": false,
+   "can_reply": true,
+   "reply_via": "email",
+   "meta": {
+    "email": "sam@example.com",
+    "phone": "555-0199"
+   },
+   "messages": [
+    {
+     "id": 202,
+     "out": false,
+     "text": "Do you sell gift cards?",
+     "ts": 1790912460000,
+     "delivered": true,
+     "read": false,
+     "extra": {
+      "phone": "555-0199",
+      "page": "/contact"
+     }
+    },
+    {
+     "id": 203,
+     "out": true,
+     "text": "We do! You can buy them at the front desk or online.",
+     "ts": 1790916060000,
+     "delivered": true,
+     "read": true,
+     "via": "email"
+    }
+   ]
+  },
+  {
+   "id": "contact:41:a3",
+   "kind": "contact",
+   "name": "Lena Fischer",
+   "sub": "lena@example.com",
+   "initials": "LF",
+   "tint": "warm",
+   "time": 1790674860000,
+   "unread": 1,
+   "pinned": false,
+   "muted": false,
+   "known": false,
+   "group": false,
+   "can_reply": true,
+   "reply_via": "email",
+   "meta": {
+    "email": "lena@example.com"
+   },
+   "messages": [
+    {
+     "id": 204,
+     "out": false,
+     "text": "Is there parking near the studio?",
+     "ts": 1790674860000,
+     "delivered": true,
+     "read": false,
+     "extra": {
+      "page": "/contact"
+     }
+    }
+   ]
   }
  ]
 }

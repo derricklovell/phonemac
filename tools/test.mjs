@@ -86,7 +86,14 @@ parent.postMessage({ gin: "app:ready", weight: "dom" }, "*");
 const TEST_TOKEN = "test-session-token"; // what the stand-in appshell restores; not a real credential
 const RECORD_74 = readFileSync(join(UCA_DIR, "props/fixtures/records/74.s01.html"), "utf8");
 const INBOX = readFileSync(join(UCA_DIR, "props/fixtures/inbox.json"), "utf8");
-const api = { inboxAuth: [], sends: [], viewer: [] };
+const api = { inboxAuth: [], sends: [], viewer: [], states: [] };
+// The Mail record (records/mail) as viewer_iframe serves it: its own props plus _viewer, injected.
+const MAIL_VIEW = "900";
+const mailRecord = () =>
+  readFileSync(join(UCA_DIR, "records/mail/mail.html"), "utf8").replace(
+    "var componentProps = {};",
+    `var componentProps = ${JSON.stringify({ ...JSON.parse(readFileSync(join(UCA_DIR, "records/mail/props.json"), "utf8")), _viewer: { merchant_id: 41, requested_view: 900 } })};`,
+  );
 async function mockApi(route) {
   const req = route.request();
   const url = new URL(req.url());
@@ -102,6 +109,7 @@ async function mockApi(route) {
   if (url.pathname === "/api:9yDRTI1I/viewer_iframe") {
     api.viewer.push({ view: url.searchParams.get("view"), auth: req.headers()["authorization"] || null, merchant: req.headers()["x-merchant-id"] || null });
     // Blank for record 74 (as the live endpoint is without a cookie); a small page for the sample tabs.
+    if (url.searchParams.get("view") === MAIL_VIEW) return route.fulfill({ status: 200, headers: { ...cors, "content-type": "text/html" }, body: mailRecord() });
     const body = ["54", "100"].includes(url.searchParams.get("view"))
       ? `<!doctype html><body><h1 id="tab">Tab ${url.searchParams.get("view")}</h1><script>parent.postMessage({gin:"app:ready",weight:"dom"},"*")</script></body>`
       : "";
@@ -121,6 +129,7 @@ async function mockApi(route) {
       api.sends.push(JSON.parse(req.postData() || "{}"));
       return json(200, { message: { id: 9000 + api.sends.length, ts: Date.now(), via: null } });
     }
+    if (url.pathname === "/api:9yDRTI1I/messages/state") api.states.push(JSON.parse(req.postData() || "{}").args);
     return json(200, {});
   }
   return route.fulfill({ status: 404, headers: cors, body: "" });
@@ -657,7 +666,7 @@ for (const width of [320, 360, 414]) {
 
   results.checks.push([
     `inside the appshell: Messages (record 74) gets the session — inbox loaded with its token (${threads} threads), Dock badge ${badge}, avatar ${avatar.trim()}`,
-    threads === 4 && badge === "4" && api.inboxAuth.includes(`Bearer ${TEST_TOKEN}`) && avatar.trim() === "SA",
+    threads === 7 && badge === "6" && api.inboxAuth.includes(`Bearer ${TEST_TOKEN}`) && avatar.trim() === "SA",
   ]);
   results.checks.push([`clicking inside the app's iframe brings its window to the front (z ${zBack} → ${zFront})`, zFront > zBack]);
   results.checks.push([`drag by title bar moves it (${r0.x},${r0.y} → ${r1.x},${r1.y}), size unchanged`, r1.x === r0.x - 200 && r1.y === r0.y + 90 && r1.w === r0.w && r1.h === r0.h]);
@@ -695,7 +704,7 @@ for (const width of [320, 360, 414]) {
   await rec.locator('.conv[data-id="101"]').waitFor({ timeout: 8000 });
   await p.waitForTimeout(300);
   await p.screenshot({ path: join(OUT, "preview-host.png") });
-  results.checks.push(["preview build: appshell stand-in → desktop → record 74 shows the sample inbox", (await rec.locator(".conv").count()) === 4]);
+  results.checks.push(["preview build: appshell stand-in → desktop → record 74 shows the sample inbox", (await rec.locator(".conv").count()) === 7]);
   await context.close();
 }
 
@@ -734,6 +743,97 @@ for (const width of [320, 360, 414]) {
     avatar === "SA" && api.inboxAuth.slice(inboxBefore).includes(`Bearer ${TEST_TOKEN}`) &&
       viewerCalls.some((c) => c.view === "74" && c.auth === `Bearer ${TEST_TOKEN}` && c.merchant === "41"),
   ]);
+  await context.close();
+}
+
+// Mail (records/mail): the business's email conversations as a shared support inbox, hosted as a
+// Record 50 tab with a signed-in session.
+{
+  const { context, p } = await page(1440);
+  await context.addCookies([{ name: "authToken", value: TEST_TOKEN, url: base }]);
+  const statesBefore = api.states.length;
+  const sendsBefore = api.sends.length;
+  await p.goto(`${base}/devshell.html#/notes`, { waitUntil: "networkidle" });
+  await p.locator('[data-dock-item="rec-900"]').click();
+  const mail = p.frameLocator('[data-window-id="rec-900"] iframe');
+  await mail.locator(".row").first().waitFor({ timeout: 8000 });
+  const names = await mail.locator(".row .who").allTextContents();
+  const narrow = await mail.locator("#app").getAttribute("data-size");
+  const badge0 = await p.locator('[data-dock-item="rec-900"] [data-badge]').textContent();
+
+  // Open Priya's email: marked read on the server, badge drops.
+  await mail.locator('.row[data-id="contact:41:a1"]').click();
+  await p.waitForTimeout(200);
+  const read = api.states.slice(statesBefore).find((a) => a.op === "read" && a.thread_id === "contact:41:a1");
+  const badge1 = await p.locator('[data-dock-item="rec-900"] [data-badge]').textContent();
+
+  // Reply by email (subject from the page the form was sent from).
+  await mail.locator("#text").fill("Friday at 2pm works — see you then!");
+  await mail.locator("#btn-send").click();
+  await p.waitForTimeout(300);
+  const sent = api.sends.slice(sendsBefore).at(-1)?.args;
+  const shown = await mail.locator(".msg.out .mb").allTextContents();
+
+  // A private note stays with the conversation, not sent.
+  await mail.locator('.tab[data-mode="note"]').click();
+  await mail.locator("#text").fill("Moved from Thursday; deposit already paid.");
+  await mail.locator("#btn-send").click();
+  const notes = await mail.locator(".msg.note").count();
+
+  // Full width: mailboxes and the details panel appear.
+  const tb = await p.locator('[data-window-id="rec-900"] [data-window-drag-handle]').boundingBox();
+  await p.mouse.dblclick(tb.x + tb.width / 2, tb.y + tb.height / 2);
+  await p.waitForTimeout(300);
+  const wide = await mail.locator("#app").getAttribute("data-size");
+  // Resolve it: it leaves the Inbox and shows under Resolved.
+  await mail.locator("#d-status").selectOption("resolved");
+  const inboxRows = await mail.locator(".row").count();
+  await mail.locator('[data-view="done"]').click();
+  const doneIds = await mail.locator(".row").evaluateAll((r) => r.map((x) => x.dataset.id));
+  // Archive Sam's conversation.
+  await mail.locator('[data-view="inbox"]').click();
+  await mail.locator('.row[data-id="contact:41:a2"]').click();
+  await mail.locator('[data-act="archive"]').click();
+  const hide = api.states.slice(statesBefore).find((a) => a.op === "hide" && a.thread_id === "contact:41:a2" && a.on === true);
+  await mail.locator('[data-view="done"]').click();
+  await mail.locator('.row[data-id="contact:41:a1"]').click();
+  await p.waitForTimeout(400);
+  await p.screenshot({ path: join(OUT, "mail-wide.png") });
+
+  // Reload: status, note and mailbox come back from the account's saved state.
+  await p.reload({ waitUntil: "networkidle" });
+  await p.locator('[data-dock-item="rec-900"]').click();
+  await mail.locator(".row").first().waitFor({ timeout: 8000 });
+  await p.waitForTimeout(300);
+  const restoredView = await mail.locator('.view[aria-current="true"]').getAttribute("data-view").catch(() => null);
+  const restoredNote = await mail.locator(".msg.note").count();
+
+  results.checks.push([`Mail lists the business's email conversations only (${names.length}: ${names.join(", ")}); Dock badge ${badge0}`, names.length === 4 && names.includes("Priya Raman") && !names.includes("Ava Thompson") && badge0 === "3"]);
+  results.checks.push([`opening a conversation marks it read on the server (badge ${badge0} → ${badge1})`, Boolean(read) && badge1 === "2"]);
+  results.checks.push([`reply goes out by email: ${JSON.stringify(sent)}`, sent?.kind === "email" && sent?.thread_id === "contact:41:a1" && sent?.email === "priya@example.com" && sent?.subject === "Re: Message from /book" && shown.includes("Friday at 2pm works — see you then!")]);
+  results.checks.push(["private note is added to the conversation, not sent", notes === 1 && api.sends.length === sendsBefore + 1]);
+  results.checks.push([`layout follows the window (${narrow} → ${wide}); resolve moves it out of the Inbox (${inboxRows} left) into Resolved`, narrow === "narrow" && wide === "wide" && inboxRows === 3 && doneIds.includes("contact:41:a1")]);
+  results.checks.push(["archive goes to messages/state (hide)", Boolean(hide)]);
+  results.checks.push([`status, mailbox and notes survive a reload (view ${restoredView}, note ${restoredNote})`, restoredView === "done" && restoredNote === 1]);
+  await context.close();
+}
+
+// Mail on a phone: one pane at a time, with a way back.
+{
+  const { context, p } = await page(390, PHONE);
+  await context.addCookies([{ name: "authToken", value: TEST_TOKEN, url: base }]);
+  await p.goto(`${base}/devshell.html#/notes`, { waitUntil: "networkidle" });
+  await p.locator('[data-phone-app="rec-900"]').click();
+  const mail = p.frameLocator('[data-phone-pane="rec-900"] iframe');
+  await mail.locator(".row").first().waitFor({ timeout: 8000 });
+  const size = await mail.locator("#app").getAttribute("data-size");
+  await mail.locator('.row[data-id="contact:41:a3"]').click();
+  const pane = await mail.locator("#app").getAttribute("data-pane");
+  await p.screenshot({ path: join(OUT, "mail-phone.png") });
+  await mail.locator("#btn-back").click();
+  const back = await mail.locator("#app").getAttribute("data-pane");
+  const overflow = await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+  results.checks.push([`Mail on a phone: ${size} layout, list → thread → back (${pane} → ${back}), no sideways scroll`, size === "phone" && pane === "thread" && back === "list" && !overflow]);
   await context.close();
 }
 

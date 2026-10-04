@@ -41,7 +41,8 @@ The tests use Playwright's Chromium. Cloud sessions have it preinstalled at `/op
 |---|---|
 | `src/` | the page: `head.html`, `body.html`, `styles/`, and the JS modules bundled into one script (`main.js` is the entry point; `apps/` holds hosted and ported apps) |
 | `src/lib/`, `src/styles/original/`, `assets/static/`, `props/data/` | pieces reused from the original Next.js site (see ATTRIBUTION.md) |
-| `props/fixtures/` | test data: sample notes, a sample inbox, and record snapshots |
+| `records/` | apps built as their own database records (Mail); see `records/README.md` |
+| `props/fixtures/` | test data: sample notes, a sample inbox, sample tabs, and read-only record snapshots (54, 74) |
 | `tools/` | build (`build.mjs`), test props (`make-props.mjs`), tests (`test.mjs`), live check, preview host |
 | `reference/` | screenshots of the original site that the pixel diffs compare against |
 

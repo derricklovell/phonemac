@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Schedule Services</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<style>
+/* ── tokens: neutral until the merchant's site theme arrives (applyTheme derives every token from it) — the token
+   names and the layout are the muaScheduler design system's (app/globals.css), so a merchant with that theme gets it 1:1 */
+:root{--background:#0b0b0c;--foreground:#e8e8e8;--card:#151517;--card-foreground:#e8e8e8;--popover:#131315;--popover-foreground:#e8e8e8;--primary:#e8e8e8;--primary-foreground:#0b0b0c;--secondary:#cfcfd2;--muted:#1a1a1c;--muted-foreground:#9a9a9f;--accent:#232326;--accent-foreground:#e8e8e8;--destructive:#e07a5f;--border:#2a2a2c;--input:#232326;--ring:#e8e8e8;--sidebar:#0f0f10;--sidebar-border:#2a2a2c;--radius:.25rem;--r-sm:0px;--r-md:2px;--r-lg:.25rem;--r-xl:.5rem;--font-sans:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;--font-serif:Georgia,serif}
+*,*::before,*::after{box-sizing:border-box;border:0 solid var(--border)}
+html{-webkit-text-size-adjust:100%;font-family:var(--font-sans);line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+body{margin:0;background:var(--background);color:var(--foreground);font-size:16px;min-height:100vh}
+button,input,textarea{font:inherit;color:inherit;letter-spacing:inherit;margin:0}
+button{cursor:pointer;background:none;border:0;padding:0;text-align:inherit}
+button:disabled{cursor:default}
+a{color:inherit;text-decoration:none}
+h1,h2,h3,h4,p,ul{margin:0}
+ul{padding:0;list-style:none}
+img{display:block;max-width:100%}
+svg{display:block;flex-shrink:0;pointer-events:none}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.hidden{display:none!important}
+/* text */
+.t-xs{font-size:.75rem;line-height:1rem}.t-sm{font-size:.875rem;line-height:1.25rem}.t-base{font-size:1rem;line-height:1.5rem}.t-lg{font-size:1.125rem;line-height:1.75rem}.t-2xl{font-size:1.5rem;line-height:2rem}
+.f-med{font-weight:500}.f-semi{font-weight:600}.f-bold{font-weight:700}
+.c-muted{color:var(--muted-foreground)}.c-fg{color:var(--foreground)}.c-primary{color:var(--primary)}.c-destr{color:var(--destructive)}
+.c-muted70{color:color-mix(in oklab,var(--muted-foreground) 70%,transparent)}
+.upper{text-transform:uppercase}.track-wide{letter-spacing:.025em}.track-wider{letter-spacing:.05em}
+.center{text-align:center}.left{text-align:left}
+.i3{width:.75rem;height:.75rem}.i35{width:.875rem;height:.875rem}.i4{width:1rem;height:1rem}.i5{width:1.25rem;height:1.25rem}.i8{width:2rem;height:2rem}
+/* layout helpers */
+.flex{display:flex}.col{flex-direction:column}.items-c{align-items:center}.items-s{align-items:flex-start}.jc-b{justify-content:space-between}.jc-c{justify-content:center}.flex1{flex:1 1 0%}
+.gap1{gap:.25rem}.gap2{gap:.5rem}.gap3{gap:.75rem}
+.sp-y-2>*+*{margin-top:.5rem}.sp-y-3>*+*{margin-top:.75rem}.sp-y-4>*+*{margin-top:1rem}.sp-y-6>*+*{margin-top:1.5rem}
+.mt1{margin-top:.25rem}.mt2{margin-top:.5rem}.mb2{margin-bottom:.5rem}
+.p3{padding:.75rem}
+.rounded-md{border-radius:var(--r-md)}.rounded-lg{border-radius:var(--r-lg)}.rounded-full{border-radius:9999px}
+.bg-accent30{background:color-mix(in oklab,var(--accent) 30%,transparent)}.bg-primary10{background:color-mix(in oklab,var(--primary) 10%,transparent)}
+.break{overflow-wrap:anywhere}
+.w-full{width:100%}
+/* ── the page (BookingScheduler root) ────────────────────────────────────────────────────────────────────── */
+#app{min-height:100vh}
+.page{min-height:100vh;background:var(--background);color:var(--foreground);display:flex;align-items:flex-start;justify-content:center;padding:.5rem;overflow-y:auto;animation:fade-up .6s ease-out both}
+.back{position:absolute;top:1rem;left:1rem;z-index:50;display:flex;align-items:center;gap:.5rem;color:var(--muted-foreground);padding:.25rem;border-radius:var(--r-md);transition:color .15s}
+.back:hover{color:var(--foreground)}
+.back:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+.wrap{width:100%;max-width:1600px;margin:0 auto}
+/* step indicator */
+.steps{display:flex;align-items:center;justify-content:center;gap:.5rem;margin-bottom:1.5rem}
+.step-item{display:flex;align-items:center}
+.pill{display:flex;align-items:center;gap:.5rem;padding:.375rem .75rem;border-radius:9999px;font-size:.75rem;line-height:1rem;font-weight:500;transition:color .15s,background-color .15s;background:var(--muted);color:var(--muted-foreground);animation:pill-in .35s ease-out both}
+.pill.active{background:var(--primary);color:var(--primary-foreground)}
+.pill.done{background:color-mix(in oklab,var(--primary) 20%,transparent);color:var(--primary)}
+.pill .lbl{display:none}.pill .num{display:inline}
+.step-line{width:2rem;height:.125rem;margin:0 .25rem;background:var(--border);transition:background-color .15s}
+.step-line.done{background:var(--primary)}
+/* card */
+.card{display:flex;flex-direction:column;border-radius:var(--r-lg);overflow:hidden;background:var(--card);border:1px solid var(--border);min-height:500px;width:100%;animation:card-in .5s ease-out .1s both}
+.side{width:100%;background:var(--sidebar);border-bottom:1px solid var(--sidebar-border);padding:1rem;flex-shrink:0;animation:slide-x .5s ease-out .2s both}
+.side>.inner>*{animation:fade-up .4s ease-out both}
+.avatar{width:2.5rem;height:2.5rem;border-radius:9999px;overflow:hidden;position:relative;display:flex;flex-shrink:0;background:var(--muted);align-items:center;justify-content:center;font-size:.875rem;color:var(--foreground)}
+.avatar img{position:relative;z-index:1;width:100%;height:100%;object-fit:cover;aspect-ratio:1/1}
+.side h1{font-size:1.5rem;line-height:2rem;font-weight:500;color:var(--foreground)}
+.main-dt{flex:1 1 0%;display:flex;flex-direction:column;overflow:hidden}
+.cal{flex:1 1 0%;padding:1rem;animation:fade-up .4s ease-out .3s both}
+.cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.cal-head h2{font-size:1rem;line-height:1.5rem;font-weight:600;color:var(--foreground)}
+.grid7{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:.375rem}
+.dow{height:2rem;display:flex;align-items:center;justify-content:center;font-size:.75rem;line-height:1rem;color:var(--muted-foreground);font-weight:500}
+.day,.day-empty{height:2.5rem}
+.day{border-radius:var(--r-md);font-size:.875rem;line-height:1.25rem;font-weight:500;transition:color .15s,background-color .15s,transform .15s;position:relative;color:var(--foreground);display:flex;align-items:center;justify-content:center;width:100%}
+.day.today{border:1px solid var(--primary);color:var(--primary)}
+.day.selected{background:var(--primary);color:var(--primary-foreground)}
+.day.off{color:color-mix(in oklab,var(--muted-foreground) 30%,transparent);cursor:not-allowed}
+.day.can:not(.selected):hover{background:var(--accent);color:var(--foreground);transform:scale(1.1)}
+.day.can:not(.selected):active{transform:scale(.95)}
+.day.locked{cursor:not-allowed;opacity:.5}
+.day .dot{position:absolute;bottom:.125rem;left:50%;transform:translateX(-50%);width:.25rem;height:.25rem;border-radius:9999px;background:var(--primary)}
+.slots{width:100%;padding:1rem;display:flex;flex-direction:column;border-top:1px solid var(--border);animation:slide-x-r .4s ease-out .4s both}
+.slots-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.slots-head h3{font-size:.875rem;line-height:1.25rem;font-weight:500;color:var(--foreground)}
+.tf{display:inline-flex;border-radius:var(--r-md);padding:.25rem;background:var(--background);border:1px solid var(--border)}
+.tf button{padding:.25rem .75rem;font-size:.75rem;line-height:1rem;font-weight:500;border-radius:var(--r-md);color:var(--muted-foreground);transition:color .15s,background-color .15s}
+.tf button:hover{color:var(--foreground)}
+.tf button.on{background:var(--primary);color:var(--primary-foreground)}
+.scroll{flex:1 1 0%;margin:0 -.5rem;padding:0 .5rem;overflow-y:auto;min-height:0;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.slot-list>*+*{margin-top:.5rem}
+.slot-list>*{animation:slide-x-r .3s ease-out both}
+.slot-btn{font-size:.75rem;line-height:1rem}
+.slot-empty{font-size:.875rem;line-height:1.25rem;color:var(--muted-foreground);text-align:center;padding:1rem 0}
+.continue{padding-top:1rem;margin-top:1rem;border-top:1px solid var(--border);animation:fade-up .3s ease-out both}
+.main-form{flex:1 1 0%;padding:1rem;display:flex;flex-direction:column;min-height:0;min-width:0;animation:slide-x-r .3s ease-out both}
+.main-form h2{font-size:1.125rem;line-height:1.75rem;font-weight:600;color:var(--foreground);margin-bottom:1rem;flex-shrink:0}
+.form-body{flex:1 1 0%;min-height:0;padding-right:.5rem}
+.form-foot{display:flex;gap:.75rem;padding-top:1rem;border-top:1px solid var(--border);margin-top:1rem;flex-shrink:0}
+.step-anim{animation:slide-x-r .3s ease-out both}
+/* buttons (components/ui/button.tsx) */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;white-space:nowrap;border-radius:var(--r-md);font-size:.875rem;line-height:1.25rem;font-weight:500;transition:color .15s,background-color .15s,border-color .15s,box-shadow .15s,opacity .15s;height:2.25rem;padding:.5rem 1rem;flex-shrink:0;outline:none}
+.btn:has(>svg){padding-left:.75rem;padding-right:.75rem}
+.btn:disabled{pointer-events:none;opacity:.5}
+.btn:focus-visible{border-color:var(--ring);box-shadow:0 0 0 3px color-mix(in oklab,var(--ring) 50%,transparent)}
+.btn-default{background:var(--primary);color:var(--primary-foreground)}.btn-default:hover{background:color-mix(in oklab,var(--primary) 90%,transparent)}
+.btn-outline{border:1px solid var(--input);background:color-mix(in oklab,var(--input) 30%,transparent);box-shadow:0 1px 2px 0 rgb(0 0 0/.05)}.btn-outline:hover{background:color-mix(in oklab,var(--input) 50%,transparent);color:var(--accent-foreground)}
+.btn-outline.bg-transparent{background:transparent}.btn-outline.bg-transparent:hover{background:color-mix(in oklab,var(--input) 50%,transparent)}
+.btn-ghost:hover{background:color-mix(in oklab,var(--accent) 50%,transparent);color:var(--accent-foreground)}
+.h8w8{height:2rem!important;width:2rem!important;padding:0!important}.h6w6{height:1.5rem!important;width:1.5rem!important;padding:0!important}
+/* inputs (components/ui/input.tsx, textarea.tsx, label.tsx) */
+.label{display:flex;align-items:center;gap:.5rem;font-size:.875rem;line-height:1;font-weight:500;user-select:none;color:var(--muted-foreground)}
+.input{height:2.25rem;width:100%;min-width:0;border-radius:var(--r-md);border:1px solid var(--input);background:color-mix(in oklab,var(--input) 30%,transparent);padding:.25rem .75rem;font-size:.875rem;line-height:1.25rem;box-shadow:0 1px 2px 0 rgb(0 0 0/.05);transition:color .15s,box-shadow .15s,border-color .15s;outline:none;color:var(--foreground)}
+.input::placeholder,.textarea::placeholder{color:var(--muted-foreground)}
+.input:focus-visible,.textarea:focus-visible{border-color:var(--ring);box-shadow:0 0 0 3px color-mix(in oklab,var(--ring) 50%,transparent)}
+.input.err,.textarea.err,.btn.err{border-color:var(--destructive)}
+.input.pl10{padding-left:2.5rem}
+.textarea{display:block;min-height:60px;width:100%;border-radius:var(--r-md);border:1px solid var(--input);background:color-mix(in oklab,var(--input) 30%,transparent);padding:.5rem .75rem;font-size:.875rem;line-height:1.25rem;box-shadow:0 1px 2px 0 rgb(0 0 0/.05);outline:none;resize:vertical;color:var(--foreground)}
+.field{position:relative}
+.field>svg{position:absolute;left:.75rem;top:50%;transform:translateY(-50%)}
+.ferr{font-size:.75rem;line-height:1rem;color:var(--destructive)}
+.ferr:empty{display:none}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+/* location select (components/ui/select.tsx, location-select.tsx) */
+.sel{position:relative}
+.sel-trigger{width:100%;display:flex;align-items:center;justify-content:space-between;gap:.5rem;background:transparent;padding:0;height:auto;font-weight:400;color:var(--muted-foreground);font-size:.875rem;line-height:1.25rem;border:0;transition:color .15s}
+.sel-trigger:hover{color:var(--foreground)}
+.sel-trigger .chev{opacity:.5}
+.sel-menu{position:absolute;left:0;top:calc(100% + .25rem);z-index:50;min-width:100%;background:var(--popover);color:var(--popover-foreground);border:1px solid var(--border);border-radius:var(--r-md);box-shadow:0 4px 6px -1px rgb(0 0 0/.1),0 2px 4px -2px rgb(0 0 0/.1);padding:.25rem;animation:pop-in .15s ease-out both}
+.sel-item{position:relative;display:flex;width:100%;cursor:default;align-items:center;gap:.5rem;border-radius:var(--r-sm);padding:.375rem 2rem .375rem .5rem;font-size:.875rem;line-height:1.25rem;color:var(--muted-foreground);user-select:none}
+.sel-item:hover,.sel-item:focus{background:var(--accent);color:var(--accent-foreground);outline:none}
+.sel-item .chk{position:absolute;right:.5rem;display:flex;width:.875rem;height:.875rem;align-items:center;justify-content:center}
+.addr-box{padding:.75rem;background:color-mix(in oklab,var(--muted) 50%,transparent);border-radius:var(--r-lg);border:1px solid var(--border)}
+.addr-btn{width:100%;height:5rem;justify-content:flex-start;text-align:left}
+/* confirmation */
+.sum{background:color-mix(in oklab,var(--accent) 30%,transparent);border-radius:var(--r-lg);padding:1rem}
+.sum h4{font-size:.875rem;line-height:1.25rem;font-weight:500;color:var(--foreground);margin-bottom:.5rem}
+.row{display:flex;justify-content:space-between;font-size:.875rem;line-height:1.25rem}
+/* payment section (light card inside the dark page — globals.css .payment-section-light) */
+.pay{background:#fff;border:1px solid #e5e7eb;border-radius:var(--r-lg);padding:1rem;box-shadow:0 1px 2px 0 rgb(0 0 0/.05);color:#1f2937}
+.pay h4{font-size:.875rem;line-height:1.25rem;font-weight:500;color:#111827;margin-bottom:1rem}
+.pay .c-muted{color:#6b7280}.pay .c-fg{color:#111827}
+.sdk-note{margin-bottom:1rem;padding:.75rem;background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--r-lg)}
+.sdk-note .l1{display:flex;align-items:center;gap:.5rem;font-size:.875rem;line-height:1.25rem;color:#1e40af}
+.sdk-note .l2{font-size:.75rem;line-height:1rem;color:#2563eb;margin-top:.25rem}
+.sdk-note .er{font-size:.75rem;line-height:1rem;color:#dc2626;margin-top:.25rem}
+.pay-sep{padding-top:.5rem;border-top:1px solid var(--border)}
+.methods{width:100%;display:flex;gap:.5rem;justify-content:center}
+.method{position:relative;flex:1 1 0%;min-width:90px;display:flex;flex-direction:column;align-items:center;padding:.75rem;border:1px solid #d1d5db;border-radius:var(--r-lg);cursor:pointer;background:#fff;color:#374151;transition:background-color .15s}
+.method:hover{background:#f9fafb}
+.method.on{border-color:var(--primary);background:#fdf2f8;box-shadow:0 1px 2px 0 rgb(0 0 0/.05)}
+.method .ico{display:flex;color:#111827}.method .ico svg{width:1.75rem;height:1.75rem}
+.method .mlabel{margin-top:.375rem;font-size:.75rem;line-height:1rem;color:#374151;font-weight:500}
+.method input{position:absolute;width:1px;height:1px;opacity:0}
+.esp{padding:24px;border-radius:16px;background:#fff;border:1px solid #e5e7eb;box-shadow:0 1px 3px 0 rgba(0,0,0,.1),0 1px 2px 0 rgba(0,0,0,.06)}
+.esp .ph{display:flex;align-items:center;gap:.75rem;margin-bottom:.5rem}
+.esp .ph .ib{padding:.5rem;background:#fce7f3;border-radius:var(--r-lg)}
+.esp .ph h3{font-size:1.125rem;line-height:1.75rem;font-weight:700;letter-spacing:-.025em;color:#111827}
+.esp .ph p{font-size:.875rem;line-height:1.25rem;color:#4b5563}
+.esp .lab{display:flex;align-items:center;gap:.5rem;font-size:.875rem;line-height:1.25rem;font-weight:500;color:#111827}
+.sqc{border:2px solid #d1d5db;border-radius:12px;padding:20px;background:#fff;transition:all .3s ease;min-height:120px;position:relative;overflow:hidden;margin-top:.75rem}
+.sqc:focus-within{border-color:#d4a5a5;box-shadow:0 0 0 3px rgba(212,165,165,.1);transform:translateY(-1px)}
+.sec{background:#f9fafb;border-radius:12px;padding:16px;border:1px solid #e5e7eb;margin-top:1.5rem}
+.sec .l1{display:flex;align-items:center;justify-content:center;gap:24px;font-size:.75rem;line-height:1rem;color:#4b5563}
+.sec .l1>div{display:flex;align-items:center;gap:.5rem}
+.sec .l2{display:flex;align-items:center;justify-content:center;gap:.5rem;font-size:.75rem;line-height:1rem;color:#4b5563;margin-top:.75rem}
+.sec .sq{width:1rem;height:1rem;background:linear-gradient(to bottom right,#3b82f6,#2563eb);border-radius:var(--r-md);color:#fff;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.paybtn{margin-top:1.5rem;width:100%;height:3rem;font-size:1rem;line-height:1.5rem;font-weight:600;border-radius:var(--r-md);background:linear-gradient(to right,var(--primary),color-mix(in oklab,var(--primary) 80%,transparent));color:var(--primary-foreground);box-shadow:0 10px 15px -3px rgb(0 0 0/.1),0 4px 6px -4px rgb(0 0 0/.1);transition:all .2s;display:inline-flex;align-items:center;justify-content:center;gap:.5rem}
+.paybtn:hover:not(:disabled){background:linear-gradient(to right,color-mix(in oklab,var(--primary) 90%,transparent),color-mix(in oklab,var(--primary) 70%,transparent));box-shadow:0 20px 25px -5px rgb(0 0 0/.1),0 8px 10px -6px rgb(0 0 0/.1);transform:translateY(-2px)}
+.paybtn:disabled{opacity:.5;pointer-events:none}
+.pbreak{margin-top:.75rem;padding:.75rem;background:#f9fafb;border:1px solid #e5e7eb;border-radius:var(--r-lg)}
+.pbreak .r1{display:flex;justify-content:space-between;align-items:center;font-size:.875rem;line-height:1.25rem;color:#4b5563}
+.pbreak .r1 b{font-weight:600;color:#111827}
+.pbreak .r2{font-size:.75rem;line-height:1rem;color:#4b5563;margin-top:.25rem}
+.pbreak .er{margin-top:.5rem;padding:.5rem;background:#fef2f2;border:1px solid #fecaca;border-radius:var(--r-md);font-size:.875rem;line-height:1.25rem;color:#b91c1c}
+.pbreak .pr{margin-top:.5rem;padding:.5rem;background:#eff6ff;border:1px solid #bfdbfe;border-radius:var(--r-md);font-size:.875rem;line-height:1.25rem;color:#1d4ed8}
+.pulse{width:100%;height:3rem;background:var(--muted);border-radius:var(--r-lg);display:flex;align-items:center;justify-content:center;animation:pulse 2s cubic-bezier(.4,0,.6,1) infinite;font-size:.875rem;color:var(--muted-foreground)}
+.unavail{width:100%;height:3rem;background:color-mix(in oklab,var(--destructive) 10%,transparent);border:1px solid color-mix(in oklab,var(--destructive) 20%,transparent);border-radius:var(--r-lg);display:flex;align-items:center;justify-content:center;font-size:.875rem;color:var(--destructive)}
+.spin{animation:spin 1s linear infinite}
+.spinner{width:1.25rem;height:1.25rem;border:2px solid rgb(255 255 255/.3);border-top-color:#fff;border-radius:9999px;animation:spin 1s linear infinite}
+/* dialog (components/ui/dialog.tsx) */
+.overlay{position:fixed;inset:0;z-index:50;background:rgb(0 0 0/.5);animation:fade .2s ease-out both}
+.dialog{position:fixed;top:50%;left:50%;z-index:50;display:grid;width:100%;max-width:calc(100% - 2rem);transform:translate(-50%,-50%);gap:1rem;border-radius:var(--r-lg);border:1px solid var(--border);background:var(--background);padding:1.5rem;box-shadow:0 10px 15px -3px rgb(0 0 0/.1),0 4px 6px -4px rgb(0 0 0/.1);animation:zoom-in .2s ease-out both;max-height:90vh;overflow-y:auto}
+.dialog .x{position:absolute;top:1rem;right:1rem;border-radius:var(--r-sm);opacity:.7;transition:opacity .15s}
+.dialog .x:hover{opacity:1}
+.dlg-head{display:flex;flex-direction:column;gap:.5rem;text-align:center}
+.dlg-title{display:flex;align-items:center;gap:.5rem;font-size:1.125rem;line-height:1;font-weight:600;justify-content:center}
+.dlg-desc{font-size:.875rem;line-height:1.25rem;color:var(--muted-foreground)}
+.dlg-foot{display:flex;flex-direction:column-reverse;gap:.5rem}
+.dlg-body{display:grid;gap:1rem;padding:1rem 0}
+.dlg-body .label{color:var(--foreground)}
+.grid-csz{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+.preview{margin-top:0;padding:.75rem;background:color-mix(in oklab,var(--muted) 50%,transparent);border-radius:var(--r-lg);border:1px solid var(--border)}
+.preview .label{color:var(--muted-foreground)}
+/* toast (sonner) */
+.toast{position:fixed;right:1rem;bottom:1rem;z-index:100;background:var(--popover);color:var(--popover-foreground);border:1px solid var(--border);border-radius:.5rem;padding:1rem;font-size:.8125rem;line-height:1.25rem;box-shadow:0 4px 12px rgb(0 0 0/.3);max-width:22.5rem;display:flex;gap:.5rem;align-items:flex-start;animation:toast-in .35s cubic-bezier(.21,1.02,.73,1) both}
+.toast.err{border-color:color-mix(in oklab,var(--destructive) 50%,var(--border))}
+/* success (app/book/success/page.tsx) */
+.success{min-height:100vh;background:var(--background);display:flex;align-items:center;justify-content:center;padding:1rem}
+.scard{max-width:28rem;width:100%;background:var(--card);color:var(--card-foreground);border:1px solid var(--border);border-radius:var(--r-xl);box-shadow:0 1px 2px 0 rgb(0 0 0/.05);padding:2rem;text-align:center}
+.scard .ok{width:4rem;height:4rem;border-radius:9999px;background:rgb(34 197 94/.2);display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;color:#22c55e}
+.scard h1{font-family:var(--font-serif);font-weight:400;font-size:1.5rem;line-height:2rem;color:var(--foreground);margin-bottom:.5rem}
+.scard .lead{color:var(--muted-foreground);margin-bottom:1.5rem}
+.scard .idbox{margin-bottom:1.5rem;padding:.75rem;background:color-mix(in oklab,var(--accent) 30%,transparent);border-radius:var(--r-lg);font-size:.875rem;line-height:1.25rem;color:var(--muted-foreground)}
+.scard .idbox b{color:var(--foreground);font-weight:700}
+.scard .next{margin-top:1.5rem;padding:1rem;background:color-mix(in oklab,var(--accent) 50%,transparent);border-radius:var(--r-lg)}
+.scard .next>*+*{margin-top:.75rem}
+.scard .next p{font-size:.875rem;line-height:1.25rem;color:var(--muted-foreground)}
+.scard .next b{color:var(--foreground);font-weight:700}
+.scard .next ul{font-size:.875rem;line-height:1.25rem;color:var(--muted-foreground);margin-top:.5rem;text-align:left}
+.scard .next ul>*+*{margin-top:.25rem}
+.scard .help{border-top:1px solid var(--border);padding-top:.75rem}
+.scard .help .links{display:flex;align-items:center;justify-content:center;gap:1rem;margin-top:.5rem}
+.scard .help a{display:flex;align-items:center;gap:.25rem;font-size:.75rem;line-height:1rem;color:var(--muted-foreground)}
+.scard .help a:hover{color:var(--foreground)}
+.loading{min-height:100vh;display:flex;align-items:center;justify-content:center;color:var(--muted-foreground);font-size:.875rem}
+.fatal{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.5rem;text-align:center}
+.fatal h2{font-size:1.25rem;line-height:1.75rem;font-weight:600}
+.fatal p{color:var(--muted-foreground);margin-top:1rem}
+/* animations (framer-motion equivalents) */
+@keyframes fade-up{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+@keyframes card-in{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:none}}
+@keyframes slide-x{from{opacity:0;transform:translateX(-50px)}to{opacity:1;transform:none}}
+@keyframes slide-x-r{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
+@keyframes pill-in{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:none}}
+@keyframes pop-in{from{opacity:0;transform:scale(.95) translateY(-.25rem)}to{opacity:1;transform:none}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes zoom-in{from{opacity:0;transform:translate(-50%,-50%) scale(.95)}to{opacity:1;transform:translate(-50%,-50%)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{50%{opacity:.5}}
+@keyframes toast-in{from{opacity:0;transform:translateY(100%)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important}}
+/* breakpoints: sm 640, md 768, lg 1024, xl 1280 */
+@media (min-width:640px){.page{padding:1rem}.pill .lbl{display:inline}.pill .num{display:none}.dialog{max-width:500px}.dlg-head{text-align:left}.dlg-title{justify-content:flex-start}.dlg-foot{flex-direction:row;justify-content:flex-end}}
+@media (min-width:768px){.grid-csz{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (min-width:1024px){.page{padding:1.5rem;align-items:center}.card{flex-direction:row;min-height:650px;max-height:95vh}.side{width:380px;border-bottom:0;border-right:1px solid var(--sidebar-border);padding:1.5rem}.main-dt{flex-direction:row}.cal{padding:1.5rem;border-right:1px solid var(--border)}.cal-head{margin-bottom:1.5rem}.cal-head h2{font-size:1.125rem;line-height:1.75rem}.grid7{gap:.5rem}.day,.day-empty{height:3rem}.day{font-size:1rem;line-height:1.5rem}.slots{width:16rem;padding:1.5rem;border-top:0;border-left:1px solid var(--border)}.slot-btn{font-size:.875rem;line-height:1.25rem}.main-form{padding:1.5rem;overflow:hidden}.form-body{overflow-y:auto}}
+@media (min-width:1280px){.side{width:420px}.day,.day-empty{height:3.5rem}.day{font-size:1.125rem;line-height:1.75rem}.slots{width:18rem;padding:2rem}.main-form{padding:2rem}}
+</style>
+</head>
+<body>
+<script>var componentProps = {};</script>
+<div id="app"><div class="loading">Loading booking interface...</div></div>
+<script>
+(function () {
+  'use strict';
+  var API = 'https://api.1ovr1.com/api:9yDRTI1I';
+  var VIEW_ID = 54;
+  var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var DAYS = ['SU','MO','TU','WE','TH','FR','SA'];
+  var WEEKDAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  var WEEKDAYS_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  /* ── lucide icons (lucide-static) ─────────────────────────────────────────────────────────────── */
+  var PATHS = {
+    'arrow-left': '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+    'arrow-right': '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+    'chevron-left': '<path d="m15 18-6-6 6-6"/>',
+    'chevron-right': '<path d="m9 18 6-6-6-6"/>',
+    'chevron-down': '<path d="m6 9 6 6 6-6"/>',
+    'check': '<path d="M20 6 9 17l-5-5"/>',
+    'clock': '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+    'map-pin': '<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>',
+    'check-circle': '<path d="M21.801 10A10 10 0 1 1 17 3.335"/><path d="m9 11 3 3L22 4"/>',
+    'user': '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+    'mail': '<path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/>',
+    'phone': '<path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"/>',
+    'calendar': '<path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/>',
+    'home': '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+    'edit-3': '<path d="M13 21h8"/><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/>',
+    'building-2': '<path d="M10 12h4"/><path d="M10 8h4"/><path d="M14 21v-3a2 2 0 0 0-4 0v3"/><path d="M6 10H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2"/><path d="M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16"/>',
+    'car': '<path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/>',
+    'credit-card': '<rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/><path d="M6 14h2"/>',
+    'wallet': '<path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>',
+    'circle-dollar-sign': '<circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/>',
+    'lock': '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+    'shield': '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>',
+    'loader': '<path d="M21 12a9 9 0 1 1-6.219-8.56"/>',
+    'x': '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>'
+  };
+  function ic(name, cls, style) {
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="' + (cls || 'i4') + '"' + (style ? ' style="' + style + '"' : '') + ' aria-hidden="true">' + PATHS[name] + '</svg>';
+  }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function $(sel, root) { return (root || document).querySelector(sel); }
+  function $$(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function money(cents, currency) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'USD' }).format((cents || 0) / 100); }
+
+  /* ── where we are: merchant, channel, query ───────────────────────────────────────────────────── */
+  function topLoc() { try { if (window.parent && window.parent !== window) return window.parent.location; } catch (e) {} return window.location; }
+  function query() {
+    var out = {}, sources = [];
+    try { sources.push(topLoc().search || ''); } catch (e) {}
+    sources.push(window.location.search || '');
+    sources.forEach(function (s) {
+      s.replace(/^\?/, '').split('&').forEach(function (kv) { if (!kv) return; var i = kv.indexOf('='); var k = decodeURIComponent(i < 0 ? kv : kv.slice(0, i)); var v = decodeURIComponent(i < 0 ? '' : kv.slice(i + 1).replace(/\+/g, ' ')); if (!(k in out)) out[k] = v; });
+    });
+    return out;
+  }
+  var Q = query();
+  var CP = (typeof componentProps === 'object' && componentProps) ? componentProps : {};
+  var VIEWER = CP._viewer || {};
+  var MERCHANT_ID = parseInt(VIEWER.merchant_id || Q.merchant_id || Q.x_merchant_id || 0, 10) || 0;
+  function channel() {
+    if (CP.channel === 'dev' || CP.channel === 'live') return CP.channel;
+    if (Q.channel === 'dev' || Q.channel === 'live') return Q.channel;
+    var host = '';
+    try { host = topLoc().host || ''; } catch (e) {}
+    if (!host) { try { host = new URL(document.referrer).host; } catch (e) {} }
+    host = host.toLowerCase();
+    if (host.indexOf('app.') === 0 || host.indexOf('dev.') === 0 || host.indexOf('localhost') === 0 || host.indexOf('127.0.0.1') === 0) return 'dev';
+    return 'live';
+  }
+  var CHANNEL = channel();
+
+  /* ── the merchant's look: the website template's theme keys, derived into this page's tokens ──── */
+  var FONT_TABLE = {"bricolage":{"stack":"\"Bricolage Grotesque\",\"Arial Narrow\",Arial,sans-serif","google":"Bricolage+Grotesque:opsz,wght@12..96,500..800"},"public-sans":{"stack":"\"Public Sans\",system-ui,-apple-system,\"Segoe UI\",Roboto,Arial,sans-serif","google":"Public+Sans:wght@400;500;600;700"},"inter":{"stack":"Inter,system-ui,sans-serif","google":"Inter:wght@400;500;600;700;800"},"dm-sans":{"stack":"\"DM Sans\",system-ui,sans-serif","google":"DM+Sans:wght@400;500;600;700;800"},"manrope":{"stack":"Manrope,system-ui,sans-serif","google":"Manrope:wght@400;500;600;700;800"},"work-sans":{"stack":"\"Work Sans\",system-ui,sans-serif","google":"Work+Sans:wght@400;500;600;700;800"},"space-grotesk":{"stack":"\"Space Grotesk\",system-ui,sans-serif","google":"Space+Grotesk:wght@400;500;600;700"},"plex-sans":{"stack":"\"IBM Plex Sans\",system-ui,sans-serif","google":"IBM+Plex+Sans:wght@400;500;600;700"},"montserrat":{"stack":"Montserrat,system-ui,sans-serif","google":"Montserrat:wght@300;400;500;600;700;800"},"poppins":{"stack":"Poppins,system-ui,sans-serif","google":"Poppins:wght@400;500;600;700;800"},"fraunces":{"stack":"Fraunces,Georgia,serif","google":"Fraunces:opsz,wght@9..144,400..800"},"playfair":{"stack":"\"Playfair Display\",Georgia,serif","google":"Playfair+Display:wght@400;500;600;700;800"},"lora":{"stack":"Lora,Georgia,serif","google":"Lora:wght@400;500;600;700"},"merriweather":{"stack":"Merriweather,Georgia,serif","google":"Merriweather:wght@400;700;900"},"roboto-slab":{"stack":"\"Roboto Slab\",Georgia,serif","google":"Roboto+Slab:wght@400;500;600;700;800"},"system":{"stack":"system-ui,-apple-system,\"Segoe UI\",Roboto,Arial,sans-serif","google":null},"teko":{"stack":"Teko,sans-serif","google":"Teko:wght@300;400;500;600;700"},"chakra-petch":{"stack":"\"Chakra Petch\",sans-serif","google":"Chakra+Petch:wght@400;500;600;700"},"great-vibes":{"stack":"\"Great Vibes\",cursive","google":"Great+Vibes"}};
+  var TOKEN_KEYS = ['background','foreground','card','card-foreground','popover','popover-foreground','primary','primary-foreground','secondary','muted','muted-foreground','accent','accent-foreground','destructive','border','input','ring','sidebar','sidebar-border','radius'];
+  function isHex(v) { return /^#[0-9a-fA-F]{6}$/.test(String(v || '')); }
+  function lum(hex) { var n = parseInt(hex.slice(1), 16), c = [n >> 16 & 255, n >> 8 & 255, n & 255].map(function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; }
+  function contrast(a, b) { var x = lum(a) + 0.05, y = lum(b) + 0.05; return x > y ? x / y : y / x; }
+  function mix(a, pa, b) { return 'color-mix(in oklab, ' + a + ' ' + pa + '%, ' + b + ')'; }
+  /* theme = the website template's keys (c-page, c-text, c-heading, c-main, c-secondary, c-tertiary, font-body, font-heading);
+     tokens = pinned overrides for this page's own token names. Missing keys keep the record's defaults. */
+  function applyTheme(theme, tokens) {
+    theme = (theme && typeof theme === 'object' && !Array.isArray(theme)) ? theme : {};
+    tokens = (tokens && typeof tokens === 'object' && !Array.isArray(tokens)) ? tokens : {};
+    var root = document.documentElement.style;
+    var page = isHex(theme['c-page']) ? theme['c-page'] : null, text = isHex(theme['c-text']) ? theme['c-text'] : null;
+    var heading = isHex(theme['c-heading']) ? theme['c-heading'] : text, main = isHex(theme['c-main']) ? theme['c-main'] : null;
+    var second = isHex(theme['c-secondary']) ? theme['c-secondary'] : main, third = isHex(theme['c-tertiary']) ? theme['c-tertiary'] : null;
+    if (page && text && main) {
+      var dark = lum(page) < 0.3;
+      var onPrimary = contrast(main, page) >= contrast(main, heading) ? page : heading;
+      var t = {
+        'background': page, 'foreground': text,
+        'card': third || mix(page, 92, text), 'card-foreground': text,
+        'popover': third ? mix(third, 80, page) : mix(page, 94, text), 'popover-foreground': text,
+        'primary': main, 'primary-foreground': onPrimary, 'secondary': second,
+        'muted': mix(page, 88, main), 'muted-foreground': mix(text, 66, page),
+        'accent': mix(page, 82, main), 'accent-foreground': text,
+        'destructive': dark ? '#e07a5f' : '#b54a32',
+        'border': mix(page, 84, text), 'input': mix(page, 88, text), 'ring': main,
+        'sidebar': third ? mix(third, 50, page) : mix(page, 96, text), 'sidebar-border': mix(page, 84, text)
+      };
+      for (var k in t) root.setProperty('--' + k, t[k]);
+      document.documentElement.classList.toggle('dark', dark);
+    }
+    TOKEN_KEYS.forEach(function (k) { var v = tokens[k]; if (v != null && String(v).length < 80 && /^[#a-zA-Z0-9 .,%()\-]+$/.test(String(v))) root.setProperty('--' + k, String(v)); });
+    // fonts: body → --font-sans, heading → --font-serif (the script face the original used for its display titles)
+    var families = [];
+    [['font-body', '--font-sans'], ['font-heading', '--font-serif']].forEach(function (pair) {
+      var f = FONT_TABLE[theme[pair[0]]]; if (!f) return;
+      root.setProperty(pair[1], f.stack); if (f.google) families.push('family=' + f.google);
+    });
+    if (families.length) { var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?' + families.join('&') + '&display=swap'; document.head.appendChild(l); }
+  }
+  var IN_SHELL = (function () { try { return window.parent && window.parent !== window; } catch (e) { return true; } })();
+  // on the merchant's own domain g/site hands the site's published theme in _site.theme: paint in it before anything else
+  try { if (CP._site && CP._site.theme) applyTheme(CP._site.theme, {}); } catch (e) {}
+
+  /* ── state ─────────────────────────────────────────────────────────────────────────────────────── */
+  var S = {
+    ctx: null, service: null, tz: 'America/Chicago', today: null, nowMins: 0,
+    step: 'datetime', month: 0, year: 2025, selectedDate: null, selectedTime: null, use24: false,
+    form: { firstName: '', lastName: '', email: '', phone: '', notes: '' }, location: 'business', address: null, errors: {},
+    method: 'square', processing: false, payError: '', paySuccess: false,
+    sq: { loaded: false, error: null, payments: null, card: null, cashApp: null, cashAppP: null, cashAppA: null, cashAppBox: null, cashAppOn: false, cashAppDep: null, gen: 0 }, pp: { loaded: false, error: null },
+    selOpen: false, slotCache: null
+  };
+
+  /* ── the lead: the first two steps double as a contact form ─────────────────────────────────────
+     When the visitor leaves "Your details" for the payment step, what they chose and typed is sent to
+     booking/lead and kept as a contact submission (contact_form_submissions, form "booking") - so a declined
+     card, a server error or cold feet still leaves the business a person to write to. One row per visit: the
+     first answer's id is kept here (and in sessionStorage where the page may use it) and every later send -
+     Back and Next again, an edited address, a payment that failed in the browser - updates that same row; a
+     send with nothing changed is skipped altogether. The id rides along with the booking (bookingPayload) so
+     the server can close the lead as booked, or hand it back with the payment's error. No mail goes out for a
+     lead. The desk (a business booking its own client) writes none. */
+  var LEAD_KEY = 'gin_lead_' + MERCHANT_ID;
+  S.lead = { id: '', hash: '', inflight: false, sentKey: '', again: null };
+  try { S.lead.id = window.sessionStorage.getItem(LEAD_KEY) || ''; } catch (e) {}
+  function leadPayload() {
+    var f = S.form, a = S.address || {}, loc = {};
+    try { loc = topLoc(); } catch (e) { loc = window.location; }
+    return {
+      merchant_id: MERCHANT_ID, channel: CHANNEL, lead_id: S.lead.id, service_id: S.service ? S.service.id : 0, service: S.service ? (S.service.slug || '') : '',
+      date: S.selectedDate ? dateKey(S.selectedDate) : '', time: S.selectedTime || '',
+      customer: { first: f.firstName.trim(), last: f.lastName.trim(), email: f.email.trim(), phone: f.phone.trim(), location: S.location,
+        address: { street: a.street || '', unit: a.unit || '', city: a.city || '', state: a.state || '', zip: a.zipCode || '', full: a.fullAddress || '' }, notes: f.notes.trim() },
+      host: loc.host || '', page: loc.pathname || ''
+    };
+  }
+  function syncLead(event, extra) {
+    if (S.mode === 'desk' || S.staff || !MERCHANT_ID) return;
+    var p = leadPayload(), key = JSON.stringify([p.service_id, p.date, p.time, p.customer]);
+    if (event === 'details' && S.lead.id && key === S.lead.hash) return;   /* Back and Next again with nothing changed: no call, no second row */
+    if (event === 'details' && S.lead.inflight && !S.lead.again && key === S.lead.sentKey) return;   /* the same details are already on their way */
+    p.event = event; if (extra) for (var k in extra) p[k] = extra[k];
+    p._key = key;
+    if (S.lead.inflight) { S.lead.again = p; return; }   /* one call at a time, so the next one carries the id this one returns */
+    sendLead(p);
+  }
+  function sendLead(p) {
+    var key = p._key; delete p._key;
+    p.lead_id = S.lead.id;
+    S.lead.inflight = true; S.lead.sentKey = (p.event === 'details') ? key : '';
+    api('POST', '/booking/lead', p).then(function (r) {
+      if (r && r.ok && r.id) { S.lead.id = r.id; try { window.sessionStorage.setItem(LEAD_KEY, r.id); } catch (e) {} }
+      if (r && r.ok && p.event === 'details') S.lead.hash = key;
+    }).catch(function () {}).then(function () {
+      S.lead.inflight = false;
+      var q = S.lead.again; S.lead.again = null;
+      if (q) sendLead(q);
+    });
+  }
+  function clearLead() {
+    S.lead.id = ''; S.lead.hash = ''; S.lead.again = null;
+    try { window.sessionStorage.removeItem(LEAD_KEY); } catch (e) {}
+  }
+
+  /* ── dates in the merchant's own calendar (strings, no client time zone involved) ─────────────── */
+  function parseDate(s) { var p = s.split('-').map(Number); return { y: p[0], m: p[1], d: p[2] }; }
+  function dateKey(o) { return o.y + '-' + pad2(o.m) + '-' + pad2(o.d); }
+  function addDays(o, n) { var t = new Date(Date.UTC(o.y, o.m - 1, o.d + n)); return { y: t.getUTCFullYear(), m: t.getUTCMonth() + 1, d: t.getUTCDate() }; }
+  function weekday(o) { return new Date(Date.UTC(o.y, o.m - 1, o.d)).getUTCDay(); }
+  function daysInMonth(y, m) { return new Date(Date.UTC(y, m, 0)).getUTCDate(); }
+  function cmp(a, b) { var x = dateKey(a), y = dateKey(b); return x < y ? -1 : x > y ? 1 : 0; }
+  function toMins(t) { var p = t.split(':').map(Number); return p[0] * 60 + p[1]; }
+  function fmtTime(t) {
+    var p = t.split(':').map(Number);
+    if (S.use24) return t;
+    var period = p[0] >= 12 ? 'PM' : 'AM'; var h = p[0] % 12 || 12;
+    return h + ':' + pad2(p[1]) + ' ' + period;
+  }
+  function fmtEEEMMMd(o) { return WEEKDAYS_SHORT[weekday(o)] + ', ' + MONTHS_SHORT[o.m - 1] + ' ' + o.d; }
+  function fmtMMMddyyyy(o) { return MONTHS_SHORT[o.m - 1] + ' ' + pad2(o.d) + ', ' + o.y; }
+  function fmtLong(o) { return WEEKDAYS[weekday(o)] + ', ' + MONTHS[o.m - 1] + ' ' + pad2(o.d) + ', ' + o.y; }
+
+  /* generateSlotsFromSchedule, plus the slots other paid bookings already hold */
+  function buildSlots() {
+    var av = S.ctx.availability, dur = S.service.duration_minutes;
+    var advance = av.advance_booking_days || 30, notice = S.staff ? 0 : (av.minimum_notice_hours || 0);
+    var booked = S.ctx.booked || [];
+    var slots = {};
+    for (var off = 0; off < advance; off++) {
+      var date = addDays(S.today, off), key = dateKey(date), mk = date.y + '-' + date.m, day = date.d;
+      if (!slots[mk]) slots[mk] = {};
+      var blocked = (av.blocked_dates || []).some(function (r) { var a = r.startDate || r.start_date, b = r.endDate || r.end_date; return a && key >= a && key <= b; });
+      if (blocked) { slots[mk][day] = []; continue; }
+      var ov = (av.date_overrides || []).filter(function (o) { return o.date === key; })[0];
+      if (ov) {
+        if (ov.blocked || ov.is_blocked) { slots[mk][day] = []; continue; }
+        if (ov.slots && ov.slots.length) { slots[mk][day] = ov.slots.filter(function (s) { return s.available; }).map(function (s) { return s.time; }); continue; }
+      }
+      var dow = weekday(date);
+      var sched = (av.weekly_schedule || []).filter(function (s) { return s.dayOfWeek === dow; })[0];
+      if (!sched) { slots[mk][day] = []; continue; }
+      var start = toMins(sched.startTime), end = toMins(sched.endTime), interval = sched.slotIntervalMinutes || 30, out = [];
+      var held = booked.filter(function (b) { return b.date === key; });
+      for (var mins = start; mins + dur <= end; mins += interval) {
+        var t = pad2(Math.floor(mins / 60)) + ':' + pad2(mins % 60);
+        var inBreak = (sched.breaks || []).some(function (b) { return mins >= toMins(b.startTime) && mins < toMins(b.endTime); });
+        if (inBreak) continue;
+        var taken = held.some(function (b) { return mins < b.start + b.duration && mins + dur > b.start; });
+        if (taken) continue;
+        if (off === 0) { if ((mins - S.nowMins) / 60 >= notice) out.push(t); } else out.push(t);
+      }
+      slots[mk][day] = out;
+    }
+    return slots;
+  }
+  function slotsFor(day, month, year) { var mk = year + '-' + (month + 1); return (S.slotCache[mk] && S.slotCache[mk][day]) || []; }
+
+  /* ── validation (validateDetailsForm) ─────────────────────────────────────────────────────────── */
+  function validateDetails() {
+    var f = S.form, e = {};
+    if (!f.firstName.trim()) e.firstName = 'First name is required'; else if (f.firstName.trim().length < 2) e.firstName = 'First name must be at least 2 characters';
+    if (!f.lastName.trim()) e.lastName = 'Last name is required'; else if (f.lastName.trim().length < 2) e.lastName = 'Last name must be at least 2 characters';
+    if (!f.email.trim()) e.email = 'Email is required'; else if (f.email.indexOf('@') < 0 || f.email.indexOf('.') < 0) e.email = 'Please enter a valid email address';
+    var digits = f.phone.replace(/\D/g, '');
+    if (!f.phone.trim()) e.phone = 'Phone number is required'; else if (digits.length < 10) e.phone = 'Please enter a valid phone number (at least 10 digits)';
+    if (S.location === 'travel') {
+      var addr = S.address ? S.address.fullAddress : '';
+      if (!addr.trim()) e.address = 'Service address is required for travel requests'; else if (addr.trim().length < 10) e.address = 'Please enter a complete address';
+    }
+    return e;
+  }
+  function formatPhone(v) { var c = v.replace(/\D/g, ''); if (c.length <= 3) return c; if (c.length <= 6) return '(' + c.slice(0, 3) + ') ' + c.slice(3); return '(' + c.slice(0, 3) + ') ' + c.slice(3, 6) + '-' + c.slice(6, 10); }
+  function businessAddress() {
+    var l = S.ctx.location || {};
+    var full = [l.street, l.unit ? 'Apt ' + l.unit : '', (l.city || '') + ', ' + (l.state || '') + ' ' + (l.zip || '')].filter(Boolean).join(', ');
+    return { street: l.street || '', unit: l.unit || '', city: l.city || '', state: l.state || '', zipCode: l.zip || '', fullAddress: full };
+  }
+
+  /* ── rendering ─────────────────────────────────────────────────────────────────────────────────── */
+  var app = document.getElementById('app');
+  function homeHref() { if (!IN_SHELL) return '/'; return (S.ctx && S.ctx.links && S.ctx.links.home) || ('https://' + ((S.ctx && S.ctx.merchant && S.ctx.merchant.domain) || 'www.1ovr1.com')); }
+
+  function renderShell(host) {
+    var own = !host || host === app; host = host || app;
+    host.innerHTML =
+      '<div class="page" id="page">' +
+        (IN_SHELL ? '' : '<a class="back" id="back" href="' + esc(homeHref()) + '" target="_top" aria-label="Go back to homepage">' + ic('arrow-left', 'i5') + '<span class="t-sm upper track-wider">Back</span></a>') +
+        '<div class="wrap">' +
+          '<div class="steps" id="steps"></div>' +
+          '<div class="card" id="card"><aside class="side"><div class="inner sp-y-6" id="side"></div></aside><div id="main" style="display:contents"></div></div>' +
+        '</div>' +
+        (own ? '<div id="dialog"></div><div id="toast"></div>' : '') +
+      '</div>';
+    renderMain();
+  }
+
+  function renderSteps() {
+    var steps = [{ key: 'datetime', label: 'Date & Time', icon: 'calendar' }, { key: 'details', label: S.staff ? 'Client Details' : 'Your Details', icon: 'user' }, { key: 'confirmation', label: 'Confirm Booking', icon: 'check-circle' }];
+    var cur = steps.map(function (s) { return s.key; }).indexOf(S.step);
+    $('#steps').innerHTML = steps.map(function (s, i) {
+      var cls = s.key === S.step ? 'active' : (i < cur ? 'done' : '');
+      return '<div class="step-item"><div class="pill ' + cls + '" style="animation-delay:' + (i * 0.1) + 's">' + ic(s.icon, 'i35') + '<span class="lbl">' + s.label + '</span><span class="num">' + (i + 1) + '</span></div>' +
+        (i < steps.length - 1 ? '<div class="step-line ' + (i < cur ? 'done' : '') + '"></div>' : '') + '</div>';
+    }).join('');
+  }
+
+  function renderSide() {
+    var p = S.ctx.provider || {}, svc = S.service, a = S.address, cur = S.ctx.payment.currency;
+    var initial = (p.name || 'D').charAt(0);
+    var html =
+      '<div class="flex items-c gap3" style="animation-delay:.3s">' +
+        '<div class="avatar"><span style="position:absolute" aria-hidden="true">' + esc(initial) + '</span>' + (p.avatar ? '<img src="' + esc(p.avatar) + '" alt="' + esc(p.name || '') + '" onerror="this.remove()">' : '') + '</div>' +
+        '<div><p class="t-sm c-muted">' + esc(p.name || '') + '</p></div>' +
+      '</div>' +
+      '<div style="animation-delay:.4s"><h1>' + esc(p.title || 'Schedule Services') + '</h1>' +
+        (p.subtitle ? '<div class="flex items-c gap2 mt2"><span class="t-sm c-muted">' + esc(p.subtitle) + '</span></div>' : '') +
+        (p.requires_confirmation ? '<div class="flex items-c gap2 mt2">' + ic('check-circle', 'i4 c-muted') + '<span class="t-sm c-muted">Requires confirmation</span></div>' : '') +
+      '</div>' +
+      '<div class="sp-y-3" style="animation-delay:.5s">' +
+        '<div class="flex items-c gap2">' + ic('clock', 'i4 c-muted') + '<span class="t-sm c-muted">Service</span></div>' +
+        '<div class="bg-accent30 rounded-md p3"><p class="t-sm f-med c-fg">' + esc(svc.name) + '</p><p class="t-xs c-muted mt1">' + svc.duration_minutes + ' min • ' + money(svc.price_cents, cur) + '</p>' +
+          (svc.description ? '<p class="t-xs c-muted mt1">' + esc(svc.description) + '</p>' : '') + '</div>' +
+      '</div>' +
+      '<div class="sp-y-3" style="animation-delay:.6s">' +
+        '<div class="flex items-c jc-b"><div class="flex items-c gap2">' + ic('map-pin', 'i4 c-muted') + '<span class="t-sm c-muted">Location</span></div>' +
+          (a && S.step !== 'datetime' ? '<button type="button" class="btn btn-ghost h6w6" id="side-edit-addr" aria-label="Edit address" style="color:var(--muted-foreground)">' + ic('edit-3', 'i3') + '</button>' : '') + '</div>' +
+        '<div class="t-sm c-muted break">' + (a ? '<div><p class="f-med c-fg">' + esc(a.street) + (a.unit ? ', Apt ' + esc(a.unit) : '') + '</p><p>' + esc(a.city) + ', ' + esc(a.state) + ' ' + esc(a.zipCode) + '</p></div>' : 'Service address to be provided') + '</div>' +
+      '</div>' +
+      (S.step !== 'datetime' && S.selectedDate && S.selectedTime ?
+        '<div style="padding-top:1rem;border-top:1px solid var(--sidebar-border);animation-delay:0s"><div class="sp-y-2"><p class="t-xs c-muted upper track-wide">' + (S.staff ? 'Client\'s Booking' : 'Your Booking') + '</p>' +
+          '<div class="bg-accent30 rounded-md p3"><p class="t-sm f-med c-fg">' + fmtMMMddyyyy(S.selectedDate) + ' at ' + fmtTime(S.selectedTime) + '</p><p class="t-xs c-muted mt1">' + svc.duration_minutes + ' min • ' + money(svc.price_cents, cur) + '</p></div></div></div>' : '');
+    $('#side').innerHTML = html;
+    var eb = $('#side-edit-addr'); if (eb) eb.onclick = function () { openAddress(); };
+  }
+
+  function renderMain() {
+    var main = $('#main');
+    if (S.step === 'datetime') { main.innerHTML = '<div class="main-dt"><div class="cal" id="cal"></div><div class="slots" id="slots"></div></div>'; renderCalendar(); renderSlots(); }
+    else {
+      main.innerHTML = '<div class="main-form"><h2>' + (S.step === 'details' ? (S.staff ? 'Client Details' : 'Your Details') : 'Confirm Booking') + '</h2><div class="form-body" id="form-body"></div>' +
+        '<div class="form-foot"><button type="button" class="btn btn-outline bg-transparent flex1" id="prev">' + ic('arrow-left', 'i4') + 'Back</button>' +
+        (S.step !== 'confirmation' ? '<button type="button" class="btn btn-default flex1" id="next">Continue' + ic('arrow-right', 'i4') + '</button>' : '') + '</div></div>';
+      $('#prev').onclick = prevStep; var nx = $('#next'); if (nx) nx.onclick = nextStep;
+      if (S.step === 'details') renderDetails(); else if (S.staff) renderDeskConfirmation(); else renderConfirmation();
+    }
+    renderSteps(); renderSide();
+  }
+
+  /* calendar + time slots */
+  function renderCalendar() {
+    var cal = $('#cal');
+    var first = weekday({ y: S.year, m: S.month + 1, d: 1 }), n = daysInMonth(S.year, S.month + 1);
+    var cells = '';
+    for (var i = 0; i < first; i++) cells += '<div class="day-empty"></div>';
+    for (var d = 1; d <= n; d++) {
+      var date = { y: S.year, m: S.month + 1, d: d };
+      var isPast = cmp(date, S.today) < 0, isToday = cmp(date, S.today) === 0;
+      var isSel = S.selectedDate && cmp(date, S.selectedDate) === 0;
+      var has = slotsFor(d, S.month, S.year).length > 0;
+      var cls = 'day' + (isSel ? ' selected' : '') + (isToday && !isSel ? ' today' : '') + (isPast || !has ? ' off' : '') + (!isPast && has && !isSel ? ' can' : '') + (S.step !== 'datetime' ? ' locked' : '');
+      cells += '<button type="button" class="' + cls + '" data-day="' + d + '"' + (isPast || !has || S.step !== 'datetime' ? ' disabled' : '') + '>' + d + (has && !isPast ? '<span class="dot"></span>' : '') + '</button>';
+    }
+    cal.innerHTML =
+      '<div class="cal-head"><h2>' + MONTHS[S.month] + ' ' + S.year + '</h2><div class="flex gap1">' +
+        '<button type="button" class="btn btn-ghost h8w8" id="prev-m" aria-label="Previous month">' + ic('chevron-left', 'i4') + '</button>' +
+        '<button type="button" class="btn btn-ghost h8w8" id="next-m" aria-label="Next month">' + ic('chevron-right', 'i4') + '</button></div></div>' +
+      '<div class="grid7 mb2">' + DAYS.map(function (d) { return '<div class="dow">' + d + '</div>'; }).join('') + '</div>' +
+      '<div class="grid7" id="days">' + cells + '</div>';
+    $('#prev-m').onclick = function () { if (S.month === 0) { S.month = 11; S.year--; } else S.month--; renderCalendar(); };
+    $('#next-m').onclick = function () { if (S.month === 11) { S.month = 0; S.year++; } else S.month++; renderCalendar(); };
+    $$('#days .day').forEach(function (b) { b.onclick = function () { S.selectedDate = { y: S.year, m: S.month + 1, d: parseInt(b.dataset.day, 10) }; S.selectedTime = null; renderCalendar(); renderSlots(); }; });
+  }
+  function renderSlots() {
+    var box = $('#slots');
+    var times = S.selectedDate ? slotsFor(S.selectedDate.d, S.selectedDate.m - 1, S.selectedDate.y) : [];
+    var list;
+    if (!S.selectedDate) list = '<p class="slot-empty">Select a date to see available times</p>';
+    else if (!times.length) list = '<p class="slot-empty">No available times</p>';
+    else list = '<div class="slot-list">' + times.map(function (t, i) { return '<div style="animation-delay:' + (i * 0.03) + 's"><button type="button" class="btn ' + (S.selectedTime === t ? 'btn-default' : 'btn-outline') + ' w-full slot-btn" data-t="' + t + '">' + fmtTime(t) + '</button></div>'; }).join('') + '</div>';
+    box.innerHTML =
+      '<div class="slots-head"><h3>' + (S.selectedDate ? fmtEEEMMMd(S.selectedDate) : 'Select a date') + '</h3>' +
+        '<div class="tf"><button type="button" class="' + (!S.use24 ? 'on' : '') + '" data-h="12">12h</button><button type="button" class="' + (S.use24 ? 'on' : '') + '" data-h="24">24h</button></div></div>' +
+      '<div class="scroll">' + list + '</div>' +
+      (S.selectedTime ? '<div class="continue"><button type="button" class="btn btn-default w-full" id="cont">Continue' + ic('arrow-right', 'i4') + '</button></div>' : '');
+    $$('.tf button', box).forEach(function (b) { b.onclick = function () { S.use24 = b.dataset.h === '24'; renderSlots(); renderSide(); }; });
+    $$('.slot-btn', box).forEach(function (b) { b.onclick = function () { S.selectedTime = b.dataset.t; renderSlots(); }; });
+    var c = $('#cont'); if (c) c.onclick = nextStep;
+  }
+
+  /* details */
+  function renderDetails() {
+    var f = S.form, e = S.errors;
+    var star = '<span class="c-primary">*</span>';
+    $('#form-body').innerHTML =
+      '<div class="sp-y-4 step-anim">' +
+        '<div class="grid2">' +
+          '<div class="sp-y-2"><label class="label" for="firstName">First Name ' + star + '</label><div class="field">' + ic('user', 'i4 c-muted') + '<input class="input pl10' + (e.firstName ? ' err' : '') + '" id="firstName" placeholder="Jane" value="' + esc(f.firstName) + '"></div><p class="ferr" id="e-firstName">' + esc(e.firstName || '') + '</p></div>' +
+          '<div class="sp-y-2"><label class="label" for="lastName">Last Name ' + star + '</label><input class="input' + (e.lastName ? ' err' : '') + '" id="lastName" placeholder="Doe" value="' + esc(f.lastName) + '"><p class="ferr" id="e-lastName">' + esc(e.lastName || '') + '</p></div>' +
+        '</div>' +
+        '<div class="sp-y-2"><label class="label" for="email">Email Address ' + star + '</label><div class="field">' + ic('mail', 'i4 c-muted') + '<input class="input pl10' + (e.email ? ' err' : '') + '" id="email" type="email" placeholder="jane@example.com" value="' + esc(f.email) + '"></div><p class="ferr" id="e-email">' + esc(e.email || '') + '</p></div>' +
+        '<div class="sp-y-2"><label class="label" for="phone">Phone Number ' + star + '</label><div class="field">' + ic('phone', 'i4 c-primary') + '<input class="input pl10' + (e.phone ? ' err' : '') + '" id="phone" type="tel" placeholder="(555) 123-4567" maxlength="14" value="' + esc(f.phone) + '"></div><p class="ferr" id="e-phone">' + esc(e.phone || '') + '</p></div>' +
+        '<div class="sp-y-2"><label class="label">Location ' + star + '</label><div class="sel" id="loc-sel"></div></div>' +
+        '<div id="addr-block"></div>' +
+        '<div class="sp-y-2"><label class="label" for="notes">Additional Notes </label><textarea class="textarea" id="notes" rows="2" placeholder="Any special requests or information...">' + esc(f.notes) + '</textarea></div>' +
+      '</div>';
+    ['firstName', 'lastName', 'email', 'notes'].forEach(function (k) {
+      $('#' + k).oninput = function (ev) { S.form[k] = ev.target.value; if (S.errors[k]) { delete S.errors[k]; ev.target.classList.remove('err'); $('#e-' + k).textContent = ''; } };
+    });
+    $('#phone').oninput = function (ev) { var v = formatPhone(ev.target.value); S.form.phone = v; ev.target.value = v; if (S.errors.phone) { delete S.errors.phone; ev.target.classList.remove('err'); $('#e-phone').textContent = ''; } };
+    renderLocSelect(); renderAddrBlock();
+  }
+  var LOCS = [{ value: 'business', label: 'Business Location', icon: 'building-2' }, { value: 'travel', label: 'Travel Request', icon: 'car' }];
+  function locDesc(v) { if (v === 'travel') return 'Service at your location'; var l = S.ctx.location || {}; return [l.street, ((l.city || '') + ' ' + (l.state || '') + ' ' + (l.zip || '')).trim()].filter(Boolean).join(', '); }
+  function renderLocSelect() {
+    var box = $('#loc-sel'); if (!box) return;
+    var cur = LOCS.filter(function (l) { return l.value === S.location; })[0];
+    box.innerHTML =
+      '<button type="button" class="sel-trigger" id="loc-trigger" aria-haspopup="listbox" aria-expanded="' + (S.selOpen ? 'true' : 'false') + '"><div class="flex items-c gap2">' + ic('map-pin', 'i4 c-muted') + '<span class="t-sm">' + (cur ? cur.label : 'Select Location') + '</span></div>' + ic('chevron-down', 'i4 chev') + '</button>' +
+      (S.selOpen ? '<div class="sel-menu" role="listbox">' + LOCS.map(function (l) {
+        return '<div class="sel-item" role="option" tabindex="0" data-v="' + l.value + '" aria-selected="' + (l.value === S.location) + '"><div class="flex items-c gap3">' + ic(l.icon, 'i4') + '<div class="flex col"><span class="f-med">' + l.label + '</span><span class="t-xs c-muted">' + esc(locDesc(l.value)) + '</span></div></div>' + (l.value === S.location ? '<span class="chk">' + ic('check', 'i4') + '</span>' : '') + '</div>';
+      }).join('') + '</div>' : '');
+    $('#loc-trigger').onclick = function (ev) { ev.stopPropagation(); S.selOpen = !S.selOpen; renderLocSelect(); };
+    $$('.sel-item', box).forEach(function (it) { it.onclick = function (ev) { ev.stopPropagation(); setLocation(it.dataset.v); }; it.onkeydown = function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); setLocation(it.dataset.v); } }; });
+  }
+  document.addEventListener('click', function () { if (S.selOpen) { S.selOpen = false; renderLocSelect(); } });
+  function setLocation(v) {
+    S.location = v; S.selOpen = false;
+    if (v === 'business') S.address = businessAddress(); else S.address = null;
+    delete S.errors.address; renderLocSelect(); renderAddrBlock(); renderSide();
+  }
+  function renderAddrBlock() {
+    var box = $('#addr-block'); if (!box) return;
+    var a = S.address, e = S.errors.address;
+    function addrBox(editable) {
+      return '<div class="addr-box"><div class="flex items-s jc-b"><div class="flex items-s gap2 flex1">' + ic('map-pin', 'i4 c-primary', 'margin-top:.125rem') + '<div class="t-sm"><p class="f-med c-fg">' + esc(a.street) + (a.unit ? ', Apt ' + esc(a.unit) : '') + '</p><p class="c-muted">' + esc(a.city) + ', ' + esc(a.state) + ' ' + esc(a.zipCode) + '</p></div></div>' +
+        (editable ? '<button type="button" class="btn btn-ghost h8w8" id="edit-addr" aria-label="Edit address">' + ic('edit-3', 'i3') + '</button>' : '') + '</div></div>';
+    }
+    if (S.location === 'travel') {
+      box.innerHTML = '<div class="sp-y-2"><label class="label">Service Address <span class="c-primary">*</span></label>' +
+        (a ? '<div class="sp-y-2">' + addrBox(true) + '</div>' :
+          '<button type="button" class="btn btn-outline addr-btn' + (e ? ' err' : '') + '" id="add-addr"><div class="flex items-c gap3">' + ic('home', 'i4 c-primary') + '<div class="left"><p class="t-sm c-muted">Click to add service address</p><p class="t-xs c-muted70">Enter your complete address</p></div></div></button>') +
+        (e ? '<p class="ferr">' + esc(e) + '</p>' : '') + '</div>';
+    } else if (a) {
+      box.innerHTML = '<div class="sp-y-2"><label class="label">Business Address</label>' + addrBox(false) + '</div>';
+    } else box.innerHTML = '';
+    var b1 = $('#add-addr'); if (b1) b1.onclick = openAddress;
+    var b2 = $('#edit-addr'); if (b2) b2.onclick = openAddress;
+  }
+
+  /* address dialog (components/ui/address-input-modal.tsx) */
+  function openAddress() {
+    var init = S.address || businessAddress();
+    var d = { street: init.street || '', unit: init.unit || '', city: init.city || '', state: init.state || '', zipCode: init.zipCode || '' }, errs = {};
+    var host = $('#dialog');
+    function preview() { return [d.street, d.unit ? 'Apt ' + d.unit : '', d.city + ', ' + d.state + ' ' + d.zipCode].filter(Boolean).join(', ') || 'Enter address details above...'; }
+    function paint() {
+      host.innerHTML =
+        '<div class="overlay" id="ov"></div><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlg-t">' +
+          '<div class="dlg-head"><h2 class="dlg-title" id="dlg-t">' + ic('map-pin', 'i5 c-primary') + 'Enter Service Address</h2><p class="dlg-desc">Please provide the complete address where the service will be performed.</p></div>' +
+          '<div class="dlg-body">' +
+            '<div class="sp-y-2"><label class="label" for="a-street">Street Address <span class="c-destr">*</span></label><div class="field">' + ic('home', 'i4 c-muted', 'top:.75rem;transform:none') + '<input class="input pl10' + (errs.street ? ' err' : '') + '" id="a-street" placeholder="123 Main Street" value="' + esc(d.street) + '"></div>' + (errs.street ? '<p class="ferr">' + errs.street + '</p>' : '') + '</div>' +
+            '<div class="sp-y-2"><label class="label" for="a-unit">Apt/Unit/Suite (Optional)</label><input class="input" id="a-unit" placeholder="4B" value="' + esc(d.unit) + '"></div>' +
+            '<div class="grid-csz">' +
+              '<div class="sp-y-2"><label class="label" for="a-city">City <span class="c-destr">*</span></label><input class="input' + (errs.city ? ' err' : '') + '" id="a-city" placeholder="Wichita" value="' + esc(d.city) + '">' + (errs.city ? '<p class="ferr">' + errs.city + '</p>' : '') + '</div>' +
+              '<div class="sp-y-2"><label class="label" for="a-state">State <span class="c-destr">*</span></label><input class="input' + (errs.state ? ' err' : '') + '" id="a-state" placeholder="KS" maxlength="2" value="' + esc(d.state) + '">' + (errs.state ? '<p class="ferr">' + errs.state + '</p>' : '') + '</div>' +
+              '<div class="sp-y-2"><label class="label" for="a-zip">ZIP Code <span class="c-destr">*</span></label><input class="input' + (errs.zipCode ? ' err' : '') + '" id="a-zip" placeholder="67202" value="' + esc(d.zipCode) + '">' + (errs.zipCode ? '<p class="ferr">' + errs.zipCode + '</p>' : '') + '</div>' +
+            '</div>' +
+            '<div class="preview' + ((d.street || d.city) ? '' : ' hidden') + '" id="a-preview"><label class="label">Address Preview:</label><p class="t-sm mt1" id="a-prev">' + esc(preview()) + '</p></div>' +
+          '</div>' +
+          '<div class="dlg-foot"><button type="button" class="btn btn-outline" id="a-cancel">Cancel</button><button type="button" class="btn btn-default" id="a-save">Save Address</button></div>' +
+          '<button type="button" class="x" id="a-x" aria-label="Close">' + ic('x', 'i4') + '<span class="sr-only">Close</span></button>' +
+        '</div>';
+      [['a-street', 'street'], ['a-unit', 'unit'], ['a-city', 'city'], ['a-state', 'state'], ['a-zip', 'zipCode']].forEach(function (p) {
+        var el = $('#' + p[0]);
+        el.oninput = function (ev) { var v = ev.target.value; if (p[1] === 'state') { v = v.toUpperCase(); ev.target.value = v; } d[p[1]] = v; if (errs[p[1]]) { delete errs[p[1]]; el.classList.remove('err'); } $('#a-prev').textContent = preview(); $('#a-preview').classList.toggle('hidden', !(d.street || d.city)); };
+      });
+      $('#a-cancel').onclick = close; $('#a-x').onclick = close; $('#ov').onclick = close;
+      $('#a-save').onclick = function () {
+        errs = {};
+        if (!d.street.trim()) errs.street = 'Street address is required';
+        if (!d.city.trim()) errs.city = 'City is required';
+        if (!d.state.trim()) errs.state = 'State is required';
+        if (!d.zipCode.trim()) errs.zipCode = 'ZIP code is required'; else if (!/^\d{5}(-\d{4})?$/.test(d.zipCode.trim())) errs.zipCode = 'Please enter a valid ZIP code (e.g., 12345 or 12345-6789)';
+        if (Object.keys(errs).length) { paint(); return; }
+        S.address = { street: d.street, unit: d.unit, city: d.city, state: d.state, zipCode: d.zipCode, fullAddress: [d.street, d.unit ? 'Apt ' + d.unit : '', d.city + ', ' + d.state + ' ' + d.zipCode].filter(Boolean).join(', ') };
+        delete S.errors.address; close(); renderAddrBlock(); renderSide(); if (S.step === 'confirmation') { renderConfirmation(); syncLead('details'); }
+      };
+    }
+    function close() { host.innerHTML = ''; document.removeEventListener('keydown', onKey); }
+    function onKey(ev) { if (ev.key === 'Escape') close(); }
+    document.addEventListener('keydown', onKey);
+    paint(); var f = $('#a-street'); if (f) f.focus();
+  }
+
+  /* confirmation + payment */
+  var METHODS = [   /* the tiles carry generic icons and the brand name as text; the brands' own marks appear on their own buttons (PayPal's and Cash App Pay's are rendered by their SDKs) */
+    { id: 'square', name: 'Credit/Debit Card (Square)', label: 'Card', icon: 'credit-card' },
+    { id: 'paypal', name: 'PayPal', label: 'PayPal', icon: 'wallet' },
+    { id: 'cashapp', name: 'Cash App Pay', label: 'Cash App', icon: 'circle-dollar-sign' }
+  ];
+  function enabledMethods() {
+    var ck = S.ctx.checkout || {};
+    return METHODS.filter(function (m) { if (m.id === 'paypal') return ck.paypal && ck.paypal.enabled; return ck.square && ck.square.enabled; });
+  }
+  function totalCents() { return S.service.price_cents; }
+  function depositCents() { var d = S.ctx.payment.deposit_cents || 2000; return Math.min(d, totalCents()); }
+
+  function renderConfirmation() {
+    var f = S.form, a = S.address, svc = S.service, cur = S.ctx.payment.currency, price = totalCents(), dep = depositCents();
+    var methods = enabledMethods();
+    if (methods.map(function (m) { return m.id; }).indexOf(S.method) < 0 && methods.length) S.method = methods[0].id;
+    var sdkPending = (S.ctx.checkout.square.enabled && !S.sq.loaded && !S.sq.error) || (S.ctx.checkout.paypal.enabled && !S.pp.loaded && !S.pp.error);
+    $('#form-body').innerHTML =
+      '<div class="sp-y-6 step-anim">' +
+        '<div class="center sp-y-4"><div class="bg-primary10 rounded-full flex items-c jc-c" style="width:4rem;height:4rem;margin:0 auto">' + ic('check-circle', 'i8 c-primary') + '</div>' +
+          '<div><h3 class="t-lg f-semi c-fg">Confirm Your Booking</h3><p class="t-sm c-muted">Please review your booking details below</p></div></div>' +
+        '<div class="sp-y-4">' +
+          '<div class="sum"><h4>Service Details</h4><div class="sp-y-2">' +
+            '<div class="row"><span class="c-muted">Service</span><span class="c-fg f-med">' + esc(svc.name) + '</span></div>' +
+            '<div class="row"><span class="c-muted">Duration</span><span class="c-fg">' + svc.duration_minutes + ' minutes</span></div>' +
+            '<div class="row"><span class="c-muted">Price</span><span class="c-fg f-med">' + money(price, cur) + '</span></div></div></div>' +
+          '<div class="sum"><h4>Date &amp; Time</h4><p class="t-sm c-fg">' + fmtLong(S.selectedDate) + ' at ' + fmtTime(S.selectedTime) + '</p></div>' +
+          '<div class="sum"><h4>Customer Details</h4><div class="sp-y-2">' +
+            '<div class="row"><span class="c-muted">Name</span><span class="c-fg">' + esc(f.firstName) + ' ' + esc(f.lastName) + '</span></div>' +
+            '<div class="row"><span class="c-muted">Email</span><span class="c-fg">' + esc(f.email) + '</span></div>' +
+            '<div class="row"><span class="c-muted">Phone</span><span class="c-fg">' + esc(f.phone) + '</span></div></div></div>' +
+          (a ? '<div class="sum"><h4>Service Address</h4><div class="t-sm c-fg"><p>' + esc(a.street) + (a.unit ? ', Apt ' + esc(a.unit) : '') + '</p><p>' + esc(a.city) + ', ' + esc(a.state) + ' ' + esc(a.zipCode) + '</p></div></div>' : '') +
+          (f.notes ? '<div class="sum"><h4>Additional Notes</h4><p class="t-sm c-fg">' + esc(f.notes) + '</p></div>' : '') +
+        '</div>' +
+        '<div class="pay"><h4>Payment Details</h4>' +
+          (S.ctx.checkout && S.ctx.checkout.mode === 'sandbox' ? (S.ctx.checkout.forced === 'dev' ? '<div class="sdk-note" id="test-note"><div class="l1">' + ic('shield', 'i4') + '<span>Dev site · test mode</span></div><div class="l2">This is the dev copy of the site: payments run against the processors\' sandboxes, no real card is charged here, and only their test cards are accepted (for example 4111 1111 1111 1111).</div></div>' : '<div class="sdk-note" id="test-note"><div class="l1">' + ic('shield', 'i4') + '<span>Test mode</span></div><div class="l2">This page is connected to Square\'s sandbox: no real card is charged here, and only Square\'s test cards are accepted (for example 4111 1111 1111 1111).</div></div>') : '') +
+          (sdkPending ? '<div class="sdk-note" id="sdk-note"><div class="l1">' + ic('loader', 'i4 spin') + '<span>Loading secure payment systems...</span></div><div class="l2">' + (S.sq.loaded ? '✅ Square ready' : '🔄 Loading Square...') + (S.pp.loaded ? ' ✅ PayPal ready' : ' 🔄 Loading PayPal...') + '</div>' + (S.sq.error ? '<div class="er">⚠️ Square: ' + esc(S.sq.error) + '</div>' : '') + (S.pp.error ? '<div class="er">⚠️ PayPal: ' + esc(S.pp.error) + '</div>' : '') + '</div>' : '') +
+          '<div class="sp-y-4">' +
+            '<div class="flex jc-b items-c"><span class="t-sm c-muted">Total Amount</span><span class="t-lg f-semi c-fg">' + money(price, cur) + '</span></div>' +
+            '<div class="flex jc-b items-c"><span class="t-sm c-muted">Deposit Required</span><span class="t-sm f-med c-primary">' + money(dep, cur) + '</span></div>' +
+            '<div class="pay-sep">' + (methods.length ? '<div class="methods">' + methods.map(function (m) {
+              return '<label class="method' + (S.method === m.id ? ' on' : '') + '" title="' + esc(m.name) + '"><input type="radio" name="paymentMethod" value="' + m.id + '"' + (S.method === m.id ? ' checked' : '') + (S.processing ? ' disabled' : '') + '><div class="ico">' + ic(m.icon, 'i5') + '</div><span class="mlabel">' + esc(m.label) + '</span></label>';
+            }).join('') + '</div>' : '<div class="center" style="padding:2rem 0"><p style="color:#6b7280">No payment methods available</p></div>') + '</div>' +
+            '<div style="padding-top:1rem" id="pay-widget"></div>' +
+          '</div></div>' +
+      '</div>';
+    $$('input[name=paymentMethod]').forEach(function (r) { r.onchange = function () { if (S.processing) return; S.method = r.value; renderConfirmation(); }; });
+    renderPayWidget();
+  }
+
+  function renderPayWidget() {
+    var w = $('#pay-widget'); if (!w) return;
+    var dep = depositCents(), cur = S.ctx.payment.currency;
+    parkSquareWidgets();
+    if (S.method === 'square') {
+      w.innerHTML =
+        '<div class="esp"><div style="margin-bottom:1.5rem"><div class="ph"><div class="ib">' + ic('credit-card', 'i5 c-primary') + '</div><div><h3>Secure Payment</h3><p>Enter your card details below</p></div></div></div>' +
+          '<div class="sp-y-3"><label class="lab"><span>Credit Card Information</span><span class="c-primary">*</span></label><div class="sqc" id="square-card-container"></div></div>' +
+          '<div class="sec"><div class="l1"><div>' + ic('shield', 'i4', 'color:#16a34a') + '<span>256-bit SSL encryption</span></div><div>' + ic('lock', 'i4', 'color:#2563eb') + '<span>PCI DSS compliant</span></div></div>' +
+            '<div class="l2"><span>Secured by</span><div class="flex items-c gap1"><div class="sq">S</div><span class="f-semi" style="color:#2563eb">Square</span></div></div></div>' +
+          '<div><button type="button" class="paybtn" id="pay-now" disabled>' + ic('check-circle', 'i5') + '<span>Pay ' + money(dep, cur) + ' &amp; Book Now</span></button><div id="pbreak"></div></div></div>';
+      mountSquareCard();
+    } else if (S.method === 'paypal') {
+      w.innerHTML = '<div class="w-full"><div id="paypal-button-container" class="w-full"></div>' + (!S.pp.loaded ? '<div class="pulse">Loading PayPal...</div>' : '') + '<div id="pbreak"></div></div>';
+      mountPayPal();
+    } else if (S.method === 'cashapp') {
+      w.innerHTML = '<div class="w-full"><div id="cash-app-pay" class="w-full"></div>' + (!S.sq.loaded ? '<div class="pulse">Loading Cash App Pay...</div>' : '') + '<div id="pbreak"></div></div>';
+      mountCashApp();
+    }
+  }
+  function showPayState(opts) {
+    var b = $('#pbreak'); if (!b) return;
+    var dep = depositCents(), cur = S.ctx.payment.currency;
+    if (!opts.error && !opts.processing) { b.innerHTML = ''; return; }
+    b.innerHTML = '<div class="pbreak"><div class="r1"><span>Deposit Required</span><b>' + money(dep, cur) + '</b></div><div class="r2">Remaining balance due at service</div>' +
+      (opts.error ? '<div class="er"><strong>Error:</strong> ' + esc(opts.error) + '</div>' : '') +
+      (opts.processing ? '<div class="pr"><strong>Processing:</strong> Please wait while we process your payment...</div>' : '') + '</div>';
+  }
+
+  /* ── Square Web Payments SDK ───────────────────────────────────────────────────────────────────── */
+  function loadScript(src, onload, onerror) { var s = document.createElement('script'); s.src = src; s.async = true; s.onload = onload; s.onerror = onerror; document.head.appendChild(s); }
+  function loadSdks() {
+    var ck = S.ctx.checkout;
+    if (ck.square.enabled) {
+      loadScript(ck.square.sdk_url, function () {
+        try {
+          if (!window.Square) throw new Error('Square.js not loaded');
+          S.sq.payments = window.Square.payments(ck.square.app_id, ck.square.location_id);
+          S.sq.loaded = true;
+        } catch (e) { S.sq.error = e.message || 'Failed to load Square'; }
+        onSdkChange();
+      }, function () { S.sq.error = 'Failed to load Square SDK'; onSdkChange(); });
+    }
+    if (ck.paypal.enabled) {
+      loadScript('https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(ck.paypal.client_id) + '&currency=' + encodeURIComponent(S.ctx.payment.currency || 'USD') + '&intent=capture&components=buttons', function () { S.pp.loaded = !!window.paypal; if (!window.paypal) S.pp.error = 'PayPal SDK not available'; onSdkChange(); }, function () { S.pp.error = 'Failed to load PayPal SDK'; onSdkChange(); });
+    }
+  }
+  function onSdkChange() {
+    if (S.step !== 'confirmation') return;
+    var note = $('#sdk-note');
+    var pending = (S.ctx.checkout.square.enabled && !S.sq.loaded && !S.sq.error) || (S.ctx.checkout.paypal.enabled && !S.pp.loaded && !S.pp.error);
+    if (note && !pending) note.remove();
+    else if (note) { note.querySelector('.l2').textContent = (S.sq.loaded ? '✅ Square ready' : '🔄 Loading Square...') + (S.pp.loaded ? ' ✅ PayPal ready' : ' 🔄 Loading PayPal...'); }
+    if (S.method === 'square' && S.sq.loaded && !S.sq.card) mountSquareCard();
+    if (S.method === 'paypal' && S.pp.loaded) mountPayPal();
+    if (S.method === 'cashapp' && S.sq.loaded && !S.sq.cashAppOn) mountCashApp();
+  }
+  /* Teardown. parkSquareWidgets runs whenever the payment UI is rebuilt or left (a method switch, an address edit,
+     Back, the success page): the card is cheap to rebuild, Cash App Pay keeps its payment request and is only
+     detached, to be attached again when it is shown next. Square's SDK allows one Cash App Pay instance per page
+     and the deposit is fixed in its payment request, so the instance is destroyed and made afresh only when the
+     deposit changed (dropCashApp). Square's own destroy() logs "[Cash App Pay] nothing to destroy" once: it removes
+     the button and then restarts the kit, which tries to remove it again. That line is square.js's, not this page's. */
+  function parkSquareWidgets() {
+    try { if (S.sq.card) { S.sq.card.destroy(); } } catch (e) {} S.sq.card = null;
+    if (S.sq.cashAppP && S.sq.cashAppDep !== depositCents()) { dropCashApp(); return; }   /* another deposit: a new payment request is needed */
+    try { if (S.sq.cashApp && S.sq.cashAppOn) { S.sq.cashApp.detach(); } } catch (e) {} S.sq.cashAppOn = false; S.sq.cashAppBox = null;
+    /* an attach still in flight is settled by settleCashApp when it lands */
+  }
+  function dropCashApp() {
+    S.sq.gen++;   /* a creation or attach still in flight sees the generation change and stands down */
+    try { if (S.sq.cashApp) { S.sq.cashApp.destroy(); } } catch (e) {}   /* destroy() removes the button itself; detaching first would only add a second SDK warning */
+    S.sq.cashApp = null; S.sq.cashAppP = null; S.sq.cashAppA = null; S.sq.cashAppOn = false; S.sq.cashAppBox = null; S.sq.cashAppDep = null;
+  }
+  function mountSquareCard() {
+    var box = $('#square-card-container'), btn = $('#pay-now'); if (!box || !btn) return;
+    if (S.sq.error) { showPayState({ error: 'Failed to initialize payment form' }); return; }
+    if (!S.sq.loaded) return;
+    S.sq.payments.card().then(function (card) {
+      if (!$('#square-card-container')) { try { card.destroy(); } catch (e) {} return; }
+      return card.attach('#square-card-container').then(function () { S.sq.card = card; btn.disabled = false; });
+    }).catch(function (e) { console.error('Error initializing Square:', e); S.sq.error = 'Failed to initialize payment form'; showPayState({ error: 'Failed to initialize payment form' }); });
+    btn.onclick = function () {
+      if (!S.sq.card || S.processing) return;
+      setProcessing(true); showPayState({ processing: true });
+      S.sq.card.tokenize().then(function (r) {
+        if (r.status === 'OK') return payWith('square', r.token);
+        var msg = (r.errors && r.errors[0] && r.errors[0].message) || 'Payment failed';
+        paymentFailed(msg, true);
+      }).catch(function (e) { paymentFailed((e && e.message) ? ('Card not accepted: ' + e.message) : 'Payment processing failed', true); });
+    };
+  }
+  function mountCashApp() {
+    var box = $('#cash-app-pay'); if (!box) return;
+    if (S.sq.error) { box.innerHTML = '<div class="unavail">Cash App Pay unavailable</div>'; return; }
+    if (!S.sq.loaded) return;
+    if (S.sq.cashAppP && S.sq.cashAppDep !== depositCents()) dropCashApp();   /* (normally already done by parkSquareWidgets) */
+    var gen = S.sq.gen;
+    function failed(e) { console.error('Cash App Pay error:', e); var b = $('#cash-app-pay'); if (b) { b.innerHTML = '<div class="unavail">Cash App Pay unavailable</div>'; var p = b.parentNode && b.parentNode.querySelector('.pulse'); if (p) p.remove(); } }
+    if (!S.sq.cashAppP) {   /* one instance per deposit amount; its payment request carries the deposit */
+      var dep = depositCents(); S.sq.cashAppDep = dep;
+      try {
+        var req = S.sq.payments.paymentRequest({ countryCode: 'US', currencyCode: S.ctx.payment.currency || 'USD', total: { amount: (dep / 100).toFixed(2), label: 'Deposit' } });
+        var refId = 'book-' + MERCHANT_ID + '-' + Date.now();
+        var redirect = ''; try { redirect = topLoc().href; } catch (e) { redirect = window.location.href; }
+        S.sq.cashAppP = S.sq.payments.cashAppPay(req, { redirectURL: redirect, referenceId: refId }).then(function (cap) {
+          if (gen !== S.sq.gen) { try { cap.destroy(); } catch (e) {} throw new Error('deposit changed'); }   /* dropped while the instance was being made */
+          cap.addEventListener('ontokenization', function (ev) {
+            var r = ev.detail && ev.detail.tokenResult;
+            if (r && r.status === 'OK') { setProcessing(true); showPayState({ processing: true }); payWith('square', r.token); }
+            else paymentFailed((r && r.errors && r.errors[0] && r.errors[0].message) || 'Cash App payment declined', true);
+          });
+          S.sq.cashApp = cap; return cap;
+        });
+      } catch (e) { failed(e); return; }
+    }
+    S.sq.cashAppP.then(function (cap) {
+      if (gen !== S.sq.gen || S.sq.cashAppA || S.sq.cashAppOn) return;   /* the step was left, or an attach is in flight / done already: settleCashApp decides */
+      attachCashApp(cap, gen);
+    }).catch(failed);
+    function attachCashApp(cap, gen) {
+      var b = $('#cash-app-pay'); if (!b) return;
+      S.sq.cashAppBox = b;
+      S.sq.cashAppA = cap.attach('#cash-app-pay', { shape: 'semiround', width: 'full', size: 'medium' }).then(function () {
+        S.sq.cashAppA = null; S.sq.cashAppOn = true; var p = b.parentNode && b.parentNode.querySelector('.pulse'); if (p) p.remove();
+        settleCashApp(cap, gen);
+      }, function (e) { S.sq.cashAppA = null; S.sq.cashAppBox = null; if (gen === S.sq.gen) failed(e); });
+    }
+    /* the attach is asynchronous: by the time it lands the visitor may have switched method (the button must go)
+       or the step may have re-rendered (the button sits in a box that is no longer in the page: attach again) */
+    function settleCashApp(cap, gen) {
+      if (gen !== S.sq.gen) return;
+      var cur = $('#cash-app-pay');
+      if (S.method === 'cashapp' && cur && cur === S.sq.cashAppBox) return;
+      try { cap.detach(); } catch (e) {} S.sq.cashAppOn = false; S.sq.cashAppBox = null;
+      if (S.method === 'cashapp' && cur) attachCashApp(cap, gen);
+    }
+  }
+  /* ── PayPal JS SDK ─────────────────────────────────────────────────────────────────────────────── */
+  function mountPayPal() {
+    var box = $('#paypal-button-container'); if (!box || !S.pp.loaded || !window.paypal) return;
+    var pulse = box.parentNode.querySelector('.pulse'); if (pulse) pulse.remove();
+    box.innerHTML = '';
+    var pending = null;
+    try {
+      window.paypal.Buttons({
+        style: { layout: 'vertical', color: 'gold', shape: 'rect', label: 'paypal', height: 45 },
+        createOrder: function () {
+          return api('POST', '/booking/paypal/order', bookingPayload({})).then(function (r) {
+            if (!r.ok) throw new Error(r.error || 'PayPal order failed');
+            pending = r; return r.order_id;
+          });
+        },
+        onApprove: function (data) {
+          setProcessing(true); showPayState({ processing: true });
+          return api('POST', '/booking/pay', { merchant_id: MERCHANT_ID, processor: 'paypal', source: data.orderID, booking_id: pending ? pending.booking_id : 0, booking_token: pending ? pending.booking_token : '', request_id: uuid(), channel: CHANNEL })
+            .then(handlePayAnswer).catch(function (e) { paymentFailed(e.message || 'Failed to capture PayPal payment', true); });
+        },
+        onError: function (err) { console.error('PayPal error:', err); paymentFailed((err && err.message) || 'PayPal payment failed', true); },
+        onCancel: function () { pending = null; syncLead('payment_failed', { error: 'PayPal window closed before paying', method: 'paypal' }); }
+      }).render('#paypal-button-container');
+    } catch (e) { console.error(e); box.innerHTML = '<div class="unavail">PayPal unavailable</div>'; }
+  }
+
+  /* ── the booking itself ────────────────────────────────────────────────────────────────────────── */
+  function uuid() { return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, function (c) { return (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16); }); }
+  function api(method, path, body, auth) {
+    var opts = { method: method, headers: {} };
+    if (auth && S.auth) opts.headers['Authorization'] = 'Bearer ' + S.auth;
+    if (auth && MERCHANT_ID) { opts.headers['x_merchant_id'] = String(MERCHANT_ID); opts.headers['x-merchant-id'] = String(MERCHANT_ID); }
+    if (body) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+    return fetch(API + path, opts).then(function (r) { return r.json().then(function (j) { if (!r.ok && !('ok' in j)) throw new Error(j.message || ('HTTP ' + r.status)); return j; }); });
+  }
+  function bookingPayload(extra) {
+    var f = S.form, a = S.address || {};
+    var base = {
+      merchant_id: MERCHANT_ID, channel: CHANNEL, service_id: S.service.id, date: dateKey(S.selectedDate), time: S.selectedTime, request_id: uuid(), lead_id: S.lead.id,
+      customer: { first: f.firstName.trim(), last: f.lastName.trim(), email: f.email.trim(), phone: f.phone.trim(), location: S.location,
+        address: { street: a.street || '', unit: a.unit || '', city: a.city || '', state: a.state || '', zip: a.zipCode || '', full: a.fullAddress || '' }, notes: f.notes.trim() }
+    };
+    for (var k in extra) base[k] = extra[k];
+    return base;
+  }
+  function payWith(processor, token) {
+    return api('POST', '/booking/pay', bookingPayload({ processor: processor, source: token })).then(handlePayAnswer).catch(function (e) { paymentFailed(e.message || 'Failed to create booking. Please try again.', true); });
+  }
+  function handlePayAnswer(r) {
+    if (!r || !r.ok) { paymentFailed((r && r.error) || 'Payment failed. Please try again.'); return; }
+    S.paySuccess = true; setProcessing(false); clearLead();
+    toast('Booking confirmed successfully! Redirecting to confirmation page...');
+    var b = r.booking;
+    try { window.parent.postMessage({ gin: 'route:changed', view_id: VIEW_ID, route: '/success?id=' + b.id + '&t=' + b.token }, '*'); } catch (e) {}
+    setTimeout(function () { showSuccess(b.id, b.token); }, 1000);
+  }
+  function paymentFailed(msg, inBrowser) {
+    console.error('Payment error:', msg);
+    setProcessing(false); S.payError = msg; showPayState({ error: msg }); toast(msg, true);
+    if (/taken/i.test(msg)) refreshBooked();
+    if (inBrowser) syncLead('payment_failed', { error: msg, method: S.method });   /* a failure the server never saw; its own it records in booking/settle */
+  }
+  function setProcessing(on) { S.processing = on; var b = $('#pay-now'); if (b) { b.disabled = on || !S.sq.card; b.innerHTML = on ? '<div class="spinner"></div><span>Processing Payment...</span>' : ic('check-circle', 'i5') + '<span>Pay ' + money(depositCents(), S.ctx.payment.currency) + ' &amp; Book Now</span>'; } $$('input[name=paymentMethod]').forEach(function (r) { r.disabled = on; }); }
+  function refreshBooked() { api('GET', '/booking/context?merchant_id=' + MERCHANT_ID + '&channel=' + CHANNEL).then(function (c) { if (c && c.ok) { S.ctx.booked = c.booked; S.slotCache = buildSlots(); } }).catch(function () {}); }
+
+  function toast(msg, isErr) {
+    var t = $('#toast'); if (!t) return;
+    t.innerHTML = '<div class="toast' + (isErr ? ' err' : '') + '" role="status">' + (isErr ? '' : ic('check-circle', 'i4', 'color:#22c55e;margin-top:.125rem')) + '<span>' + esc(msg) + '</span></div>';
+    clearTimeout(toast._t); toast._t = setTimeout(function () { t.innerHTML = ''; }, 4000);
+  }
+
+  /* ── steps ─────────────────────────────────────────────────────────────────────────────────────── */
+  function nextStep() {
+    if (S.step === 'datetime' && S.selectedDate && S.selectedTime) { S.step = 'details'; renderMain(); }
+    else if (S.step === 'details') {
+      var errs = validateDetails();
+      if (Object.keys(errs).length) { S.errors = errs; renderDetails(); return; }
+      S.errors = {}; S.step = 'confirmation'; renderMain();
+      syncLead('details');
+    }
+  }
+  function prevStep() {
+    parkSquareWidgets(); S.payError = '';
+    if (S.step === 'confirmation') S.step = 'details'; else if (S.step === 'details') S.step = 'datetime';
+    renderMain();
+  }
+
+  /* ── success page (app/book/success/page.tsx) ──────────────────────────────────────────────────── */
+  function showSuccess(id, token) {
+    parkSquareWidgets();
+    app.innerHTML = '<div class="loading">Loading...</div>';
+    api('GET', '/booking/status?id=' + encodeURIComponent(id) + '&t=' + encodeURIComponent(token)).then(function (s) { paintSuccess(id, s && s.ok ? s : null); }).catch(function () { paintSuccess(id, null); });
+  }
+  function paintSuccess(id, s) {
+    var m = (s && s.merchant) || (S.ctx && S.ctx.merchant) || {};
+    var links = (s && s.links) || (S.ctx && S.ctx.links) || {};
+    var email = links.email || m.email || '', phone = m.phone || '';
+    app.innerHTML =
+      '<div class="success"><div class="scard">' +
+        '<div class="ok">' + ic('check-circle', 'i8') + '</div>' +
+        '<h1>Booking Confirmed!</h1>' +
+        '<p class="lead">Your appointment has been successfully booked. You\'ll receive a confirmation email shortly with all the details.</p>' +
+        (id ? '<div class="idbox"><b>Booking ID:</b> #' + esc(id) + '</div>' : '') +
+        '<div class="sp-y-3">' +
+          '<a class="btn btn-default w-full" href="' + esc(homeHref()) + '" target="_top">' + ic('home', 'i4') + 'Return Home</a>' +
+          '<button type="button" class="btn btn-outline bg-transparent w-full" id="again">' + ic('calendar', 'i4') + 'Book Another Service</button>' +
+        '</div>' +
+        '<div class="next"><div><p><b>What\'s next?</b></p><ul><li>• Your appointment will be confirmed within 24 hours</li><li>• Check your email for confirmation details</li><li>• You\'ll receive any preparation instructions</li></ul></div>' +
+          '<div class="help"><p><b>Need help?</b></p><div class="links">' + (email ? '<a href="mailto:' + esc(email) + '">' + ic('mail', 'i3') + 'Email</a>' : '') + (phone ? '<a href="tel:' + esc(phone.replace(/[^+\d]/g, '')) + '">' + ic('phone', 'i3') + 'Call</a>' : '') + '</div></div></div>' +
+      '</div></div>';
+    $('#again').onclick = function () {
+      try { window.parent.postMessage({ gin: 'route:changed', view_id: VIEW_ID, route: '/' }, '*'); } catch (e) {}
+      S.step = 'datetime'; S.selectedDate = null; S.selectedTime = null; S.paySuccess = false; S.payError = ''; S.errors = {};
+      if (!S.ctx) { boot(); return; }
+      refreshBooked(); renderShell();
+    };
+  }
+
+    /* ── the desk is not in this page. Its code lives in this record's s02 as parts the platform hands out by role
+     (GET app/module, manifest.parts): a visitor never receives it; the people who work the business get "desk", owners
+     and admins also "manage". This seam loads a part and gives it the page's interface. ── */
+  S.auth = null; S.user = null; S.desk = null; S.mode = 'visitor'; S.staff = false; S.visitorDue = null; S.deskTried = false; S.sdkStarted = false;
+  var DESK = null, PARTS = {};
+  function loadPart(part, kit) {
+    if (PARTS[part]) return PARTS[part];
+    var url = API + '/app/module?view=' + VIEW_ID + '&part=' + encodeURIComponent(part) + '&merchant_id=' + MERCHANT_ID;
+    var p = fetch(url, { headers: { 'Authorization': 'Bearer ' + S.auth, 'x-merchant-id': String(MERCHANT_ID) } })
+      .then(function (r) { return r.text().then(function (t) { if (!r.ok) { var msg = ''; try { msg = JSON.parse(t).message; } catch (e) {} throw new Error(msg || ('part ' + part + ': HTTP ' + r.status)); } return t; }); })
+      .then(function (code) {
+        return new Promise(function (res, rej) {
+          var got = false;
+          window.__ginModule = function (name, factory) { got = true; window.__ginModule = undefined; try { res(factory(kit)); } catch (e) { rej(e); } };
+          var s = document.createElement('script'); s.textContent = code + '\n//# sourceURL=app-' + VIEW_ID + '-' + part + '.js';
+          document.head.appendChild(s); s.parentNode.removeChild(s);
+          if (!got) { window.__ginModule = undefined; rej(new Error('part ' + part + ' did not load')); }
+        });
+      });
+    PARTS[part] = p; p.catch(function () { delete PARTS[part]; });
+    return p;
+  }
+  function deskKit() {
+    return { '$': $, '$$': $$, CHANNEL: CHANNEL, IN_SHELL: IN_SHELL, MERCHANT_ID: MERCHANT_ID, PATHS: PATHS, S: S, VIEW_ID: VIEW_ID, WEEKDAYS: WEEKDAYS, addDays: addDays, api: api, app: app, applyTheme: applyTheme, buildSlots: buildSlots, businessAddress: businessAddress, dateKey: dateKey, depositCents: depositCents, esc: esc, fmtLong: fmtLong, fmtTime: fmtTime, ic: ic, money: money, pad2: pad2, parkSquareWidgets: parkSquareWidgets, parseDate: parseDate, renderShell: renderShell, toMins: toMins, toast: toast, totalCents: totalCents, uuid: uuid, visitorNow: visitorNow, loadPart: loadPart };
+  }
+  function tryDesk() {
+    if (DESK) { DESK.tryDesk(); return; }
+    loadPart('desk', deskKit()).then(function (m) { DESK = m; m.tryDesk(); }).catch(function () { S.auth = null; visitorNow(); });
+  }
+  function renderDesk() { if (DESK) DESK.renderDesk(); }
+  function renderDeskConfirmation() { if (DESK) DESK.renderDeskConfirmation(); }
+
+  /* ── boot ──────────────────────────────────────────────────────────────────────────────────────── */
+  function fatal(title, msg) { app.innerHTML = '<div class="fatal"><div><h2>' + esc(title) + '</h2><p>' + esc(msg) + '</p></div></div>'; }
+  function boot() {
+    if (!MERCHANT_ID) { fatal('Unable to load booking system', 'No business is attached to this page.'); return; }
+    api('GET', '/booking/context?merchant_id=' + MERCHANT_ID + '&channel=' + CHANNEL).then(function (c) {
+      if (!c || !c.ok) throw new Error((c && (c.message || c.error)) || 'context');
+      S.ctx = c; S.tz = c.availability.timezone; S.today = parseDate(c.now.date); S.nowMins = toMins(c.now.time);
+      applyTheme(c.theme, c.tokens);
+      S.month = S.today.m - 1; S.year = S.today.y;
+      var dflt = (c.form && c.form.default_service) || 'natural-beat';
+      var slug = Q.service || dflt;
+      S.service = c.services.filter(function (s) { return s.slug === slug; })[0] || c.services.filter(function (s) { return s.slug === dflt; })[0] || c.services[0];
+      if (!S.service) { app.innerHTML = '<div class="fatal"><div><h1 class="t-2xl c-fg" style="font-family:var(--font-serif);margin-bottom:1rem">No Services Available</h1><a class="c-primary" href="' + esc(homeHref()) + '" target="_top" style="text-decoration:underline">Return to Home</a></div></div>'; return; }
+      S.address = businessAddress();
+      S.slotCache = buildSlots();
+      if (c.merchant && c.merchant.favicon) { var l = document.createElement('link'); l.rel = 'icon'; l.href = c.merchant.favicon; document.head.appendChild(l); }
+      document.title = ((c.provider && c.provider.title) || 'Schedule Services') + ' · ' + (c.merchant.name || '');
+      if (Q.success_id && Q.success_t) { showSuccess(Q.success_id, Q.success_t); return; }
+      if (S.mode === 'desk') return;
+      S.visitorReady = true;
+      if (IN_SHELL && !S.restoreSeen) { S.visitorDue = setTimeout(visitorNow, 1500); return; }
+      visitorNow();
+    }).catch(function (e) { console.error(e); if (S.mode !== 'desk') fatal('Unable to load booking system', 'Please refresh the page or try again later.'); });
+  }
+  function visitorNow() {
+    clearTimeout(S.visitorDue); S.visitorDue = null;
+    if (S.mode === 'desk' || !S.visitorReady || S.visitorShown) return;
+    S.visitorShown = true; renderShell(); if (!S.sdkStarted) { S.sdkStarted = true; loadSdks(); }
+  }
+  // the shell: ready handshake, a remembered route (a reload lands back on the success page)
+  window.addEventListener('message', function (ev) {
+    var d = ev.data || {}; if (!d || typeof d !== 'object') return;
+    if (d.gin === 'app:restore') {
+      S.restoreSeen = true; S.user = d.user || null;
+      var tok = d.user && typeof d.user.auth_token === 'string' && d.user.auth_token.length > 20 ? d.user.auth_token : null;
+      if (tok && MERCHANT_ID) { S.auth = tok; tryDesk(); } else visitorNow();
+      return;
+    }
+    if (d.gin === 'route:set' && typeof d.route === 'string' && d.route.indexOf('/desk/') === 0) { var t = d.route.slice(6).replace(/[?#].*$/, ''); if (t) S.tab = t; if (S.mode === 'desk') renderDesk(); return; }
+    if (d.gin === 'route:set' && typeof d.route === 'string' && d.route.indexOf('/success') === 0) {
+      var m1 = d.route.match(/[?&]id=(\d+)/), m2 = d.route.match(/[?&]t=([^&]+)/);
+      if (m1 && m2) { var go = function () { showSuccess(m1[1], decodeURIComponent(m2[1])); }; if (S.ctx) go(); else setTimeout(go, 1200); }
+    }
+  });
+  try { window.parent.postMessage({ gin: 'app:ready', view_id: VIEW_ID, weight: 'dom' }, '*'); } catch (e) {}
+  boot();
+})();
+</script>
+</body>
+</html>

@@ -29,6 +29,7 @@ A macOS-style desktop that takes Record 50's place: the `appshell` / `devshell` 
   - Otherwise, a ported app (`src/apps/notes.js`), or a placeholder (`src/apps/pending.js`).
 - If the page is instead embedded as a tab inside the appshell, it takes the session from the host's `app:restore`, passes it down to the records it hosts, and passes requests it can't serve up to the host.
 - `src/settings-store.js` `setAppearance()` is the only way to change light/dark/system.
+- `records/` holds apps built as their own database records: the page (`s01`), `props.json` and `dev.json` (face) for each. Mail is the first. See `records/README.md`. Records already in the database (54 Booking, 74 Messages) are snapshot read-only in `props/fixtures/records/`; never change them.
 
 ## Testing
 
