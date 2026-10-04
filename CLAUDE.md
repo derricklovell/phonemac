@@ -35,7 +35,7 @@ A macOS-style desktop that takes Record 50's place: the `appshell` / `devshell` 
 
 - `tools/test.mjs` mocks `api.1ovr1.com`. Records come from snapshots in `props/fixtures/records/`; the inbox is sample data.
 - Pixel diffs against `reference/` (the original site) target ≤ 0.5%. Known gaps are the unported apps, and Messages, which is now the real record 74 rather than the original's Messages app.
-- The claude.ai preview only allows same-origin requests. `dist/artifact/` bundles an appshell stand-in, the desktop, record snapshots and sample data. Republish it with the Artifact tool, passing `dist/artifact/phonemac-preview.html` plus those files.
+- The claude.ai preview only allows same-origin requests. `dist/artifact/` bundles an appshell stand-in, the desktop, one file per record (`records/view-<id>.html`: Messages 74 and the local Mail at 900), and the sample inbox. Republish it with the Artifact tool, passing `dist/artifact/phonemac-preview.html` plus those files.
 
 ## 1ovr1 database
 

@@ -705,6 +705,13 @@ for (const width of [320, 360, 414]) {
   await p.waitForTimeout(300);
   await p.screenshot({ path: join(OUT, "preview-host.png") });
   results.checks.push(["preview build: appshell stand-in → desktop → record 74 shows the sample inbox", (await rec.locator(".conv").count()) === 7]);
+  // Mail (the local record) is a tab in the preview too, on the same sample inbox.
+  await p.frameLocator("#desktop").locator('[data-dock-item="rec-900"]').click();
+  const mail = p.frameLocator("#desktop").frameLocator('[data-window-id="rec-900"] iframe');
+  await mail.locator(".row").first().waitFor({ timeout: 8000 });
+  const mailRows = await mail.locator(".row").count();
+  await p.screenshot({ path: join(OUT, "preview-mail.png") });
+  results.checks.push([`preview build: Mail (local record) opens as a tab and lists the sample email (${mailRows})`, mailRows === 4]);
   await context.close();
 }
 

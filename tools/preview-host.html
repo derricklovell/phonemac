@@ -43,6 +43,12 @@
 
   fetch("desktop.html")
     .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.text(); })
-    .then(function (html) { frame.srcdoc = html; })
+    .then(function (html) {
+      // A static host can't answer per ?view=: viewer_iframe requests from the desktop go to the
+      // record's own file (records/view-<id>.html), the way the white-label gate patches fetch.
+      var patch = "<script>(function(){var f=window.fetch.bind(window);window.fetch=function(i,o){var u=typeof i==='string'?i:(i&&i.url)||'';" +
+        "var m=/records\\/viewer_iframe\\?view=([\\w-]+)/.exec(u);return m?f('records/view-'+m[1]+'.html',o):f(i,o);};})();<\/script>";
+      frame.srcdoc = html.replace(/<head>/i, function (h) { return h + patch; });
+    })
     .catch(function (err) { toast("Could not load the desktop: " + err.message); });
 </script>

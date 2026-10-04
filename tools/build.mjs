@@ -280,15 +280,24 @@ export async function buildAll({ assetBase = "assets/" } = {}) {
   const fragment = `<title>${props.meta.previewTitle}</title>\n<style>\n${css}\n</style>\n${body.trim()}\n<script>\n${script}\n</script>\n`;
   // Preview: an appshell stand-in (the artifact's page) hosting the desktop (desktop.html), which
   // hosts record 74 (real code, snapshot) reading a sample inbox — the production nesting, offline.
+  // A static host can't answer per ?view=, so each record is its own file (records/view-<id>.html);
+  // the stand-in appshell points viewer_iframe requests at them (see tools/preview-host.html).
   const preview = previewVariant(props);
   const desktopHtml = injectProps(page, preview);
   const record74 = withViewerProps(read(join(UCA_DIR, "props/fixtures/records/74.s01.html")), { config: { gin_base: "records/api" } });
+  const mailProps = JSON.parse(read(join(UCA_DIR, "records/mail/props.json")));
+  const mail = injectProps(read(join(UCA_DIR, "records/mail/mail.html")), {
+    ...mailProps,
+    config: { ...mailProps.config, gin_base: "records/api" },
+    _viewer: { merchant_id: preview.merchant_pk, requested_view: PREVIEW_MAIL_VIEW },
+  });
   const inbox = read(join(UCA_DIR, "props/fixtures/inbox.json"));
   const hostFragment = read(join(UCA_DIR, "tools/preview-host.html"));
   for (const dir of ["local", "artifact"]) {
     mkdirSync(join(DIST, dir, "records/api/messages"), { recursive: true });
     writeFileSync(join(DIST, dir, "desktop.html"), desktopHtml);
-    writeFileSync(join(DIST, dir, "records/viewer_iframe"), record74);
+    writeFileSync(join(DIST, dir, "records/view-74.html"), record74);
+    writeFileSync(join(DIST, dir, `records/view-${PREVIEW_MAIL_VIEW}.html`), mail);
     writeFileSync(join(DIST, dir, "records/api/messages/inbox"), inbox);
   }
   writeFileSync(join(DIST, "artifact/phonemac-preview.html"), hostFragment);
@@ -306,11 +315,19 @@ export async function buildAll({ assetBase = "assets/" } = {}) {
 // so the boot logo is bundled and records come from same-origin copies at records/viewer_iframe
 // (the shell still fetches `${view_endpoint}_iframe?view=<id>`, as from the database). The record
 // file keeps the real URLs.
+const PREVIEW_MAIL_VIEW = 900; // Mail has no database id yet; the local copy uses this one
+
 function previewVariant(props) {
+  const mailFace = JSON.parse(read(join(UCA_DIR, "records/mail/dev.json")));
   return {
     ...props,
     config: { ...props.config, view_endpoint: "records/viewer" },
     assets: { ...props.assets, bootLogo: "assets/brand/1ovr1-logo.jpg" },
+    // Record 50-style: the sample business, with Mail (local) as a tab next to Messages (74).
+    tabs: [{ ...mailFace, view_id: PREVIEW_MAIL_VIEW }],
+    merchant_id: "sample-merchant",
+    merchant_slug: "sample-merchant",
+    merchant_pk: 41,
   };
 }
 
