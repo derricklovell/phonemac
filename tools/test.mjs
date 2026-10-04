@@ -892,6 +892,123 @@ for (const width of [320, 360, 414]) {
   await context.close();
 }
 
+// Teacher on its own (dist/records/teacher-local.html): the course builder + the preview harness standing
+// in for the shell and the elearn store with records/teacher/mock-courses.json. Nothing may reach the
+// real store: any request to it fails the check.
+{
+  const { context, p } = await page(1440);
+  let escaped = 0;
+  await context.route("https://*.supabase.co/**", (r) => { escaped++; return r.abort(); });
+  const ids = (sel) => p.locator(sel).evaluateAll((els) => els.map((e) => e.dataset.id));
+  const lessonIds = (m) => ids(`.lessons[data-module="${m}"] .les`);
+  const dialogOk = () => p.locator("#modal [data-ok]").click();
+  await p.goto(`${base}/teacher.html`, { waitUntil: "networkidle" });
+  await p.locator(".course").first().waitFor({ timeout: 5000 });
+  const courses = await p.locator(".course .ctitle").allTextContents();
+  await p.locator('.course[data-slug="watercolor-foundations"]').click();
+  await p.locator(".sec").first().waitFor({ timeout: 5000 });
+  const sections0 = await ids(".sec");
+  const lessons0 = await p.locator(".les").count();
+  const status0 = await p.locator("#head .chip").textContent();
+  // Add a section and name it; add an article lesson to it.
+  await p.locator('[data-act="add-section"]').click();
+  await p.waitForFunction(() => document.querySelectorAll(".sec").length === 4);
+  await p.keyboard.type("Framing and finishing");
+  await p.keyboard.press("Enter");
+  const newSec = (await ids(".sec"))[3];
+  await p.locator(`[data-act="add-lesson"][data-module="${newSec}"]`).click();
+  await p.locator(`.add-les[data-module="${newSec}"] [data-kind="article"]`).click();
+  await p.locator(`.add-les[data-module="${newSec}"] [name="title"]`).fill("Choosing a mat and frame");
+  await p.keyboard.press("Enter");
+  await p.waitForFunction((m) => document.querySelectorAll(`.lessons[data-module="${m}"] .les`).length === 1, newSec);
+  // Rename, reorder with the keyboard, drag a section, free preview, delete with the in-page dialog.
+  await p.locator('[data-field="lesson-title"][data-id="102"]').fill("Setting up your palette (2026)");
+  await p.keyboard.press("Enter");
+  await p.locator('.les[data-id="103"] [data-drag]').focus();
+  await p.keyboard.press("ArrowUp");
+  const order11 = await lessonIds(11);
+  const from = await p.locator('.sec[data-id="13"] .sec-h [data-drag]').boundingBox();
+  const to = await p.locator('.sec[data-id="12"] .sec-h').boundingBox();
+  await p.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await p.mouse.down();
+  await p.mouse.move(from.x + 5, to.y + 4, { steps: 8 });
+  await p.mouse.up();
+  const sectionsDragged = await ids(".sec");
+  await p.locator('[data-act="preview"][data-id="104"]').click();
+  await p.locator('[data-act="del-lesson"][data-id="107"]').click();
+  await dialogOk();
+  await p.waitForFunction(() => !document.querySelector('.les[data-id="107"]'));
+  // Details: subtitle and a tag.
+  await p.locator('[data-tab="details"]').click();
+  await p.locator('#details [name="subtitle"]').fill("Three weekends from first wash to a finished painting.");
+  await p.locator("#tag-in").fill("watercolour");
+  await p.keyboard.press("Enter");
+  await p.locator("#save-details").click();
+  await p.waitForFunction(() => document.querySelector("#saving")?.textContent === "All changes saved" && document.querySelector("#save-details")?.disabled);
+  await p.screenshot({ path: join(OUT, "teacher-details.png") });
+  // Reload: the store kept every change and the shell restores the open course and tab.
+  await p.reload({ waitUntil: "networkidle" });
+  await p.locator('#details [name="subtitle"]').waitFor({ timeout: 5000 });
+  const subtitle = await p.locator('#details [name="subtitle"]').inputValue();
+  const tags = await p.locator("#tags .chip").allTextContents();
+  await p.locator('[data-tab="curriculum"]').click();
+  await p.locator(".sec").first().waitFor();
+  const sectionsAfter = await ids(".sec");
+  const order11After = await lessonIds(11);
+  const renamed = await p.locator('[data-field="lesson-title"][data-id="102"]').inputValue();
+  const preview104 = await p.locator('[data-act="preview"][data-id="104"]').getAttribute("aria-pressed");
+  const gone107 = await p.locator('.les[data-id="107"]').count();
+  const newLesson = await p.locator(`.lessons[data-module="${newSec}"] .les-title`).inputValue();
+  await p.screenshot({ path: join(OUT, "teacher-curriculum.png") });
+  // Unpublish (in-page dialog), publish again.
+  await p.locator('#head [data-act="unpublish"]').click();
+  await dialogOk();
+  await p.locator('#head [data-act="publish"]').waitFor();
+  const unpublished = await p.locator("#head .chip").textContent();
+  await p.locator('#head [data-act="publish"]').click();
+  await p.locator('#head [data-act="unpublish"]').waitFor();
+  // A new course whose URL is taken gets the next free one; an empty course can't be published.
+  await p.locator("#btn-new").click();
+  await p.locator('#modal [name="title"]').fill("Watercolor Foundations");
+  await dialogOk();
+  await p.locator(".empty h3").waitFor();
+  const created = await p.locator(".course[aria-current=true]").getAttribute("data-slug");
+  await p.locator('#head [data-act="publish"]').click();
+  const stillDraft = await p.locator("#head .chip").textContent();
+  // Delete it: the confirm button waits for the title to be typed.
+  await p.locator('[data-tab="details"]').click();
+  await p.locator('[data-act="delete-course"]').click();
+  const locked = await p.locator("#modal [data-ok]").isDisabled();
+  await p.locator('#modal [name="confirm"]').fill("Watercolor Foundations");
+  await dialogOk();
+  await p.waitForFunction(() => !document.querySelector('.course[data-slug="watercolor-foundations-2"]'));
+  const coursesAfter = await p.locator(".course").count();
+  results.checks.push([`Teacher alone opens populated from the sample store (${courses.length} courses; Watercolor: ${sections0.length} sections, ${lessons0} lessons, ${status0})`, courses.length === 4 && sections0.length === 3 && lessons0 === 11 && status0 === "Published"]);
+  results.checks.push([`Teacher: add section + lesson, rename, keyboard reorder (${order11.join(",")}), drag section (${sectionsDragged.join(",")}), free preview, delete — all kept after reload (${sectionsAfter.join(",")}; ${order11After.join(",")}; ${renamed}; ${preview104}; ${gone107}; ${newLesson})`, order11.join() === "101,103,102" && sectionsDragged.slice(0, 3).join() === "11,13,12" && sectionsAfter.join() === sectionsDragged.join() && order11After.join() === "101,103,102" && renamed === "Setting up your palette (2026)" && preview104 === "true" && gone107 === 0 && newLesson === "Choosing a mat and frame"]);
+  results.checks.push([`Teacher: details saved and restored (subtitle, tags ${tags.join("/")}), open course + tab restored by the shell`, subtitle === "Three weekends from first wash to a finished painting." && tags.some((x) => x.startsWith("watercolour"))]);
+  results.checks.push([`Teacher: unpublish → ${unpublished}, publish again; new course gets a free URL (${created}), empty course stays ${stillDraft}; delete needs the title typed (${locked ? "locked" : "open"}) → ${coursesAfter} courses`, unpublished === "Draft" && created === "watercolor-foundations-2" && stillDraft === "Draft" && locked && coursesAfter === 4]);
+  results.checks.push([`Teacher preview makes no requests to the real store (${escaped})`, escaped === 0]);
+  await context.close();
+}
+{
+  const { context, p } = await page(390, PHONE);
+  await context.route("https://*.supabase.co/**", (r) => r.abort());
+  await p.goto(`${base}/teacher.html`, { waitUntil: "networkidle" });
+  await p.evaluate(() => localStorage.clear());
+  await p.reload({ waitUntil: "networkidle" });
+  await p.locator(".course").first().waitFor({ timeout: 5000 });
+  const size = await p.locator("#app").getAttribute("data-size");
+  await p.locator('.course[data-slug="color-mixing-masterclass"]').click();
+  await p.locator(".sec").first().waitFor();
+  const pane = await p.locator("#app").getAttribute("data-pane");
+  const overflow = await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+  await p.screenshot({ path: join(OUT, "teacher-phone.png") });
+  await p.locator('#head [data-act="back"]').click();
+  const back = await p.locator("#app").getAttribute("data-pane");
+  results.checks.push([`Teacher alone on a phone: ${size} layout, courses → course → back (${pane} → ${back}), no sideways scroll`, size === "phone" && pane === "course" && back === "list" && !overflow]);
+  await context.close();
+}
+
 // Shell handshake inside an iframe.
 {
   const { context, p } = await page(1200);

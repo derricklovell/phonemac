@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title></title>
+<!-- Teacher — the course builder for E Learn (1ovr1 record, UCA 3.0).
+     A teacher's courses, each with its curriculum (sections and lessons: add, rename, reorder by dragging
+     or with the arrow keys, free preview, delete) and its details (title, subtitle, description, level,
+     URL, cover, tags), published, unpublished, archived or deleted from here.
+     Data: the elearn Supabase project's RPCs, the same ones Teacher mode and the Classroom use —
+     lms_catalog and lms_course_outline to read, lms_author (upsert_course / upsert_module / upsert_lesson,
+     delete_*, publish_course) to write. Every write is checked server-side by lms.author_guard (an owner,
+     admin or instructor of the merchant). The session comes from the shell on app:restore; the app token
+     is refreshed through the project's xano-session exchange. Everything shown comes from componentProps. -->
+<style>
+  :root { color-scheme: light; }
+  :root.dark { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 13px/1.45 var(--font); -webkit-font-smoothing: antialiased; }
+  button, input, textarea, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  [hidden] { display: none !important; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  svg.i { width: 16px; height: 16px; flex-shrink: 0; }
+  .muted { color: var(--muted); }
+  .grow { flex: 1; min-width: 0; }
+
+  #app { display: grid; grid-template-columns: var(--side-w) minmax(0, 1fr); height: 100%; }
+  #app[data-size="phone"] { display: block; }
+  #app[data-size="phone"][data-pane="list"] #main { display: none; }
+  #app[data-size="phone"][data-pane="course"] #side { display: none; }
+  #app[data-size="phone"] #side, #app[data-size="phone"] #main { height: 100%; }
+
+  /* buttons */
+  .btn { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 30px; padding: 0 12px; border-radius: 7px; border: 1px solid var(--line); background: var(--card); color: var(--text); font-weight: 550; cursor: pointer; white-space: nowrap; }
+  .btn:hover { background: var(--hover); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  .btn.primary:hover { filter: brightness(1.06); }
+  .btn.danger { color: var(--bad); }
+  .btn.danger.solid { background: var(--bad); border-color: var(--bad); color: var(--accent-text); }
+  .btn.sm { height: 26px; padding: 0 9px; font-size: 12px; }
+  .btn[disabled] { opacity: .45; cursor: default; filter: none; }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .ib { all: unset; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; color: var(--muted); flex-shrink: 0; }
+  .ib:hover { background: var(--hover); color: var(--text); }
+  .ib.danger:hover { color: var(--bad); }
+  .ib:focus-visible { outline: 2px solid var(--accent); }
+  .chip { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: 10px; background: var(--chip); color: var(--chip-text); font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .chip.ok { background: var(--ok-bg); color: var(--ok); }
+  .chip.warn { background: var(--warn-bg); color: var(--warn); }
+  .chip.bad { background: var(--bad-bg); color: var(--bad); }
+
+  /* sidebar: the teacher's courses */
+  #side { display: flex; flex-direction: column; min-width: 0; background: var(--panel); border-right: 1px solid var(--line); }
+  .side-top { display: flex; align-items: center; gap: 8px; padding: 12px 12px 6px; }
+  .side-top h1 { font-size: 15px; margin: 0; font-weight: 700; }
+  .side-scope { padding: 0 12px; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .search { display: flex; align-items: center; gap: 6px; margin: 8px 12px 6px; padding: 5px 8px; border-radius: 7px; background: var(--input); color: var(--muted); }
+  .search input { all: unset; flex: 1; min-width: 0; color: var(--text); }
+  #courses { overflow-y: auto; flex: 1; padding: 2px 8px 12px; }
+  .grp { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 12px 6px 4px; }
+  .course { all: unset; box-sizing: border-box; display: grid; grid-template-columns: 40px 1fr; gap: 10px; align-items: center; width: 100%; padding: 7px 8px; border-radius: 9px; cursor: pointer; }
+  .course:hover { background: var(--hover); }
+  .course[aria-current="true"] { background: var(--selected); color: var(--selected-text); }
+  .course[aria-current="true"] .cmeta { color: var(--selected-sub); }
+  .course:focus-visible { outline: 2px solid var(--accent); }
+  .course.archived { opacity: .7; }
+  .ctitle { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cmeta { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile { width: 40px; height: 40px; border-radius: 9px; display: flex; align-items: center; justify-content: center; color: var(--tile-text); font-weight: 700; font-size: 16px; overflow: hidden; flex-shrink: 0; }
+  .tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .tile.lg { width: 56px; height: 56px; border-radius: 12px; font-size: 22px; }
+  .side-note { padding: 18px 12px; color: var(--muted); }
+
+  /* main */
+  #main { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--bg); }
+  #head { display: flex; align-items: center; gap: 12px; padding: 14px 20px 10px; border-bottom: 1px solid var(--line-soft); }
+  #head h2 { margin: 0; font-size: 18px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hmeta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 3px; color: var(--muted); font-size: 12px; }
+  .saving { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .saving.bad { color: var(--bad); }
+  #tabs { display: flex; gap: 2px; padding: 0 16px; border-bottom: 1px solid var(--line); }
+  .tab { all: unset; padding: 9px 10px 8px; cursor: pointer; color: var(--muted); font-weight: 600; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tab:hover { color: var(--text); }
+  .tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+  .tab:focus-visible { outline: 2px solid var(--accent); }
+  #pane { flex: 1; overflow-y: auto; padding: 18px 20px 40px; }
+  .wrap { max-width: var(--content-max); margin: 0 auto; }
+  .empty { text-align: center; padding: 48px 16px; color: var(--muted); }
+  .empty h3 { color: var(--text); margin: 0 0 6px; font-size: 15px; }
+  .empty .btn { margin-top: 14px; }
+
+  /* curriculum */
+  .curr-sum { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: var(--muted); font-size: 12px; }
+  .sec { background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 14px; box-shadow: var(--shadow-sm); }
+  .sec-h { display: flex; align-items: center; gap: 6px; padding: 8px 10px 2px 6px; }
+  .sec-n { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+  .inl { all: unset; box-sizing: border-box; min-width: 0; padding: 4px 6px; border-radius: 6px; border: 1px solid transparent; }
+  .inl:hover { border-color: var(--line); }
+  .inl:focus { border-color: var(--accent); background: var(--input); }
+  .sec-title { flex: 1; font-size: 15px; font-weight: 650; }
+  .sec-sum { display: block; width: calc(100% - 52px); margin: 0 10px 6px 42px; color: var(--muted); font-size: 12.5px; resize: none; white-space: pre-wrap; field-sizing: content; min-height: 24px; }
+  .lessons { padding: 2px 8px 4px; }
+  .les { display: flex; align-items: center; gap: 6px; padding: 4px 4px 4px 0; border-radius: 8px; border-top: 1px solid var(--line-soft); background: var(--card); }
+  .les:first-child { border-top-color: transparent; }
+  .les:hover { background: var(--hover); }
+  .les .kind { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 7px; background: var(--chip); color: var(--chip-text); flex-shrink: 0; }
+  .les .kind svg.i { width: 14px; height: 14px; }
+  .les-title { flex: 1; }
+  .dur { color: var(--muted); font-size: 12px; white-space: nowrap; min-width: 44px; text-align: right; }
+  .toggle { all: unset; display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border-radius: 11px; font-size: 11px; font-weight: 600; cursor: pointer; color: var(--muted); border: 1px dashed var(--line); white-space: nowrap; }
+  .toggle[aria-pressed="true"] { color: var(--ok); background: var(--ok-bg); border: 1px solid transparent; }
+  .toggle:focus-visible { outline: 2px solid var(--accent); }
+  .grip { all: unset; display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 28px; border-radius: 5px; color: var(--muted); cursor: grab; touch-action: none; flex-shrink: 0; opacity: .55; }
+  .grip:hover, .grip:focus-visible { opacity: 1; background: var(--hover); }
+  .grip:focus-visible { outline: 2px solid var(--accent); }
+  .dragging { position: relative; z-index: 2; box-shadow: var(--shadow-lg); opacity: .96; }
+  .dragging .grip { cursor: grabbing; }
+  .drag-on { cursor: grabbing; user-select: none; -webkit-user-select: none; }
+  .les-empty { padding: 8px 10px 10px 42px; color: var(--muted); font-size: 12.5px; }
+  .add-btn { all: unset; display: inline-flex; align-items: center; gap: 6px; margin: 2px 10px 10px 38px; padding: 5px 8px; border-radius: 7px; color: var(--accent); font-weight: 600; cursor: pointer; }
+  .add-btn:hover { background: var(--hover); }
+  .add-btn:focus-visible { outline: 2px solid var(--accent); }
+  .add-les { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 4px 10px 12px 38px; padding: 10px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); }
+  .kinds { display: inline-flex; padding: 2px; border-radius: 8px; background: var(--input); }
+  .kinds button { all: unset; display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 6px; font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; }
+  .kinds button[aria-pressed="true"] { background: var(--card); color: var(--text); box-shadow: var(--shadow-sm); }
+  .kinds button:focus-visible { outline: 2px solid var(--accent); }
+  .kinds svg.i { width: 14px; height: 14px; }
+  .field { all: unset; box-sizing: border-box; height: 30px; padding: 0 9px; border-radius: 7px; background: var(--card); border: 1px solid var(--line); min-width: 0; }
+  .field:focus { border-color: var(--accent); }
+  .add-les .field { flex: 1; min-width: 160px; }
+  .add-sec { all: unset; box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 12px; border-radius: 12px; border: 1.5px dashed var(--line); color: var(--accent); font-weight: 650; cursor: pointer; }
+  .add-sec:hover { background: var(--hover); }
+  .add-sec:focus-visible { outline: 2px solid var(--accent); }
+
+  /* details */
+  .form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; }
+  .form .full { grid-column: 1 / -1; }
+  .lbl { display: flex; flex-direction: column; gap: 5px; font-weight: 600; font-size: 12px; }
+  .lbl .hint { font-weight: 400; color: var(--muted); }
+  .lbl .field, .lbl textarea, .lbl select { width: 100%; }
+  .lbl input, .lbl textarea, .lbl select, .tags input { font-weight: 400; font-size: 13px; }
+  textarea.field { height: auto; padding: 7px 9px; resize: vertical; line-height: 1.45; white-space: pre-wrap; }
+  select.field { appearance: none; -webkit-appearance: none; background: var(--card) var(--chevron) no-repeat right 9px center / 10px 6px; padding-right: 26px; }
+  .prefixed { display: flex; align-items: center; border-radius: 7px; border: 1px solid var(--line); background: var(--card); overflow: hidden; }
+  .prefixed span { padding: 0 4px 0 9px; color: var(--muted); white-space: nowrap; }
+  .prefixed input { all: unset; flex: 1; min-width: 0; height: 28px; padding-right: 9px; }
+  .prefixed:focus-within { border-color: var(--accent); }
+  .cover-row { display: flex; gap: 10px; align-items: center; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; min-height: 30px; padding: 3px 6px; border-radius: 7px; border: 1px solid var(--line); background: var(--card); }
+  .tags:focus-within { border-color: var(--accent); }
+  .tags .chip button { all: unset; cursor: pointer; padding: 0 2px; color: var(--muted); }
+  .tags input { all: unset; flex: 1; min-width: 120px; height: 22px; }
+  .form-actions { display: flex; gap: 8px; align-items: center; margin-top: 18px; }
+  .dzone { margin-top: 32px; border: 1px solid var(--bad-line); border-radius: 12px; }
+  .dzone h3 { margin: 0; padding: 12px 14px 0; font-size: 13px; color: var(--bad); }
+  .drow { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+  .drow + .drow { border-top: 1px solid var(--line-soft); }
+  .drow b { display: block; }
+  .drow .muted { font-size: 12px; }
+
+  /* dialog */
+  #modal { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--scrim); padding: 16px; z-index: 10; }
+  .dlg { width: 100%; max-width: 440px; background: var(--card); border-radius: 14px; box-shadow: var(--shadow-lg); padding: 18px 18px 14px; }
+  .dlg h3 { margin: 0 0 6px; font-size: 15px; }
+  .dlg p { margin: 0 0 12px; color: var(--muted); white-space: pre-line; }
+  .dlg .lbl { margin-bottom: 12px; }
+  .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+
+  #toast { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); max-width: calc(100% - 32px); padding: 7px 12px; border-radius: 8px; background: var(--toast); color: var(--toast-text); font-size: 12px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 20; }
+  #toast[data-on] { opacity: 1; }
+  #fatal { margin: 24px; white-space: pre-wrap; font: 13px/1.5 ui-monospace, monospace; color: var(--bad); }
+
+  #head [data-act="back"] { display: none; }
+  #app[data-size="phone"] #head [data-act="back"] { display: inline-flex; }
+  #app[data-size="phone"] #head { padding: 10px 12px 8px; gap: 6px 8px; flex-wrap: wrap; }
+  #app[data-size="phone"] #head > .grow { flex-basis: calc(100% - 44px); }
+  #app[data-size="phone"] #head .saving { flex: 1; text-align: left; padding-left: 36px; }
+  #app[data-size="phone"] .les { flex-wrap: wrap; row-gap: 2px; padding-bottom: 6px; }
+  #app[data-size="phone"] .les-title { flex: 1 1 calc(100% - 64px); }
+  #app[data-size="phone"] .les .toggle { margin-left: 56px; }
+  #app[data-size="phone"] .les .btn.sm { margin-left: auto; }
+  #app[data-size="phone"] .sec-count { display: none; }
+  #app[data-size="phone"] #head .tile.lg { display: none; }
+  #app[data-size="phone"] #pane { padding: 12px 10px 32px; }
+  #app[data-size="phone"] .form { grid-template-columns: 1fr; }
+  #app[data-size="phone"] .dur, #app[data-size="phone"] .sec-n { display: none; }
+  #app[data-size="phone"] .les .btn.sm { padding: 0 7px; }
+  #app[data-size="phone"] .add-les, #app[data-size="phone"] .add-btn, #app[data-size="phone"] .les-empty { margin-left: 8px; padding-left: 8px; }
+  #app[data-size="phone"] .sec-sum { margin-left: 10px; width: calc(100% - 20px); }
+  #app[data-size="phone"] .drow { flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div id="app" data-size="wide" data-pane="list" hidden>
+  <aside id="side">
+    <div class="side-top"><h1 id="side-title" class="grow"></h1><button class="btn sm primary" id="btn-new" type="button"></button></div>
+    <div class="side-scope" id="side-scope"></div>
+    <label class="search"><span id="search-icon"></span><span class="sr" id="search-label"></span><input id="search" type="search" aria-labelledby="search-label"></label>
+    <div id="courses" role="list"></div>
+  </aside>
+  <main id="main">
+    <header id="head"></header>
+    <nav id="tabs" role="tablist"></nav>
+    <div id="pane" role="tabpanel"></div>
+  </main>
+</div>
+<div id="modal" hidden></div>
+<div id="toast" role="status"></div>
+<script>
+var componentProps = {};
+</script>
+<script>
+(function () {
+  "use strict";
+
+  /* ── props (the only source of truth; a missing one stops the app with its name) ─────────────── */
+  function Missing(path) { this.message = "componentProps." + path + " is not configured"; }
+  function need(path) {
+    var v = path.split(".").reduce(function (o, k) { return o == null ? undefined : o[k]; }, componentProps);
+    if (v === undefined || v === null) throw new Missing(path);
+    return v;
+  }
+  function t(key, vars) {
+    var s = need("strings")[key];
+    if (s === undefined) throw new Missing("strings." + key);
+    return String(s).replace(/\{(\w+)\}/g, function (_, k) { return vars && vars[k] != null ? vars[k] : ""; });
+  }
+  function plural(key, n) { return t(key + (n === 1 ? "One" : "Many"), { n: n }); }
+  function icon(name) {
+    var d = need("icons")[name];
+    if (d === undefined) throw new Missing("icons." + name);
+    return '<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' + d + '"></path></svg>';
+  }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function $(s) { return document.querySelector(s); }
+  function byId(list, id) { return list.filter(function (x) { return String(x.id) === String(id); })[0] || null; }
+
+  var LUT = {};
+  var S = {
+    scheme: null, restored: false,
+    profile: null, roles: {}, // who is editing, from app:restore
+    tok: { value: null, at: 0, ttl: 0, session: null, refreshing: null },
+    catalog: { loaded: false, loading: null, error: null },
+    courses: [], // the catalog rows this teacher may author
+    openSlug: null, course: null, courseError: null, courseLoading: false,
+    tab: null, pane: "list", query: "",
+    form: null, // the details form while it's being edited
+    adding: null, addKind: null, // the section whose add-lesson form is open, and the kind picked
+    saving: 0, saveError: null, queue: Promise.resolve(),
+  };
+
+  /* ── 1. CSS props: theme tokens for the scheme in force ─────────────────────────────────────── */
+  function applyCSSProps() {
+    var scheme = S.scheme || need("theme.defaultScheme");
+    var tokens = need("theme." + scheme);
+    var root = document.documentElement;
+    Object.keys(tokens).forEach(function (k) { root.style.setProperty("--" + k, tokens[k]); });
+    var L = need("layout");
+    root.style.setProperty("--side-w", L.sidebarWidth + "px");
+    root.style.setProperty("--content-max", L.contentMax + "px");
+    root.classList.toggle("dark", scheme === "dark");
+  }
+
+  /* ── 2. LUT from props ───────────────────────────────────────────────────────────────────────── */
+  function buildLUT() {
+    LUT.sb = need("config.supabase_url");
+    LUT.sbKey = need("config.supabase_key");
+    LUT.exchange = need("config.session_exchange");
+    LUT.scoped = need("config.merchant_scoped_rpc");
+    LUT.catalogStatuses = need("config.catalog_statuses");
+    LUT.authorRoles = need("config.author_roles");
+    LUT.slugTries = need("config.slug_tries");
+    LUT.editor = need("config.lesson_editor");
+    LUT.statuses = need("statuses"); LUT.status = {};
+    LUT.statuses.forEach(function (s) { LUT.status[s.id] = s; });
+    LUT.kinds = need("kinds"); LUT.kind = {};
+    LUT.kinds.forEach(function (k) { LUT.kind[k.id] = k; });
+    LUT.levels = need("levels");
+    LUT.tabs = need("tabs");
+    LUT.layout = need("layout");
+    LUT.tiles = need("theme.tiles");
+    var v = componentProps._viewer || {};
+    LUT.viewId = v.requested_view != null ? v.requested_view : null;
+    LUT.merchant = v.merchant_id ? Number(v.merchant_id) : null;
+    LUT.merchantName = (v.merchant && (v.merchant.business_name || v.merchant.name)) || null;
+    // Opened from the Classroom for a channel the viewer authors: it leaves that merchant here.
+    if (LUT.merchant == null) {
+      try {
+        var b = JSON.parse(sessionStorage.getItem(need("config.builders_key")) || "null");
+        if (b && b.merchant_id) { LUT.merchant = Number(b.merchant_id); LUT.merchantName = b.name || null; }
+      } catch (e) { /* storage blocked: no handoff */ }
+    }
+  }
+
+  /* ── the app token (the store's verified identity), refreshed before it lapses ──────────────── */
+  function tokenFresh() { return !!(S.tok.value && (Date.now() - S.tok.at) < (S.tok.ttl - 120) * 1000); }
+  function refreshToken() {
+    if (!S.tok.session) return Promise.resolve(S.tok.value);
+    if (S.tok.refreshing) return S.tok.refreshing;
+    S.tok.refreshing = fetch(LUT.sb + LUT.exchange, { method: "POST", headers: { Authorization: "Bearer " + S.tok.session, "Content-Type": "application/json" }, body: "{}" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) { if (j && j.app_token) { S.tok.value = j.app_token; S.tok.at = Date.now(); S.tok.ttl = j.expires_in || S.tok.ttl; } return S.tok.value; })
+      .catch(function () { return S.tok.value; })
+      .then(function (v) { S.tok.refreshing = null; return v; });
+    return S.tok.refreshing;
+  }
+  function bearer() { return (S.tok.session && !tokenFresh()) ? refreshToken() : Promise.resolve(S.tok.value); }
+
+  /* ── the store ───────────────────────────────────────────────────────────────────────────────── */
+  function friendly(j, status) {
+    var code = j && j.code;
+    if (code === "28000") return t("errSignedOut");
+    if (code === "42501") return t("errNoRole");
+    if (code === "23505") return t("errSlugTaken");
+    if (code === "P0002") return t("errNotFound");
+    return String((j && (j.message || j.error)) || ("HTTP " + status)).slice(0, 160);
+  }
+  function rpc(name, args, retried) {
+    var a = Object.assign({}, args || {});
+    if (LUT.merchant != null && LUT.scoped.indexOf(name) > -1 && a.p_merchant_id === undefined) a.p_merchant_id = LUT.merchant;
+    return bearer().then(function (tok) {
+      return fetch(LUT.sb + "/rest/v1/rpc/" + name, {
+        method: "POST",
+        headers: { apikey: LUT.sbKey, Authorization: "Bearer " + (tok || LUT.sbKey), "Content-Type": "application/json" },
+        body: JSON.stringify(a),
+      });
+    }).then(function (r) {
+      if (r.status === 401 && S.tok.session && !retried) return refreshToken().then(function () { return rpc(name, args, true); });
+      return r.text().then(function (txt) {
+        var j = null;
+        try { j = JSON.parse(txt); } catch (e) {}
+        if (!r.ok) { var err = new Error(friendly(j, r.status)); err.code = j && j.code; err.status = r.status; throw err; }
+        return j;
+      });
+    });
+  }
+  function author(action, payload) {
+    return rpc("lms_author", { p_action: action, p_payload: payload }).then(function (r) {
+      if (r && r.error) throw new Error(String(r.error));
+      return r;
+    });
+  }
+  // Writes go one at a time, in order (a reorder is several of them), and the header says how it went.
+  function write(fn) {
+    S.saving++; S.saveError = null; renderSaving();
+    var p = S.queue.then(fn);
+    S.queue = p.catch(function () {});
+    return p.then(function (v) { S.saving--; renderSaving(); return v; }, function (e) {
+      S.saving--; S.saveError = e.message; renderSaving(); toast(t("saveFailed", { reason: e.message }));
+      throw e;
+    });
+  }
+  function post(msg) { try { window.parent.postMessage(msg, "*"); } catch (e) {} }
+  function remember() { post({ gin: "app:state", view_id: LUT.viewId, state: { open: S.openSlug, tab: S.tab } }); }
+
+  /* ── data ─────────────────────────────────────────────────────────────────────────────────── */
+  function signedIn() { return S.profile != null && !!(S.tok.value || S.tok.session); }
+  function mayAuthor(c) {
+    var role = S.roles[String(c.merchant_id)];
+    return LUT.authorRoles.indexOf(role) > -1 || (S.profile != null && c.created_by != null && Number(c.created_by) === Number(S.profile));
+  }
+  function loadCatalog() {
+    if (!signedIn()) { S.catalog.error = "signed-out"; render(); return Promise.resolve(); }
+    if (S.catalog.loading) return S.catalog.loading;
+    S.catalog.loading = Promise.all(LUT.catalogStatuses.map(function (st, i) {
+      var q = rpc("lms_catalog", { p_status: st, p_user_id: S.profile });
+      return i === 0 ? q : q.catch(function () { return []; }); // the first status must load; others may be refused
+    })).then(function (res) {
+      var rows = [].concat.apply([], res.map(function (r) { return Array.isArray(r) ? r : []; })).filter(mayAuthor);
+      if (LUT.merchant != null) rows = rows.filter(function (c) { return Number(c.merchant_id) === LUT.merchant; });
+      S.courses = rows.map(adoptRow);
+      S.catalog = { loaded: true, loading: null, error: null };
+      if (S.openSlug && !byslug(S.openSlug)) { S.openSlug = null; S.course = null; S.pane = "list"; }
+      render();
+      if (S.openSlug && !S.course) loadCourse();
+    }).catch(function (e) {
+      S.catalog.loading = null; S.catalog.error = e.message; render();
+    });
+    return S.catalog.loading;
+  }
+  function adoptRow(c) {
+    return { id: c.id, slug: c.slug, title: c.title || "", subtitle: c.subtitle || "", status: c.status, cover_url: c.cover_url || "",
+      merchant_id: c.merchant_id, created_by: c.created_by, learners: Number(c.learner_count) || 0,
+      modules: Number(c.module_count) || 0, lessons: Number(c.lesson_count) || 0, updated_at: c.updated_at || null };
+  }
+  function byslug(slug) { return S.courses.filter(function (c) { return c.slug === slug; })[0] || null; }
+  function rowOf(course) { return course ? byId(S.courses, course.id) : null; }
+  function adoptCourse(j) {
+    var mods = (j.modules || []).slice().sort(function (a, b) { return a.position - b.position; });
+    return {
+      id: j.id, slug: j.slug, title: j.title || "", subtitle: j.subtitle || "", description: j.description || "",
+      level: j.level || "", cover_url: j.cover_url || "", tags: Array.isArray(j.tags) ? j.tags.slice() : [], status: j.status,
+      modules: mods.map(function (m) {
+        return { id: m.id, position: m.position, title: m.title || "", summary: m.summary || "",
+          lessons: (m.lessons || []).slice().sort(function (a, b) { return a.position - b.position; }).map(function (l) {
+            return { id: l.id, position: l.position, title: l.title || "", kind: l.kind, duration_seconds: Number(l.duration_seconds) || 0, is_preview: !!l.is_preview };
+          }) };
+      }),
+    };
+  }
+  function loadCourse() {
+    var slug = S.openSlug; if (!slug) return Promise.resolve();
+    S.courseLoading = true; S.courseError = null; renderMain();
+    return rpc("lms_course_outline", { p_slug: slug, p_user_id: S.profile }).then(function (j) {
+      if (slug !== S.openSlug) return;
+      if (!j || j.error) throw new Error(t("errNotFound"));
+      S.course = adoptCourse(j); S.courseLoading = false; S.form = null;
+      syncRow(); render();
+    }).catch(function (e) {
+      if (slug !== S.openSlug) return;
+      S.courseLoading = false; S.courseError = e.message; renderMain();
+    });
+  }
+  // The sidebar's counts follow the open course as it's edited.
+  function syncRow() {
+    var c = S.course, row = rowOf(c); if (!row) return;
+    row.title = c.title; row.subtitle = c.subtitle; row.status = c.status; row.cover_url = c.cover_url; row.slug = c.slug;
+    row.modules = c.modules.length; row.lessons = lessonCount(c);
+  }
+  function lessonCount(c) { return c.modules.reduce(function (n, m) { return n + m.lessons.length; }, 0); }
+  function seconds(c) { return c.modules.reduce(function (n, m) { return n + m.lessons.reduce(function (k, l) { return k + l.duration_seconds; }, 0); }, 0); }
+  function duration(sec) {
+    if (!sec) return "";
+    var m = Math.max(1, Math.round(sec / 60));
+    return m < 60 ? t("minutes", { n: m }) : t("hoursMinutes", { h: Math.floor(m / 60), m: m % 60 });
+  }
+  function slugify(s) { return String(s).toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""); }
+
+  /* ── rendering ───────────────────────────────────────────────────────────────────────────────── */
+  function tile(c, big) {
+    var pal = LUT.tiles, bg = pal[Math.abs(Number(c.id) || 0) % pal.length];
+    var inner = c.cover_url ? '<img alt="" src="' + esc(c.cover_url) + '">' : esc((c.title || "?").trim().charAt(0).toUpperCase());
+    return '<span class="tile' + (big ? " lg" : "") + '" style="background:' + esc(bg) + '" aria-hidden="true">' + inner + "</span>";
+  }
+  function statusChip(id) {
+    var s = LUT.status[id]; if (!s) return "";
+    return '<span class="chip ' + esc(s.tone) + '">' + esc(s.label) + "</span>";
+  }
+  function render() { renderSide(); renderMain(); }
+  function renderSide() {
+    $("#side-scope").textContent = LUT.merchantName ? t("scope", { name: LUT.merchantName }) : "";
+    var el = $("#courses");
+    $("#btn-new").disabled = !signedIn();
+    if (!signedIn()) { el.innerHTML = '<div class="side-note">' + esc(t("signedOut")) + "</div>"; return; }
+    if (!S.catalog.loaded) {
+      el.innerHTML = '<div class="side-note">' + esc(S.catalog.error ? t("loadFailed", { reason: S.catalog.error }) : t("loading")) + "</div>";
+      return;
+    }
+    var q = S.query.trim().toLowerCase();
+    var rows = S.courses.filter(function (c) { return !q || (c.title + " " + c.subtitle).toLowerCase().indexOf(q) > -1; });
+    if (!S.courses.length) { el.innerHTML = '<div class="side-note">' + esc(t("noCourses")) + "</div>"; return; }
+    if (!rows.length) { el.innerHTML = '<div class="side-note">' + esc(t("noMatches")) + "</div>"; return; }
+    el.innerHTML = LUT.statuses.map(function (st) {
+      var group = rows.filter(function (c) { return c.status === st.id; }).sort(function (a, b) { return a.title.localeCompare(b.title); });
+      if (!group.length) return "";
+      return '<div class="grp">' + esc(st.group) + "</div>" + group.map(function (c) {
+        return '<button type="button" role="listitem" class="course' + (c.status === "archived" ? " archived" : "") + '" data-slug="' + esc(c.slug) + '" aria-current="' + (c.slug === S.openSlug) + '">' +
+          tile(c) + '<span style="min-width:0"><span class="ctitle" style="display:block">' + esc(c.title) + '</span><span class="cmeta" style="display:block">' +
+          esc(plural("lessons", c.lessons) + " · " + plural("learners", c.learners)) + "</span></span></button>";
+      }).join("");
+    }).join("");
+  }
+  function renderMain() {
+    var head = $("#head"), tabs = $("#tabs"), pane = $("#pane");
+    var back = '<button class="ib" type="button" data-act="back" aria-label="' + esc(t("back")) + '">' + icon("back") + "</button>";
+    if (!signedIn() || !S.openSlug) {
+      if (signedIn() && !S.catalog.loaded) {
+        head.innerHTML = back + '<h2 class="grow">' + esc(t("title")) + "</h2>";
+        tabs.innerHTML = ""; tabs.hidden = true;
+        pane.innerHTML = '<div class="empty">' + esc(S.catalog.error ? t("loadFailed", { reason: S.catalog.error }) : t("loading")) + "</div>";
+        return;
+      }
+      head.innerHTML = back + '<h2 class="grow">' + esc(t("title")) + "</h2>";
+      tabs.innerHTML = ""; tabs.hidden = true;
+      pane.innerHTML = '<div class="empty"><h3>' + esc(signedIn() ? (S.courses.length ? t("pickTitle") : t("startTitle")) : t("signedOut")) + "</h3>" +
+        (signedIn() ? "<div>" + esc(S.courses.length ? t("pickBody") : t("startBody")) + '</div><button class="btn primary" type="button" data-act="new-course">' + icon("plus") + esc(t("newCourse")) + "</button>" : "") + "</div>";
+      return;
+    }
+    var c = S.course;
+    if (!c) {
+      var row = byslug(S.openSlug);
+      head.innerHTML = back + '<h2 class="grow">' + esc(row ? row.title : "") + "</h2>";
+      tabs.innerHTML = ""; tabs.hidden = true;
+      pane.innerHTML = '<div class="empty">' + esc(S.courseError ? t("loadFailed", { reason: S.courseError }) : t("loading")) + "</div>";
+      return;
+    }
+    var row2 = rowOf(c), n = lessonCount(c);
+    var action = c.status === "published" ? '<button class="btn" type="button" data-act="unpublish">' + esc(t("unpublish")) + "</button>"
+      : c.status === "archived" ? '<button class="btn" type="button" data-act="restore">' + esc(t("restore")) + "</button>"
+      : '<button class="btn primary" type="button" data-act="publish">' + esc(t("publish")) + "</button>";
+    head.innerHTML = back + tile(c, true) +
+      '<div class="grow"><h2>' + esc(c.title) + '</h2><div class="hmeta">' + statusChip(c.status) +
+      "<span>" + esc([plural("sections", c.modules.length), plural("lessons", n), duration(seconds(c)), row2 ? plural("learners", row2.learners) : ""].filter(Boolean).join(" · ")) + "</span></div></div>" +
+      '<span class="saving" id="saving" aria-live="polite"></span>' + action;
+    renderSaving();
+    tabs.hidden = false;
+    tabs.innerHTML = LUT.tabs.map(function (tb) {
+      return '<button class="tab" type="button" role="tab" data-tab="' + esc(tb.id) + '" aria-selected="' + (tb.id === S.tab) + '">' + esc(tb.label) + "</button>";
+    }).join("");
+    if (S.tab === "details") renderDetails(); else renderCurriculum();
+  }
+  function renderSaving() {
+    var el = $("#saving"); if (!el) return;
+    el.className = "saving" + (S.saveError && !S.saving ? " bad" : "");
+    el.textContent = S.saving ? t("saving") : S.saveError ? t("notSaved") : t("saved");
+  }
+
+  /* curriculum: sections and lessons */
+  function lessonRow(l) {
+    var k = LUT.kind[l.kind] || { label: l.kind, icon: "article" };
+    return '<div class="les" data-item="lesson" data-id="' + l.id + '">' +
+      '<button class="grip" type="button" data-drag aria-label="' + esc(t("reorderLesson", { title: l.title })) + '">' + icon("grip") + "</button>" +
+      '<span class="kind" title="' + esc(k.label) + '">' + icon(k.icon) + '<span class="sr">' + esc(k.label) + "</span></span>" +
+      '<input class="inl les-title" data-field="lesson-title" data-id="' + l.id + '" value="' + esc(l.title) + '" aria-label="' + esc(t("lessonTitle")) + '">' +
+      '<span class="dur">' + esc(duration(l.duration_seconds)) + "</span>" +
+      '<button class="toggle" type="button" data-act="preview" data-id="' + l.id + '" aria-pressed="' + l.is_preview + '" title="' + esc(t("previewHint")) + '">' + (l.is_preview ? icon("eye") : "") + esc(t("freePreview")) + "</button>" +
+      '<button class="btn sm" type="button" data-act="edit" data-id="' + l.id + '">' + esc(t("editContent")) + "</button>" +
+      '<button class="ib danger" type="button" data-act="del-lesson" data-id="' + l.id + '" aria-label="' + esc(t("deleteLesson")) + '">' + icon("trash") + "</button>" +
+      "</div>";
+  }
+  function addLessonForm(m) {
+    if (S.adding !== m.id) return '<button class="add-btn" type="button" data-act="add-lesson" data-module="' + m.id + '">' + icon("plus") + esc(t("addLesson")) + "</button>";
+    return '<form class="add-les" data-module="' + m.id + '"><span class="kinds" role="group" aria-label="' + esc(t("lessonType")) + '">' +
+      LUT.kinds.filter(function (k) { return k.add; }).map(function (k) {
+        return '<button type="button" data-kind="' + esc(k.id) + '" aria-pressed="' + (k.id === S.addKind) + '">' + icon(k.icon) + esc(k.label) + "</button>";
+      }).join("") + "</span>" +
+      '<input class="field" name="title" autocomplete="off" placeholder="' + esc(t("newLessonPlaceholder")) + '" aria-label="' + esc(t("lessonTitle")) + '">' +
+      '<button class="btn sm primary" type="submit">' + esc(t("add")) + '</button><button class="btn sm" type="button" data-act="cancel-add">' + esc(t("done")) + "</button></form>";
+  }
+  function renderCurriculum() {
+    var c = S.course, pane = $("#pane");
+    var html = '<div class="wrap">';
+    if (!c.modules.length) {
+      html += '<div class="empty"><h3>' + esc(t("emptyCourseTitle")) + "</h3><div>" + esc(t("emptyCourseBody")) + "</div></div>";
+    } else {
+      html += '<div class="curr-sum">' + esc(t("dragHint")) + "</div>";
+    }
+    html += '<div id="sections" data-list="section">' + c.modules.map(function (m, i) {
+      return '<section class="sec" data-item="section" data-id="' + m.id + '">' +
+        '<div class="sec-h"><button class="grip" type="button" data-drag aria-label="' + esc(t("reorderSection", { title: m.title })) + '">' + icon("grip") + "</button>" +
+        '<span class="sec-n">' + esc(t("sectionN", { n: i + 1 })) + "</span>" +
+        '<input class="inl sec-title" data-field="module-title" data-id="' + m.id + '" value="' + esc(m.title) + '" aria-label="' + esc(t("sectionTitle")) + '">' +
+        '<span class="muted sec-count" style="font-size:12px;white-space:nowrap">' + esc(plural("lessons", m.lessons.length)) + "</span>" +
+        '<button class="ib danger" type="button" data-act="del-section" data-id="' + m.id + '" aria-label="' + esc(t("deleteSection")) + '">' + icon("trash") + "</button></div>" +
+        '<textarea class="inl sec-sum" rows="1" data-field="module-summary" data-id="' + m.id + '" placeholder="' + esc(t("summaryPlaceholder")) + '" aria-label="' + esc(t("sectionSummary")) + '">' + esc(m.summary) + "</textarea>" +
+        '<div class="lessons" data-list="lesson" data-module="' + m.id + '">' + m.lessons.map(lessonRow).join("") + "</div>" +
+        (m.lessons.length ? "" : '<div class="les-empty">' + esc(t("noLessons")) + "</div>") +
+        addLessonForm(m) + "</section>";
+    }).join("") + "</div>";
+    html += '<button class="add-sec" type="button" data-act="add-section">' + icon("plus") + esc(t("addSection")) + "</button></div>";
+    pane.innerHTML = html;
+  }
+
+  /* details: the course's settings */
+  function formOf(c) { return { title: c.title, subtitle: c.subtitle, description: c.description, level: c.level, slug: c.slug, cover_url: c.cover_url, tags: c.tags.slice() }; }
+  function formDirty() {
+    var c = S.course, f = S.form; if (!c || !f) return false;
+    return ["title", "subtitle", "description", "level", "slug", "cover_url"].some(function (k) { return String(f[k]) !== String(c[k]); }) || f.tags.join("\u0001") !== c.tags.join("\u0001");
+  }
+  function renderDetails() {
+    var c = S.course, pane = $("#pane");
+    if (!S.form) S.form = formOf(c);
+    var f = S.form;
+    var levels = (f.level ? "" : '<option value="" selected disabled>' + esc(t("levelPick")) + "</option>") + LUT.levels.map(function (l) {
+      return '<option value="' + esc(l.id) + '"' + (l.id === f.level ? " selected" : "") + ">" + esc(l.label) + "</option>";
+    }).join("");
+    var archived = c.status === "archived";
+    pane.innerHTML = '<div class="wrap"><form id="details" class="form" novalidate>' +
+      '<label class="lbl full">' + esc(t("fTitle")) + '<input class="field" name="title" required value="' + esc(f.title) + '"></label>' +
+      '<label class="lbl full">' + esc(t("fSubtitle")) + '<span class="hint">' + esc(t("fSubtitleHint")) + '</span><input class="field" name="subtitle" value="' + esc(f.subtitle) + '"></label>' +
+      '<label class="lbl full">' + esc(t("fDescription")) + '<textarea class="field" name="description" rows="6">' + esc(f.description) + "</textarea></label>" +
+      '<label class="lbl">' + esc(t("fLevel")) + '<select class="field" name="level">' + levels + "</select></label>" +
+      '<label class="lbl">' + esc(t("fSlug")) + '<span class="prefixed"><span>' + esc(t("slugPrefix")) + '</span><input name="slug" value="' + esc(f.slug) + '" spellcheck="false" autocomplete="off"></span><span class="hint">' + esc(t("fSlugHint")) + "</span></label>" +
+      '<label class="lbl full">' + esc(t("fCover")) + '<span class="hint">' + esc(t("fCoverHint")) + '</span><span class="cover-row">' + tile({ id: c.id, title: f.title, cover_url: f.cover_url }, true) +
+      '<input class="field grow" name="cover_url" type="url" inputmode="url" value="' + esc(f.cover_url) + '" placeholder="https://…"></span></label>' +
+      '<div class="lbl full">' + esc(t("fTags")) + '<div class="tags" id="tags">' + f.tags.map(function (tg, i) {
+        return '<span class="chip">' + esc(tg) + '<button type="button" data-act="untag" data-i="' + i + '" aria-label="' + esc(t("removeTag", { tag: tg })) + '">×</button></span>';
+      }).join("") + '<input id="tag-in" placeholder="' + esc(t("addTag")) + '" aria-label="' + esc(t("fTags")) + '"></div></div>' +
+      '<div class="form-actions full"><button class="btn primary" type="submit" id="save-details"' + (formDirty() ? "" : " disabled") + ">" + esc(t("saveChanges")) + '</button><button class="btn" type="button" data-act="discard" id="discard"' + (formDirty() ? "" : " disabled") + ">" + esc(t("discard")) + "</button></div>" +
+      "</form>" +
+      '<div class="dzone"><h3>' + esc(t("dangerTitle")) + "</h3>" +
+      '<div class="drow"><div class="grow"><b>' + esc(archived ? t("restoreTitle") : t("archiveTitle")) + '</b><span class="muted">' + esc(archived ? t("restoreBody") : t("archiveBody")) + "</span></div>" +
+      '<button class="btn" type="button" data-act="' + (archived ? "restore" : "archive") + '">' + esc(archived ? t("restore") : t("archive")) + "</button></div>" +
+      '<div class="drow"><div class="grow"><b>' + esc(t("deleteTitle")) + '</b><span class="muted">' + esc(t("deleteBody")) + "</span></div>" +
+      '<button class="btn danger" type="button" data-act="delete-course">' + esc(t("deleteCourse")) + "</button></div></div></div>";
+  }
+  function syncFormButtons() {
+    var d = formDirty();
+    var s = $("#save-details"), x = $("#discard");
+    if (s) s.disabled = !d;
+    if (x) x.disabled = !d;
+  }
+
+  /* ── dialogs (in the page: the appshell's sandbox blocks window.confirm) ─────────────────────── */
+  function dialog(o) {
+    return new Promise(function (resolve) {
+      var m = $("#modal"), prev = document.activeElement;
+      var fields = (o.fields || []).map(function (f) {
+        var input = f.type === "select"
+          ? '<select class="field" name="' + f.name + '">' + f.options.map(function (op) { return '<option value="' + esc(op.id) + '"' + (op.id === f.value ? " selected" : "") + ">" + esc(op.label) + "</option>"; }).join("") + "</select>"
+          : '<input class="field" name="' + f.name + '" autocomplete="off" value="' + esc(f.value || "") + '"' + (f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : "") + ">";
+        return '<label class="lbl">' + esc(f.label) + input + "</label>";
+      }).join("");
+      m.innerHTML = '<form class="dlg" role="dialog" aria-modal="true" aria-labelledby="dlg-t"><h3 id="dlg-t">' + esc(o.title) + "</h3>" + (o.body ? "<p>" + esc(o.body) + "</p>" : "") + fields +
+        '<div class="dlg-actions"><button class="btn" type="button" data-x>' + esc(t("cancel")) + '</button><button class="btn ' + (o.danger ? "danger solid" : "primary") + '" type="submit" data-ok>' + esc(o.confirm) + "</button></div></form>";
+      m.hidden = false;
+      var form = m.querySelector("form"), ok = m.querySelector("[data-ok]");
+      function values() { var v = {}; (o.fields || []).forEach(function (f) { v[f.name] = form.elements[f.name].value; }); return v; }
+      function valid() { return !o.valid || o.valid(values()); }
+      ok.disabled = !valid();
+      form.addEventListener("input", function () { ok.disabled = !valid(); });
+      function close(v) { m.hidden = true; m.innerHTML = ""; document.removeEventListener("keydown", onKey, true); if (prev && prev.focus) prev.focus(); resolve(v); }
+      function onKey(e) { if (e.key === "Escape") { e.preventDefault(); close(null); } }
+      document.addEventListener("keydown", onKey, true);
+      m.querySelector("[data-x]").addEventListener("click", function () { close(null); });
+      m.addEventListener("click", function (e) { if (e.target === m) close(null); }, { once: true });
+      form.addEventListener("submit", function (e) { e.preventDefault(); if (valid()) close(values()); });
+      var first = form.querySelector("input, select") || ok;
+      first.focus();
+    });
+  }
+  function toast(msg) {
+    var el = $("#toast"); el.textContent = msg; el.setAttribute("data-on", "");
+    clearTimeout(toast._t); toast._t = setTimeout(function () { el.removeAttribute("data-on"); }, 2800);
+  }
+
+  /* ── actions ─────────────────────────────────────────────────────────────────────────────────── */
+  function openCourse(slug) {
+    if (S.openSlug !== slug) { S.course = null; S.form = null; S.adding = null; }
+    S.openSlug = slug; S.pane = "course";
+    if (!S.tab) S.tab = LUT.tabs[0].id;
+    size(); render(); remember();
+    if (!S.course) loadCourse();
+  }
+  function newCourse() {
+    dialog({
+      title: t("newCourseTitle"), body: t("newCourseBody"), confirm: t("create"),
+      fields: [
+        { name: "title", label: t("fTitle"), placeholder: t("newCoursePlaceholder") },
+        { name: "subtitle", label: t("fSubtitle") },
+        { name: "level", label: t("fLevel"), type: "select", options: LUT.levels, value: LUT.levels[0].id },
+      ],
+      valid: function (v) { return !!v.title.trim() && !!slugify(v.title); },
+    }).then(function (v) {
+      if (!v) return;
+      var base = slugify(v.title);
+      function attempt(i) {
+        var payload = { title: v.title.trim(), subtitle: v.subtitle.trim(), level: v.level, status: LUT.statuses[0].id, slug: i ? base + "-" + (i + 1) : base };
+        if (LUT.merchant != null) payload.merchant_id = LUT.merchant;
+        return author("upsert_course", payload).catch(function (e) {
+          if (e.code === "23505" && i + 1 < LUT.slugTries) return attempt(i + 1);
+          throw e;
+        });
+      }
+      write(function () { return attempt(0); }).then(function (row) {
+        S.courses.push(adoptRow(row));
+        S.tab = LUT.tabs[0].id;
+        openCourse(row.slug);
+        toast(t("created", { title: row.title }));
+      }).catch(function () {});
+    });
+  }
+  function addSection() {
+    var c = S.course, n = c.modules.length + 1;
+    write(function () { return author("upsert_module", { course_id: c.id, title: t("newSectionTitle", { n: n }), position: n }); }).then(function (m) {
+      c.modules.push({ id: m.id, position: m.position, title: m.title || "", summary: m.summary || "", lessons: [] });
+      syncRow(); render();
+      var el = document.querySelector('[data-field="module-title"][data-id="' + m.id + '"]');
+      if (el) { el.focus(); el.select(); el.scrollIntoView({ block: "center" }); }
+    }).catch(function () {});
+  }
+  function addLesson(form) {
+    var c = S.course, m = byId(c.modules, form.dataset.module); if (!m) return;
+    var input = form.elements.title, title = input.value.trim() || t("untitledLesson"), kind = S.addKind;
+    input.value = "";
+    write(function () { return author("upsert_lesson", { module_id: m.id, title: title, kind: kind, position: m.lessons.length + 1 }); }).then(function (l) {
+      m.lessons.push({ id: l.id, position: l.position, title: l.title || "", kind: l.kind, duration_seconds: Number(l.duration_seconds) || 0, is_preview: !!l.is_preview });
+      syncRow(); render();
+      var again = document.querySelector('.add-les[data-module="' + m.id + '"] [name="title"]');
+      if (again) again.focus();
+    }).catch(function () {});
+  }
+  function rename(el) {
+    var c = S.course, f = el.dataset.field, v = el.value.trim();
+    var isModule = f !== "lesson-title";
+    var item = isModule ? byId(c.modules, el.dataset.id) : lessonById(el.dataset.id);
+    if (!item) return;
+    var key = f === "module-summary" ? "summary" : "title";
+    if (key === "title" && !v) { el.value = item.title; return; }
+    if (v === item[key]) return;
+    var before = item[key];
+    item[key] = v;
+    var p = {}; p.id = item.id; p[key] = v;
+    write(function () { return author(isModule ? "upsert_module" : "upsert_lesson", p); }).catch(function () { item[key] = before; el.value = before; });
+  }
+  function lessonById(id) {
+    var hit = null;
+    S.course.modules.forEach(function (m) { m.lessons.forEach(function (l) { if (String(l.id) === String(id)) hit = l; }); });
+    return hit;
+  }
+  function moduleOfLesson(id) { return S.course.modules.filter(function (m) { return !!byId(m.lessons, id); })[0] || null; }
+  function togglePreview(id) {
+    var l = lessonById(id); if (!l) return;
+    l.is_preview = !l.is_preview; renderCurriculum();
+    write(function () { return author("upsert_lesson", { id: l.id, is_preview: l.is_preview }); }).catch(function () { l.is_preview = !l.is_preview; renderCurriculum(); });
+  }
+  function deleteLesson(id) {
+    var l = lessonById(id), m = moduleOfLesson(id), row = rowOf(S.course); if (!l) return;
+    dialog({ title: t("deleteLessonTitle", { title: l.title }), body: t("deleteLessonBody", { learners: plural("learners", row ? row.learners : 0) }), confirm: t("delete"), danger: true }).then(function (ok) {
+      if (!ok) return;
+      write(function () { return author("delete_lesson", { id: l.id }); }).then(function () {
+        m.lessons = m.lessons.filter(function (x) { return x !== l; });
+        syncRow(); render(); toast(t("deleted", { title: l.title }));
+      }).catch(function () {});
+    });
+  }
+  function deleteSection(id) {
+    var m = byId(S.course.modules, id); if (!m) return;
+    var go = function () {
+      return write(function () { return author("delete_module", { id: m.id }); }).then(function () {
+        S.course.modules = S.course.modules.filter(function (x) { return x !== m; });
+        syncRow(); render(); toast(t("deleted", { title: m.title }));
+      }).catch(function () {});
+    };
+    if (!m.lessons.length) { go(); return; }
+    dialog({ title: t("deleteSectionTitle", { title: m.title }), body: t("deleteSectionBody", { lessons: plural("lessons", m.lessons.length) }), confirm: t("delete"), danger: true }).then(function (ok) { if (ok) go(); });
+  }
+  function editLesson(id) {
+    var l = lessonById(id); if (!l) return;
+    post({ gin: "view:swap", view_id: LUT.editor.view_id, slot_code: LUT.editor.slot_code, context: { course_id: S.course.id, course_slug: S.course.slug, lesson_id: l.id } });
+    toast(t("openingEditor", { title: l.title }));
+  }
+  // New order → positions 1..n; only what moved is written.
+  function commitOrder(list) {
+    var moved = list.filter(function (x, i) { return x.position !== i + 1; });
+    list.forEach(function (x, i) { x.position = i + 1; });
+    if (!moved.length) return;
+    var action = list === S.course.modules ? "upsert_module" : "upsert_lesson";
+    write(function () {
+      return moved.reduce(function (chain, x) { return chain.then(function () { return author(action, { id: x.id, position: x.position }); }); }, Promise.resolve());
+    }).catch(function () { loadCourse(); });
+  }
+  function listFor(item) {
+    if (item.dataset.item === "section") return S.course.modules;
+    var m = moduleOfLesson(item.dataset.id); return m ? m.lessons : null;
+  }
+  function reorder(item, ids) {
+    var list = listFor(item); if (!list) return;
+    var next = ids.map(function (id) { return byId(list, id); }).filter(Boolean);
+    if (next.length !== list.length) return;
+    list.splice.apply(list, [0, list.length].concat(next));
+    commitOrder(list);
+  }
+  function step(item, dir) {
+    var list = listFor(item); if (!list) return;
+    var i = list.indexOf(byId(list, item.dataset.id)), j = i + dir;
+    if (i < 0 || j < 0 || j >= list.length) return;
+    var x = list[i]; list[i] = list[j]; list[j] = x;
+    commitOrder(list);
+    renderCurriculum();
+    var g = document.querySelector('[data-item="' + item.dataset.item + '"][data-id="' + item.dataset.id + '"] [data-drag]');
+    if (g) g.focus();
+    toast(t("movedTo", { n: j + 1, total: list.length }));
+  }
+  function setStatus(status, done) {
+    var c = S.course, before = c.status;
+    var run = status === "published" ? function () { return author("publish_course", { id: c.id }); } : function () { return author("upsert_course", { id: c.id, status: status }); };
+    write(run).then(function (row) {
+      c.status = (row && row.status) || status; syncRow(); render(); toast(done);
+    }).catch(function () { c.status = before; render(); });
+  }
+  function publish() {
+    if (!lessonCount(S.course)) { toast(t("publishEmpty")); return; }
+    setStatus("published", t("published"));
+  }
+  function unpublish() {
+    dialog({ title: t("unpublishTitle"), body: t("unpublishBody"), confirm: t("unpublish") }).then(function (ok) { if (ok) setStatus("draft", t("unpublished")); });
+  }
+  function archive() {
+    dialog({ title: t("archiveTitle"), body: t("archiveBody"), confirm: t("archive") }).then(function (ok) { if (ok) setStatus("archived", t("archived")); });
+  }
+  function saveDetails() {
+    var c = S.course, f = S.form; if (!formDirty()) return;
+    if (!f.title.trim()) { toast(t("titleRequired")); return; }
+    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(f.slug)) { toast(t("slugInvalid")); return; }
+    var p = { id: c.id }, keys = ["title", "subtitle", "description", "level", "slug", "cover_url"];
+    keys.forEach(function (k) { if (String(f[k]) !== String(c[k])) p[k] = k === "title" ? f[k].trim() : f[k]; });
+    if (f.tags.join("\u0001") !== c.tags.join("\u0001")) p.tags = f.tags.slice();
+    write(function () { return author("upsert_course", p); }).then(function (row) {
+      Object.keys(p).forEach(function (k) { if (k !== "id") c[k] = Array.isArray(p[k]) ? p[k].slice() : p[k]; });
+      if (row && row.slug) c.slug = row.slug;
+      S.openSlug = c.slug; S.form = null;
+      syncRow(); render(); remember(); toast(t("detailsSaved"));
+    }).catch(function () {});
+  }
+  function deleteCourse() {
+    var c = S.course, row = rowOf(c);
+    dialog({
+      title: t("deleteCourseTitle", { title: c.title }), body: t("deleteCourseBody", { learners: plural("learners", row ? row.learners : 0), lessons: plural("lessons", lessonCount(c)) }),
+      confirm: t("deleteCourse"), danger: true,
+      fields: [{ name: "confirm", label: t("typeToConfirm", { title: c.title }) }],
+      valid: function (v) { return v.confirm.trim() === c.title.trim(); },
+    }).then(function (v) {
+      if (!v) return;
+      write(function () { return author("delete_course", { id: c.id }); }).then(function () {
+        S.courses = S.courses.filter(function (x) { return x.id !== c.id; });
+        S.course = null; S.openSlug = null; S.pane = "list"; S.form = null;
+        size(); render(); remember(); toast(t("deleted", { title: c.title }));
+      }).catch(function () {});
+    });
+  }
+
+  /* ── drag to reorder (pointer: mouse, pen and touch) ─────────────────────────────────────────── */
+  function startDrag(e, grip) {
+    var item = grip.closest("[data-item]"), list = item && item.parentElement; if (!list) return;
+    e.preventDefault();
+    var kind = item.dataset.item, before = ids(list, kind), scroller = $("#pane");
+    // Listen on the window: moving the item in the page drops any pointer capture on its grip.
+    var pid = e.pointerId;
+    item.classList.add("dragging"); document.body.classList.add("drag-on");
+    function ids(l, k) { return Array.prototype.filter.call(l.children, function (x) { return x.dataset.item === k; }).map(function (x) { return x.dataset.id; }); }
+    function move(ev) {
+      if (ev.pointerId !== pid) return;
+      var sibs = Array.prototype.filter.call(list.children, function (x) { return x !== item && x.dataset.item === kind; });
+      var target = null;
+      for (var i = 0; i < sibs.length; i++) { var r = sibs[i].getBoundingClientRect(); if (ev.clientY < r.top + r.height / 2) { target = sibs[i]; break; } }
+      if (target) { if (item.nextElementSibling !== target) list.insertBefore(item, target); }
+      else if (sibs.length && sibs[sibs.length - 1].nextElementSibling !== item) sibs[sibs.length - 1].after(item);
+      var b = scroller.getBoundingClientRect(), edge = 40;
+      if (ev.clientY < b.top + edge) scroller.scrollTop -= 12; else if (ev.clientY > b.bottom - edge) scroller.scrollTop += 12;
+    }
+    function up(ev) {
+      if (ev.pointerId !== pid) return;
+      window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", up);
+      item.classList.remove("dragging"); document.body.classList.remove("drag-on");
+      var after = ids(list, kind);
+      if (after.join() !== before.join()) { reorder(item, after); renderCurriculum(); }
+    }
+    window.addEventListener("pointermove", move); window.addEventListener("pointerup", up); window.addEventListener("pointercancel", up);
+  }
+
+  /* ── wiring ──────────────────────────────────────────────────────────────────────────────────── */
+  function size() {
+    LUT.size = window.innerWidth < LUT.layout.phoneBelow ? "phone" : "wide";
+    var app = $("#app");
+    app.setAttribute("data-size", LUT.size);
+    app.setAttribute("data-pane", S.openSlug ? S.pane : "list");
+  }
+  function wire() {
+    $("#side-title").textContent = t("courses");
+    $("#btn-new").innerHTML = icon("plus") + esc(t("new"));
+    $("#btn-new").setAttribute("aria-label", t("newCourse"));
+    $("#search-icon").innerHTML = icon("search");
+    $("#search-label").textContent = t("search");
+    $("#search").placeholder = t("search");
+    $("#search").addEventListener("input", function () { S.query = this.value; renderSide(); });
+    $("#btn-new").addEventListener("click", newCourse);
+    $("#courses").addEventListener("click", function (e) { var b = e.target.closest(".course"); if (b) openCourse(b.dataset.slug); });
+
+    var app = $("#app");
+    app.addEventListener("click", function (e) {
+      var tab = e.target.closest("[data-tab]");
+      if (tab) { S.tab = tab.dataset.tab; S.adding = null; renderMain(); remember(); return; }
+      var kindBtn = e.target.closest("[data-kind]");
+      if (kindBtn) {
+        S.addKind = kindBtn.dataset.kind;
+        kindBtn.parentElement.querySelectorAll("[data-kind]").forEach(function (b) { b.setAttribute("aria-pressed", String(b === kindBtn)); });
+        var inp = kindBtn.closest("form").elements.title; if (inp) inp.focus();
+        return;
+      }
+      var a = e.target.closest("[data-act]"); if (!a) return;
+      var act = a.dataset.act, id = a.dataset.id;
+      if (act === "back") { S.pane = "list"; size(); }
+      else if (act === "new-course") newCourse();
+      else if (act === "add-section") addSection();
+      else if (act === "add-lesson") {
+        S.adding = Number(a.dataset.module); S.addKind = S.addKind || LUT.kinds.filter(function (k) { return k.add; })[0].id;
+        renderCurriculum();
+        var f = document.querySelector('.add-les[data-module="' + a.dataset.module + '"] [name="title"]'); if (f) f.focus();
+      }
+      else if (act === "cancel-add") { S.adding = null; renderCurriculum(); }
+      else if (act === "preview") togglePreview(id);
+      else if (act === "edit") editLesson(id);
+      else if (act === "del-lesson") deleteLesson(id);
+      else if (act === "del-section") deleteSection(id);
+      else if (act === "publish") publish();
+      else if (act === "unpublish") unpublish();
+      else if (act === "restore") setStatus(LUT.statuses[0].id, t("restored"));
+      else if (act === "archive") archive();
+      else if (act === "delete-course") deleteCourse();
+      else if (act === "discard") { S.form = null; renderDetails(); }
+      else if (act === "untag") { S.form.tags.splice(Number(a.dataset.i), 1); renderDetails(); syncFormButtons(); var ti = $("#tag-in"); if (ti) ti.focus(); }
+    });
+    app.addEventListener("change", function (e) {
+      if (e.target.dataset && e.target.dataset.field) rename(e.target);
+    });
+    app.addEventListener("input", function (e) {
+      var el = e.target, form = el.closest && el.closest("#details");
+      if (!form || !el.name || !S.form || !(el.name in S.form) || el.name === "tags") return;
+      S.form[el.name] = el.value;
+      if (el.name === "slug") { var clean = el.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"); if (clean !== el.value) { el.value = clean; S.form.slug = clean; } }
+      if (el.name === "cover_url" || el.name === "title") {
+        var tl = form.querySelector(".cover-row .tile");
+        if (tl) tl.outerHTML = tile({ id: S.course.id, title: S.form.title, cover_url: S.form.cover_url }, true);
+      }
+      syncFormButtons();
+    });
+    app.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (e.target.id === "details") saveDetails();
+      else if (e.target.classList.contains("add-les")) addLesson(e.target);
+    });
+    app.addEventListener("keydown", function (e) {
+      var el = e.target;
+      if (el.dataset && el.dataset.field && e.key === "Enter" && el.tagName === "INPUT") { e.preventDefault(); el.blur(); return; }
+      if (el.dataset && el.dataset.field && e.key === "Escape") {
+        var it = el.dataset.field === "lesson-title" ? lessonById(el.dataset.id) : byId(S.course.modules, el.dataset.id);
+        if (it) el.value = el.dataset.field === "module-summary" ? it.summary : it.title;
+        el.blur(); return;
+      }
+      if (el.id === "tag-in" && (e.key === "Enter" || e.key === ",")) {
+        e.preventDefault();
+        var tag = el.value.trim().replace(/,$/, "");
+        if (tag && S.form.tags.indexOf(tag) < 0) S.form.tags.push(tag);
+        el.value = ""; renderDetails(); syncFormButtons(); $("#tag-in").focus();
+        return;
+      }
+      if (el.id === "tag-in" && e.key === "Backspace" && !el.value && S.form.tags.length) { S.form.tags.pop(); renderDetails(); syncFormButtons(); $("#tag-in").focus(); return; }
+      if (el.closest && el.closest(".add-les") && e.key === "Escape") { S.adding = null; renderCurriculum(); return; }
+      if (el.matches && el.matches("[data-drag]") && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+        e.preventDefault(); step(el.closest("[data-item]"), e.key === "ArrowUp" ? -1 : 1);
+      }
+    });
+    app.addEventListener("pointerdown", function (e) {
+      var g = e.target.closest("[data-drag]");
+      if (g && (e.button === 0 || e.pointerType !== "mouse")) startDrag(e, g);
+    });
+    window.addEventListener("resize", size);
+  }
+
+  /* ── the shell ───────────────────────────────────────────────────────────────────────────────── */
+  window.addEventListener("message", function (e) {
+    var d = e.data; if (!d || typeof d.gin !== "string") return;
+    if (d.scheme && d.scheme !== S.scheme) { S.scheme = d.scheme; applyCSSProps(); }
+    if (d.gin === "app:restore") {
+      var u = d.user || null;
+      S.profile = u ? (u.profile_id != null ? u.profile_id : (typeof u.id === "number" ? u.id : null)) : null;
+      S.roles = (u && u.roles) || {};
+      S.tok.value = (u && u.app_token) || null;
+      S.tok.at = (u && u.app_token_at) || Date.now();
+      S.tok.ttl = (u && u.app_token_expires_in) || 0;
+      S.tok.session = (u && (u.auth_token || u.authToken)) || null;
+      if (!S.restored && d.state && typeof d.state === "object") {
+        if (d.state.open) { S.openSlug = d.state.open; S.pane = "course"; }
+        if (d.state.tab && LUT.tabs.some(function (tb) { return tb.id === d.state.tab; })) S.tab = d.state.tab;
+      }
+      S.restored = true;
+      if (!S.tab) S.tab = LUT.tabs[0].id;
+      S.catalog.loaded = false; S.catalog.error = null;
+      size(); render(); loadCatalog();
+    } else if (d.gin === "auth:user") {
+      if (d.authed === false) { S.profile = null; S.tok = { value: null, at: 0, ttl: 0, session: null, refreshing: null }; S.courses = []; S.course = null; S.openSlug = null; render(); }
+      else post({ gin: "app:ready", view_id: LUT.viewId, weight: "dom" });
+    }
+  });
+
+  /* ── boot ────────────────────────────────────────────────────────────────────────────────────── */
+  function boot() {
+    document.title = t("title");
+    wire();
+    $("#app").hidden = false;
+    size(); render();
+    post({ gin: "app:ready", view_id: LUT.viewId, weight: "dom" });
+  }
+
+  function init() {
+    try {
+      if (!componentProps || !Object.keys(componentProps).length) throw new Missing("* (props were not injected)");
+      applyCSSProps();
+      buildLUT();
+      boot();
+    } catch (e) {
+      if (!(e instanceof Missing)) throw e;
+      var box = document.createElement("pre");
+      box.id = "fatal"; box.setAttribute("role", "alert");
+      box.textContent = e.message + ".\nTeacher renders only from its componentProps (record props injected by the viewer).";
+      document.body.replaceChildren(box);
+    }
+  }
+  init();
+})();
+</script>
+</body>
+</html>

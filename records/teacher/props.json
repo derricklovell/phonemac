@@ -1,0 +1,313 @@
+{
+ "config": {
+  "supabase_url": "https://skwnvuajjrxvpozmxjvk.supabase.co",
+  "supabase_key": "sb_publishable_vxyjVZ_5Otm9CqPP8nnFFg_8nf5wE4q",
+  "session_exchange": "/functions/v1/xano-session",
+  "merchant_scoped_rpc": [
+   "lms_catalog",
+   "lms_course_outline"
+  ],
+  "catalog_statuses": [
+   "published",
+   "draft",
+   "archived"
+  ],
+  "author_roles": [
+   "owner",
+   "admin",
+   "instructor"
+  ],
+  "slug_tries": 5,
+  "builders_key": "lms_builders_for",
+  "lesson_editor": {
+   "view_id": 57,
+   "slot_code": "s02"
+  }
+ },
+ "statuses": [
+  {
+   "id": "draft",
+   "label": "Draft",
+   "group": "Drafts",
+   "tone": "warn"
+  },
+  {
+   "id": "published",
+   "label": "Published",
+   "group": "Published",
+   "tone": "ok"
+  },
+  {
+   "id": "archived",
+   "label": "Archived",
+   "group": "Archived",
+   "tone": ""
+  }
+ ],
+ "kinds": [
+  {
+   "id": "video",
+   "label": "Video",
+   "icon": "video",
+   "add": true
+  },
+  {
+   "id": "audio",
+   "label": "Audio",
+   "icon": "audio",
+   "add": true
+  },
+  {
+   "id": "article",
+   "label": "Article",
+   "icon": "article",
+   "add": true
+  },
+  {
+   "id": "quiz",
+   "label": "Quiz",
+   "icon": "quiz",
+   "add": true
+  },
+  {
+   "id": "interactive",
+   "label": "Interactive",
+   "icon": "interactive",
+   "add": false
+  }
+ ],
+ "levels": [
+  {
+   "id": "intro",
+   "label": "Beginner"
+  },
+  {
+   "id": "intermediate",
+   "label": "Intermediate"
+  },
+  {
+   "id": "advanced",
+   "label": "Advanced"
+  }
+ ],
+ "tabs": [
+  {
+   "id": "curriculum",
+   "label": "Curriculum"
+  },
+  {
+   "id": "details",
+   "label": "Details"
+  }
+ ],
+ "layout": {
+  "sidebarWidth": 272,
+  "contentMax": 860,
+  "phoneBelow": 640
+ },
+ "icons": {
+  "plus": "M12 5v14 M5 12h14",
+  "grip": "M9 5h.01 M9 12h.01 M9 19h.01 M15 5h.01 M15 12h.01 M15 19h.01",
+  "trash": "M3 6h18 M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2 M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6 M10 11v6 M14 11v6",
+  "eye": "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z",
+  "back": "M15 18l-6-6 6-6",
+  "search": "M11 3a8 8 0 1 0 0 16 8 8 0 0 0 0-16z M21 21l-4.3-4.3",
+  "video": "M23 7l-7 5 7 5V7z M3 5h11a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z",
+  "audio": "M9 18V5l12-2v13 M6 15a3 3 0 1 0 0 6 3 3 0 0 0 0-6z M18 13a3 3 0 1 0 0 6 3 3 0 0 0 0-6z",
+  "article": "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8",
+  "quiz": "M9 11l3 3L22 4 M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11",
+  "interactive": "M12 2l3 7h7l-5.5 4.5 2 7.5L12 16.5 5.5 21l2-7.5L2 9h7z"
+ },
+ "strings": {
+  "title": "Teacher",
+  "courses": "Your courses",
+  "scope": "for {name}",
+  "new": "New",
+  "newCourse": "New course",
+  "search": "Search courses",
+  "loading": "Loading…",
+  "loadFailed": "Couldn't load ({reason}).",
+  "signedOut": "Sign in to build your courses.",
+  "noCourses": "No courses yet.",
+  "noMatches": "No courses match.",
+  "startTitle": "Create your first course",
+  "startBody": "Give it a title — you can add sections and lessons right after.",
+  "pickTitle": "Choose a course",
+  "pickBody": "Pick a course on the left to edit its curriculum and details, or start a new one.",
+  "back": "Back to courses",
+  "sectionsOne": "1 section",
+  "sectionsMany": "{n} sections",
+  "lessonsOne": "1 lesson",
+  "lessonsMany": "{n} lessons",
+  "learnersOne": "1 learner",
+  "learnersMany": "{n} learners",
+  "minutes": "{n} min",
+  "hoursMinutes": "{h} h {m} min",
+  "saving": "Saving…",
+  "saved": "All changes saved",
+  "notSaved": "Last change not saved",
+  "saveFailed": "Couldn't save ({reason}).",
+  "publish": "Publish course",
+  "published": "Course published",
+  "publishEmpty": "Add at least one lesson before publishing.",
+  "unpublish": "Unpublish",
+  "unpublishTitle": "Unpublish this course?",
+  "unpublishBody": "It goes back to draft and leaves the catalog. You can publish it again any time.",
+  "unpublished": "Course moved to drafts",
+  "restore": "Restore as draft",
+  "restored": "Course restored as a draft",
+  "restoreTitle": "Restore course",
+  "restoreBody": "Bring the course back as a draft so you can edit and publish it again.",
+  "archive": "Archive",
+  "archiveTitle": "Archive course",
+  "archiveBody": "Take the course out of the catalog and your active list. Nothing is deleted.",
+  "archived": "Course archived",
+  "dragHint": "Drag ⋮⋮ to reorder (or focus it and use ↑ ↓). Click a title to rename it.",
+  "sectionN": "Section {n}",
+  "sectionTitle": "Section title",
+  "sectionSummary": "Section summary",
+  "summaryPlaceholder": "Add a short summary (optional)",
+  "newSectionTitle": "Section {n}",
+  "addSection": "Add section",
+  "deleteSection": "Delete section",
+  "deleteSectionTitle": "Delete “{title}”?",
+  "deleteSectionBody": "Its {lessons} and their content, checkpoints and learner progress are deleted too. This can't be undone.",
+  "noLessons": "No lessons in this section yet.",
+  "addLesson": "Add lesson",
+  "lessonType": "Lesson type",
+  "lessonTitle": "Lesson title",
+  "newLessonPlaceholder": "Lesson title — press Return to add",
+  "untitledLesson": "Untitled lesson",
+  "add": "Add",
+  "done": "Done",
+  "freePreview": "Free preview",
+  "previewHint": "Free preview lessons can be watched before enrolling.",
+  "editContent": "Edit content",
+  "openingEditor": "Opening “{title}” in the lesson editor…",
+  "deleteLesson": "Delete lesson",
+  "deleteLessonTitle": "Delete “{title}”?",
+  "deleteLessonBody": "Its content, checkpoints and every learner's progress in it are deleted ({learners} in this course). This can't be undone.",
+  "deleted": "Deleted “{title}”",
+  "reorderSection": "Reorder section {title}: drag, or use the arrow keys",
+  "reorderLesson": "Reorder lesson {title}: drag, or use the arrow keys",
+  "movedTo": "Moved to position {n} of {total}",
+  "emptyCourseTitle": "No sections yet",
+  "emptyCourseBody": "Sections are like chapters: group your lessons into them. Start with one.",
+  "fTitle": "Title",
+  "fSubtitle": "Subtitle",
+  "fSubtitleHint": "One line under the title in the catalog.",
+  "fDescription": "Description",
+  "fLevel": "Level",
+  "levelPick": "Choose a level",
+  "fSlug": "Course URL",
+  "slugPrefix": "/course/",
+  "fSlugHint": "Changing it breaks links already shared.",
+  "fCover": "Cover image",
+  "fCoverHint": "Link to an image (16:9 works best).",
+  "fTags": "Tags",
+  "addTag": "Add a tag and press Return",
+  "removeTag": "Remove tag {tag}",
+  "saveChanges": "Save changes",
+  "discard": "Discard",
+  "detailsSaved": "Details saved",
+  "titleRequired": "The course needs a title.",
+  "slugInvalid": "Use lowercase letters, numbers and dashes for the URL.",
+  "dangerTitle": "Danger zone",
+  "deleteTitle": "Delete course",
+  "deleteBody": "Deletes the course, its sections, lessons and every learner's enrollment and progress.",
+  "deleteCourse": "Delete course",
+  "deleteCourseTitle": "Delete “{title}”?",
+  "deleteCourseBody": "{lessons} and {learners}' enrollments and progress are deleted. This can't be undone.",
+  "typeToConfirm": "Type “{title}” to confirm",
+  "newCourseTitle": "New course",
+  "newCourseBody": "It starts as a draft: only you and your team see it until you publish.",
+  "newCoursePlaceholder": "e.g. Watercolor Foundations",
+  "create": "Create course",
+  "created": "Created “{title}”",
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "errSignedOut": "you're not signed in — sign in to edit",
+  "errNoRole": "you need to be an owner, admin or instructor of this business to do that",
+  "errSlugTaken": "that course URL is already taken",
+  "errNotFound": "that course wasn't found"
+ },
+ "theme": {
+  "defaultScheme": "light",
+  "light": {
+   "font": "-apple-system, BlinkMacSystemFont, \"SF Pro Text\", \"Segoe UI\", Inter, system-ui, sans-serif",
+   "bg": "#ffffff",
+   "panel": "#f5f5f7",
+   "card": "#ffffff",
+   "input": "#f2f2f5",
+   "line": "#e3e3e8",
+   "line-soft": "#f0f0f3",
+   "text": "#1d1d1f",
+   "muted": "#6e6e73",
+   "hover": "rgba(0,0,0,.045)",
+   "selected": "#0a84ff",
+   "selected-text": "#ffffff",
+   "selected-sub": "rgba(255,255,255,.82)",
+   "accent": "#0a84ff",
+   "accent-text": "#ffffff",
+   "chip": "#ececf1",
+   "chip-text": "#3a3a3c",
+   "warn": "#9a5800",
+   "warn-bg": "#fff1dc",
+   "ok": "#1e7438",
+   "ok-bg": "#e2f4e7",
+   "bad": "#b42318",
+   "bad-bg": "#fde6e3",
+   "toast": "rgba(29,29,31,.92)",
+   "toast-text": "#ffffff",
+   "chevron": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236e6e73' stroke-width='1.5'/%3E%3C/svg%3E\")",
+   "bad-line": "#f3c4bf",
+   "tile-text": "#ffffff",
+   "scrim": "rgba(0,0,0,.28)",
+   "shadow-sm": "0 1px 2px rgba(0,0,0,.06)",
+   "shadow-lg": "0 12px 32px rgba(0,0,0,.18)"
+  },
+  "dark": {
+   "font": "-apple-system, BlinkMacSystemFont, \"SF Pro Text\", \"Segoe UI\", Inter, system-ui, sans-serif",
+   "bg": "#1e1e20",
+   "panel": "#252528",
+   "card": "#2a2a2d",
+   "input": "#2f2f33",
+   "line": "#38383c",
+   "line-soft": "#2c2c30",
+   "text": "#f2f2f4",
+   "muted": "#9c9ca3",
+   "hover": "rgba(255,255,255,.06)",
+   "selected": "#0a84ff",
+   "selected-text": "#ffffff",
+   "selected-sub": "rgba(255,255,255,.82)",
+   "accent": "#3b9bff",
+   "accent-text": "#ffffff",
+   "chip": "#36363b",
+   "chip-text": "#e3e3e8",
+   "warn": "#f2b45c",
+   "warn-bg": "#3b2a12",
+   "ok": "#6fd38c",
+   "ok-bg": "#173323",
+   "bad": "#ff8a7d",
+   "bad-bg": "#3d1a17",
+   "toast": "rgba(242,242,244,.94)",
+   "toast-text": "#1d1d1f",
+   "chevron": "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239c9ca3' stroke-width='1.5'/%3E%3C/svg%3E\")",
+   "bad-line": "#5a2620",
+   "tile-text": "#ffffff",
+   "scrim": "rgba(0,0,0,.5)",
+   "shadow-sm": "0 1px 2px rgba(0,0,0,.4)",
+   "shadow-lg": "0 12px 32px rgba(0,0,0,.55)"
+  },
+  "tiles": [
+   "#5b7cfa",
+   "#08bdba",
+   "#f59f00",
+   "#e64980",
+   "#40c057",
+   "#9775fa",
+   "#fd7e14",
+   "#15aabf"
+  ]
+ }
+}

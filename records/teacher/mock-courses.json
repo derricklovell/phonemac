@@ -1,0 +1,270 @@
+{
+ "_about": "Sample data for the Teacher preview only (never sent anywhere). Shapes follow the elearn tables lms.courses / lms.modules / lms.lessons. learner_count stands in for lms.enrollments.",
+ "me": {
+  "profile_id": 7001,
+  "display_name": "Jordan Ellis",
+  "roles": {
+   "41": "owner"
+  }
+ },
+ "merchant": {
+  "id": 41,
+  "name": "Harbor Lane Studio"
+ },
+ "courses": [
+  {
+   "id": 301,
+   "slug": "watercolor-foundations",
+   "title": "Watercolor Foundations",
+   "subtitle": "From first wash to finished painting in three weekends.",
+   "description": "A calm, step-by-step start in watercolor. You'll set up a palette, learn the four washes every painter uses, and finish a landscape you'll want to frame.\n\nNo experience needed — just paper, three brushes and a willingness to let the water do some of the work.",
+   "level": "intro",
+   "cover_url": "",
+   "tags": [
+    "watercolor",
+    "beginner",
+    "landscape"
+   ],
+   "meta": {},
+   "status": "published",
+   "merchant_id": 41,
+   "created_by": 7001,
+   "learner_count": 128,
+   "updated_at": "2026-09-28T15:12:00Z"
+  },
+  {
+   "id": 302,
+   "slug": "color-mixing-masterclass",
+   "title": "Color Mixing Masterclass",
+   "subtitle": "Mix any color you see with a limited palette.",
+   "description": "Warm and cool primaries, neutral greys, glazing and the colors that make a painting sing.",
+   "level": "intermediate",
+   "cover_url": "",
+   "tags": [
+    "color",
+    "palette"
+   ],
+   "meta": {},
+   "status": "draft",
+   "merchant_id": 41,
+   "created_by": 7001,
+   "learner_count": 0,
+   "updated_at": "2026-10-02T10:40:00Z"
+  },
+  {
+   "id": 303,
+   "slug": "plein-air-weekend",
+   "title": "Plein Air Weekend",
+   "subtitle": "",
+   "description": "",
+   "level": null,
+   "cover_url": "",
+   "tags": [],
+   "meta": {},
+   "status": "draft",
+   "merchant_id": 41,
+   "created_by": 7001,
+   "learner_count": 0,
+   "updated_at": "2026-10-03T18:05:00Z"
+  },
+  {
+   "id": 304,
+   "slug": "holiday-card-workshop-2025",
+   "title": "Holiday Card Workshop 2025",
+   "subtitle": "Five quick cards for the season.",
+   "description": "A short seasonal workshop from last year.",
+   "level": "intro",
+   "cover_url": "",
+   "tags": [
+    "seasonal"
+   ],
+   "meta": {},
+   "status": "archived",
+   "merchant_id": 41,
+   "created_by": 7001,
+   "learner_count": 42,
+   "updated_at": "2025-12-20T09:00:00Z"
+  }
+ ],
+ "modules": [
+  {
+   "id": 11,
+   "course_id": 301,
+   "position": 1,
+   "title": "Getting started",
+   "summary": "Your kit, your table and the one habit that makes everything easier."
+  },
+  {
+   "id": 12,
+   "course_id": 301,
+   "position": 2,
+   "title": "Core techniques",
+   "summary": "Washes, wet-on-wet and how to fix what goes wrong."
+  },
+  {
+   "id": 13,
+   "course_id": 301,
+   "position": 3,
+   "title": "Your first painting",
+   "summary": "Put it all together in a simple lakeside landscape."
+  },
+  {
+   "id": 21,
+   "course_id": 302,
+   "position": 1,
+   "title": "The color wheel, revisited",
+   "summary": ""
+  },
+  {
+   "id": 22,
+   "course_id": 302,
+   "position": 2,
+   "title": "Glazing",
+   "summary": ""
+  },
+  {
+   "id": 41,
+   "course_id": 304,
+   "position": 1,
+   "title": "Cards",
+   "summary": ""
+  }
+ ],
+ "lessons": [
+  {
+   "id": 101,
+   "module_id": 11,
+   "position": 1,
+   "title": "Welcome and what you'll need",
+   "kind": "video",
+   "duration_seconds": 240,
+   "is_preview": true
+  },
+  {
+   "id": 102,
+   "module_id": 11,
+   "position": 2,
+   "title": "Setting up your palette",
+   "kind": "video",
+   "duration_seconds": 420,
+   "is_preview": false
+  },
+  {
+   "id": 103,
+   "module_id": 11,
+   "position": 3,
+   "title": "Paper, brushes and water",
+   "kind": "article",
+   "duration_seconds": 300,
+   "is_preview": false
+  },
+  {
+   "id": 104,
+   "module_id": 12,
+   "position": 1,
+   "title": "Flat and graded washes",
+   "kind": "video",
+   "duration_seconds": 780,
+   "is_preview": false
+  },
+  {
+   "id": 105,
+   "module_id": 12,
+   "position": 2,
+   "title": "Wet-on-wet",
+   "kind": "video",
+   "duration_seconds": 660,
+   "is_preview": false
+  },
+  {
+   "id": 106,
+   "module_id": 12,
+   "position": 3,
+   "title": "Lifting and correcting",
+   "kind": "video",
+   "duration_seconds": 540,
+   "is_preview": false
+  },
+  {
+   "id": 107,
+   "module_id": 12,
+   "position": 4,
+   "title": "Technique check",
+   "kind": "quiz",
+   "duration_seconds": 0,
+   "is_preview": false
+  },
+  {
+   "id": 108,
+   "module_id": 13,
+   "position": 1,
+   "title": "Sketching the composition",
+   "kind": "video",
+   "duration_seconds": 600,
+   "is_preview": false
+  },
+  {
+   "id": 109,
+   "module_id": 13,
+   "position": 2,
+   "title": "Layering the sky",
+   "kind": "video",
+   "duration_seconds": 900,
+   "is_preview": false
+  },
+  {
+   "id": 110,
+   "module_id": 13,
+   "position": 3,
+   "title": "Final details and signing",
+   "kind": "video",
+   "duration_seconds": 720,
+   "is_preview": false
+  },
+  {
+   "id": 111,
+   "module_id": 13,
+   "position": 4,
+   "title": "Share your work",
+   "kind": "article",
+   "duration_seconds": 180,
+   "is_preview": false
+  },
+  {
+   "id": 201,
+   "module_id": 21,
+   "position": 1,
+   "title": "Warm and cool primaries",
+   "kind": "video",
+   "duration_seconds": 600,
+   "is_preview": true
+  },
+  {
+   "id": 202,
+   "module_id": 21,
+   "position": 2,
+   "title": "Studio talk: why limited palettes work",
+   "kind": "audio",
+   "duration_seconds": 900,
+   "is_preview": false
+  },
+  {
+   "id": 203,
+   "module_id": 22,
+   "position": 1,
+   "title": "Transparent and opaque pigments",
+   "kind": "article",
+   "duration_seconds": 420,
+   "is_preview": false
+  },
+  {
+   "id": 401,
+   "module_id": 41,
+   "position": 1,
+   "title": "Snowy village in five steps",
+   "kind": "video",
+   "duration_seconds": 1500,
+   "is_preview": false
+  }
+ ]
+}
